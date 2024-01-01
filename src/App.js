@@ -2,13 +2,8 @@ import { Link, Route, Routes } from 'react-router-dom';
 import { ViewActivities } from './pages/ViewActivities';
 import { Activities } from './pages/Activities';
 import { Login } from './pages/Login';
-
-const Home = () => (
-  <div className='border border-red-500 p-4 mt-16'>
-    <h2 className='text-2xl font-bold mb-2'>Home</h2>
-    <p>Welcome to our homepage!</p>
-  </div>
-);
+import { Ideas } from './pages/Ideas';
+import { Home } from './pages/Home';
 
 
 export default function App() {
@@ -25,6 +20,9 @@ export default function App() {
                 <Link className="px-3 py-2 flex items-center text-xs uppercase font-bold leading-snug text-white hover:opacity-75" to="/login">Login</Link>
               </li>
               <li className="nav-item">
+                <Link className="px-3 py-2 flex items-center text-xs uppercase font-bold leading-snug text-white hover:opacity-75" to="/ideas">Ideas</Link>
+              </li>
+              <li className="nav-item">
                 <Link className="px-3 py-2 flex items-center text-xs uppercase font-bold leading-snug text-white hover:opacity-75" to="/activities">Activities</Link>
               </li>
               <li className="nav-item">
@@ -38,6 +36,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/ideas" element={<Ideas />} />
         <Route path="/activities" element={<Activities />} />
         <Route path="/view-activities" element={<ViewActivities />} />
       </Routes>
