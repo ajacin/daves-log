@@ -1,4 +1,4 @@
-import { useState ,useEffect} from "react";
+import { useState, useEffect } from "react";
 import { useUser } from "../lib/context/user";
 import { useNavigate } from "react-router-dom";
 
@@ -11,13 +11,15 @@ export function Login() {
 
   useEffect(() => {
     if (user.current) {
-       return navigate("/activities");
+      return navigate("/activities");
     }
- },[navigate,user]);
+  }, [navigate, user]);
 
   return (
     <section className="flex flex-col items-center justify-center h-screen bg-gray-200">
-      <h1 className="mb-6 text-3xl font-bold text-gray-700">Login or register</h1>
+      <h1 className="mb-6 text-3xl font-bold text-gray-700">
+        Login or register
+      </h1>
       <form className="w-full max-w-sm">
         <div className="mb-4">
           <input
@@ -54,7 +56,7 @@ export function Login() {
             type="button"
             onClick={() => user.register(email, password)}
           >
-            Register
+            Signup
           </button>
         </div>
       </form>
