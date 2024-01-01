@@ -16,8 +16,8 @@ export function Activities() {
 
   function getLocalDateTime() {
     const now = new Date();
-    let tzo = -now.getTimezoneOffset(),
-      dif = tzo >= 0 ? "+" : "-";
+    // let tzo = -now.getTimezoneOffset(),
+    //   dif = tzo >= 0 ? "+" : "-";
 
     return (
       now.getFullYear() +
