@@ -9,22 +9,27 @@ export function Activities() {
   const user = useUser();
   const navigate = useNavigate();
 
-
   function pad(num) {
     let norm = Math.floor(Math.abs(num));
-    return (norm < 10 ? '0' : '') + norm;
+    return (norm < 10 ? "0" : "") + norm;
   }
-  
+
   function getLocalDateTime() {
     const now = new Date();
-    let tzo = -now.getTimezoneOffset(),
-        dif = tzo >= 0 ? '+' : '-';
-  
-    return now.getFullYear() 
-          + '-' + pad(now.getMonth()+1)
-          + '-' + pad(now.getDate())
-          + 'T' + pad(now.getHours())
-          + ':' + pad(now.getMinutes());
+    // let tzo = -now.getTimezoneOffset(),
+    //     dif = tzo >= 0 ? '+' : '-';
+
+    return (
+      now.getFullYear() +
+      "-" +
+      pad(now.getMonth() + 1) +
+      "-" +
+      pad(now.getDate()) +
+      "T" +
+      pad(now.getHours()) +
+      ":" +
+      pad(now.getMinutes())
+    );
   }
 
   const [activityName, setActivityName] = useState("Feed");
@@ -36,9 +41,7 @@ export function Activities() {
   // Assuming you have these lists
   const activityNames = ["Feed", "Diaper", "Vitamin D", "Medicine"];
   const unitOptions = ["mL", "drops", "unit"];
-  const timeDifferences = [5, 10, 15, 30, 60];  // time differences in minutes
-
-
+  const timeDifferences = [5, 10, 15, 30, 60]; // time differences in minutes
 
   const onActivityNameChange = (event) => {
     const selectedActivity = event.target.value;
@@ -59,8 +62,6 @@ export function Activities() {
   const onUnitChange = (event) => {
     setUnit(event.target.value);
   };
-
-  
 
   const quickValues = [60, 70, 80, 90, 1];
   if (!user.current) {
@@ -86,45 +87,47 @@ export function Activities() {
           />
         </div>
         <div className="mb-4">
-  <label
-    htmlFor="activityTime"
-    className="block text-gray-700 text-sm font-bold mb-2"
-  >
-    Activity Time
-  </label>
-  <input
-    id="activityTime"
-    type="datetime-local"
-    value={activityTime}
-    onChange={(event) => {
-      setActivityTime(event.target.value);
-    }}
-    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-  />
-  <div className="mt-2 overflow-x-auto whitespace-nowrap">
-    {timeDifferences.map((timeDiff) => (
-      <button
-        key={timeDiff}
-        type="button"
-        onClick={() => {
-          const time = new Date(Date.now() - timeDiff * 60000);
-          setActivityTime([
-            time.getFullYear(),
-            pad(time.getMonth() + 1),
-            pad(time.getDate())
-          ].join('-') + 'T' + [
-            pad(time.getHours()),
-            pad(time.getMinutes())
-          ].join(':'));
-        }}
-        
-        className="mr-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-1 px-2 rounded inline-flex items-center"
-      >
-        {timeDiff < 60 ? `${timeDiff} mins ago` : `${timeDiff / 60} hr ago`}
-      </button>
-    ))}
-  </div>
-</div>
+          <label
+            htmlFor="activityTime"
+            className="block text-gray-700 text-sm font-bold mb-2"
+          >
+            Activity Time
+          </label>
+          <input
+            id="activityTime"
+            type="datetime-local"
+            value={activityTime}
+            onChange={(event) => {
+              setActivityTime(event.target.value);
+            }}
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          />
+          <div className="mt-2 overflow-x-auto whitespace-nowrap">
+            {timeDifferences.map((timeDiff) => (
+              <button
+                key={timeDiff}
+                type="button"
+                onClick={() => {
+                  const time = new Date(Date.now() - timeDiff * 60000);
+                  setActivityTime(
+                    [
+                      time.getFullYear(),
+                      pad(time.getMonth() + 1),
+                      pad(time.getDate()),
+                    ].join("-") +
+                      "T" +
+                      [pad(time.getHours()), pad(time.getMinutes())].join(":")
+                  );
+                }}
+                className="mr-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-1 px-2 rounded inline-flex items-center"
+              >
+                {timeDiff < 60
+                  ? `${timeDiff} mins ago`
+                  : `${timeDiff / 60} hr ago`}
+              </button>
+            ))}
+          </div>
+        </div>
         <div className="mb-4">
           <label
             htmlFor="value"
@@ -193,17 +196,19 @@ export function Activities() {
             onClick={() => {
               const now = new Date();
               let activityDate = new Date(activityTime);
-              
+
               if (activityDate > now) {
                 activityDate = now; // reset to current date and time
-                alert("Future dates are not allowed. The activity time has been reset to the current date and time.");
+                alert(
+                  "Future dates are not allowed. The activity time has been reset to the current date and time."
+                );
                 return;
               }
-              
+
               babyActivities.add({
                 activityName,
                 activityTime: activityDate, // use the possibly reset date
-                value:value.toString(),
+                value: value.toString(),
                 unit,
                 remarks,
               });
