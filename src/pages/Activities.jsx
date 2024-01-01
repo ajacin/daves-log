@@ -16,8 +16,8 @@ export function Activities() {
 
   function getLocalDateTime() {
     const now = new Date();
-    // let tzo = -now.getTimezoneOffset(),
-    //     dif = tzo >= 0 ? '+' : '-';
+    let tzo = -now.getTimezoneOffset(),
+      dif = tzo >= 0 ? "+" : "-";
 
     return (
       now.getFullYear() +
@@ -41,6 +41,7 @@ export function Activities() {
   // Assuming you have these lists
   const activityNames = ["Feed", "Diaper", "Vitamin D", "Medicine"];
   const unitOptions = ["mL", "drops", "unit"];
+  const [selectedTimeDiff, setSelectedTimeDiff] = useState(null);
   const timeDifferences = [5, 10, 15, 30, 60]; // time differences in minutes
 
   const onActivityNameChange = (event) => {
@@ -99,10 +100,23 @@ export function Activities() {
             value={activityTime}
             onChange={(event) => {
               setActivityTime(event.target.value);
+              setSelectedTimeDiff(null); // reset selected time difference
             }}
             className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
           />
           <div className="mt-2 overflow-x-auto whitespace-nowrap">
+            <button
+              type="button"
+              onClick={() => {
+                setActivityTime(getLocalDateTime());
+                setSelectedTimeDiff("NOW");
+              }}
+              className={`mr-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-1 px-2 rounded inline-flex items-center ${
+                selectedTimeDiff === "NOW" ? "bg-blue-300" : ""
+              }`}
+            >
+              NOW
+            </button>
             {timeDifferences.map((timeDiff) => (
               <button
                 key={timeDiff}
@@ -118,8 +132,11 @@ export function Activities() {
                       "T" +
                       [pad(time.getHours()), pad(time.getMinutes())].join(":")
                   );
+                  setSelectedTimeDiff(timeDiff);
                 }}
-                className="mr-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-1 px-2 rounded inline-flex items-center"
+                className={`mr-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-1 px-2 rounded inline-flex items-center ${
+                  selectedTimeDiff === timeDiff ? "bg-blue-300" : ""
+                }`}
               >
                 {timeDiff < 60
                   ? `${timeDiff} mins ago`
@@ -139,6 +156,7 @@ export function Activities() {
             id="value"
             type="text"
             value={value}
+            disabled={activityName === "Vitamin D" || activityName === "Diaper"}
             onChange={(event) => {
               setValue(event.target.value);
             }}
@@ -149,6 +167,9 @@ export function Activities() {
               <button
                 key={qv}
                 type="button"
+                disabled={
+                  activityName === "Vitamin D" || activityName === "Diaper"
+                }
                 onClick={() => setValue(qv)}
                 className="mr-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded inline-flex items-center"
               >
@@ -212,6 +233,14 @@ export function Activities() {
                 unit,
                 remarks,
               });
+
+              // Reset form
+              setActivityName("Feed");
+              setActivityTime(getLocalDateTime());
+              setValue("90");
+              setUnit("mL");
+              setRemarks("");
+              setSelectedTimeDiff(null);
             }}
           >
             Log Activity
