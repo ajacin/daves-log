@@ -134,7 +134,7 @@ export function Activities() {
                   );
                   setSelectedTimeDiff(timeDiff);
                 }}
-                className={`mr-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-1 px-2 rounded inline-flex items-center ${
+                className={`mr-2 bg-gray-200 hover:bg-blue-500 text-gray-800 font-bold py-1 px-2 rounded inline-flex items-center ${
                   selectedTimeDiff === timeDiff ? "bg-blue-500" : ""
                 }`}
               >
