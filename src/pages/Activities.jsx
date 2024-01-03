@@ -171,9 +171,9 @@ export function Activities() {
                   activityName === "Vitamin D" || activityName === "Diaper"
                 }
                 onClick={() => setValue(qv)}
-                className="mr-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded inline-flex items-center"
+                className="mr-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold rounded inline-flex items-center"
               >
-                <div className={` ${qv === value ? "bg-blue-300" : ""}`}>
+                <div className={` ${qv === value ? "bg-blue-500 py-2 px-4" : "bg-gray-200 py-2 px-4"}`}>
                   {qv}
                 </div>
               </button>
