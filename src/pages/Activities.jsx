@@ -104,7 +104,7 @@ export function Activities() {
             }}
             className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
           />
-          <div className="mt-2 overflow-x-auto whitespace-nowrap">
+          <div className="mt-2 overflow-x-auto whitespace-nowrap group">
             <button
               type="button"
               onClick={() => {
@@ -134,7 +134,7 @@ export function Activities() {
                   );
                   setSelectedTimeDiff(timeDiff);
                 }}
-                className={`mr-2 bg-gray-200 hover:bg-blue-500 text-gray-800 font-bold py-1 px-2 rounded inline-flex items-center ${
+                className={`mr-2 bg-gray-200 text-gray-800 font-bold py-1 px-2 rounded inline-flex items-center ${
                   selectedTimeDiff === timeDiff ? "bg-blue-500" : ""
                 }`}
               >
