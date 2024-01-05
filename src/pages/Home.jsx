@@ -3,6 +3,7 @@ import { useUser } from "../lib/context/user";
 import { useBabyActivities } from "../lib/context/activities";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faExclamationCircle, faBook } from "@fortawesome/free-solid-svg-icons";
+import ReactTimeAgo from "react-time-ago";
 
 export function Home() {
   const user = useUser();
@@ -43,10 +44,10 @@ export function Home() {
                 activity.activityName === "Feed"
                   ? 3
                   : activity.activityName === "Diaper"
-                    ? 5
-                    : activity.activityName === "Vitamin D"
-                      ? 24
-                      : 24;
+                  ? 5
+                  : activity.activityName === "Vitamin D"
+                  ? 24
+                  : 24;
               const timeDifference = (now - activityDate) / (1000 * 60 * 60);
               return (
                 <div className="flex gap-2 m-2">
@@ -66,13 +67,17 @@ export function Home() {
                   })} */}
                   </p>
                   <p
-                    className={` ${timeDifference > cutOffTime
+                    className={` ${
+                      timeDifference > cutOffTime
                         ? "text-red-500"
                         : "text-green-500"
-                      }`}
+                    }`}
                   >
                     {timeDifference > cutOffTime ? "NOT OK" : "OK"}
                   </p>
+                  <div>
+                    <ReactTimeAgo date={activityDate} locale="en-US" />
+                  </div>
                 </div>
               );
             })}
@@ -89,7 +94,8 @@ export function Home() {
                 Thermometer Manual
               </a>
             </div>
-          </section></>
+          </section>
+        </>
       ) : (
         <section className="mt-8">
           <p className="text-lg">Please login to view dashboard.</p>
