@@ -2,9 +2,9 @@ import React, { useState, useEffect } from "react";
 import ReactTimeAgo from "react-time-ago";
 
 const ActivityTime = ({ activityName, activityTime }) => {
+  const activityDate = new Date(activityTime);
   const getTimeDifference = (activityTime) => {
     const now = new Date();
-    const activityDate = new Date(activityTime);
     const timeDifference = (now - activityDate) / (1000 * 60 * 60); // returns time difference in hours
     return timeDifference;
   };
@@ -36,7 +36,7 @@ const ActivityTime = ({ activityName, activityTime }) => {
         timeDifference > cutOffTime ? "text-red-500" : "text-green-500"
       }`}
     >
-      <ReactTimeAgo date={activityTime} locale="en-US" />
+      <ReactTimeAgo date={activityDate} locale="en-US" />
       {/* <p> / {cutOffTime} hours </p> */}
     </div>
   );
