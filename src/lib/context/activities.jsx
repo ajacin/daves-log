@@ -40,10 +40,15 @@ export function BabyActivitiesProvider(props) {
   }
 
   async function init() {
+    const now = new Date();
+    const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
     const response = await databases.listDocuments(DATABASE_ID, COLLECTION_ID, [
       Query.orderDesc("$createdAt"),
-      Query.limit(10),
+      // Query.limit(10),
+      Query.greaterThan("$createdAt", twentyFourHoursAgo.toISOString()),
     ]);
+
     setBabyActivities(response.documents);
   }
 
