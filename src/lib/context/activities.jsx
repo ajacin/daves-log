@@ -5,7 +5,8 @@ import { ID, Query } from "appwrite";
 // dotenv.config()
 
 export const DATABASE_ID = process.env.REACT_APP_DATABASE_ID; // Replace with your database ID
-export const COLLECTION_ID = process.env.REACT_APP_COLLECTION_ID_BABY_ACTIVITIES; // Replace with your collection ID
+export const COLLECTION_ID =
+  process.env.REACT_APP_COLLECTION_ID_BABY_ACTIVITIES; // Replace with your collection ID
 
 const BabyActivitiesContext = createContext();
 
@@ -23,22 +24,26 @@ export function BabyActivitiesProvider(props) {
       ID.unique(),
       item
     );
-    setBabyActivities((babyActivities) => [response.$id, ...babyActivities].slice(0, 10));
-    alert('Activity added successfully!')
+    setBabyActivities((babyActivities) =>
+      [response.$id, ...babyActivities].slice(0, 10)
+    );
+    await init();
+    alert("Activity added successfully!");
   }
 
   async function remove(id) {
     await databases.deleteDocument(DATABASE_ID, COLLECTION_ID, id);
-    setBabyActivities((babyActivities) => babyActivities.filter((item) => item.$id !== id));
+    setBabyActivities((babyActivities) =>
+      babyActivities.filter((item) => item.$id !== id)
+    );
     await init(); // Refetch babyActivities to ensure we have 10 items
   }
 
   async function init() {
-    const response = await databases.listDocuments(
-      DATABASE_ID,
-      COLLECTION_ID,
-      [Query.orderDesc("$createdAt"), Query.limit(10)]
-    );
+    const response = await databases.listDocuments(DATABASE_ID, COLLECTION_ID, [
+      Query.orderDesc("$createdAt"),
+      Query.limit(10),
+    ]);
     setBabyActivities(response.documents);
   }
 
@@ -47,7 +52,9 @@ export function BabyActivitiesProvider(props) {
   }, []);
 
   return (
-    <BabyActivitiesContext.Provider value={{ current: babyActivities, add, remove }}>
+    <BabyActivitiesContext.Provider
+      value={{ current: babyActivities, add, remove }}
+    >
       {props.children}
     </BabyActivitiesContext.Provider>
   );

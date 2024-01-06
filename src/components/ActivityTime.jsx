@@ -36,7 +36,7 @@ const ActivityTime = ({ activityName, activityTime }) => {
         timeDifference > cutOffTime ? "text-red-500" : "text-green-500"
       }`}
     >
-      <ReactTimeAgo date={activityDate} locale="en-US" />
+      {activityDate && <ReactTimeAgo date={activityDate} locale="en-US" />}
       {/* <p> / {cutOffTime} hours </p> */}
     </div>
   );
