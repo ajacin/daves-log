@@ -19,7 +19,7 @@ const ActivityTime = ({ activityName, activityTime }) => {
     }, 1000);
 
     return () => clearInterval(intervalId); // Clear interval on unmount
-  }, [activityTime]);
+  }, [activityTime, getTimeDifference]);
 
   const cutOffTime =
     activityName === "Feed"
