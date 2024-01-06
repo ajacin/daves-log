@@ -4,6 +4,7 @@ import SelectBox from "../components/SelectBox";
 import { useUser } from "../lib/context/user";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
+import LastActivity from "../components/LastActivity";
 
 export function Activities() {
   const babyActivities = useBabyActivities();
@@ -95,6 +96,7 @@ export function Activities() {
             value={activityName}
             options={activityNames}
           />
+          <LastActivity name={activityName} />
         </div>
         <div className="mb-4">
           <label

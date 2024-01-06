@@ -3,7 +3,7 @@ import { useUser } from "../lib/context/user";
 import { useBabyActivities } from "../lib/context/activities";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faExclamationCircle, faBook } from "@fortawesome/free-solid-svg-icons";
-import ReactTimeAgo from "react-time-ago";
+import LastActivity from "../components/LastActivity";
 
 export function Home() {
   const user = useUser();
@@ -56,28 +56,7 @@ export function Home() {
                     icon={faExclamationCircle}
                     className="h-6 w-6"
                   />
-
-                  <p key={activity.id}>
-                    {activity.activityName}
-                    {/* {activityDate.toLocaleTimeString(undefined, {
-                    weekday: "short",
-                    year: "numeric",
-                    month: "short",
-                    day: "numeric",
-                  })} */}
-                  </p>
-                  <p
-                    className={` ${
-                      timeDifference > cutOffTime
-                        ? "text-red-500"
-                        : "text-green-500"
-                    }`}
-                  >
-                    {timeDifference > cutOffTime ? "NOT OK" : "OK"}
-                  </p>
-                  <div>
-                    <ReactTimeAgo date={activityDate} locale="en-US" />
-                  </div>
+                  <LastActivity name={activity.activityName} />
                 </div>
               );
             })}
