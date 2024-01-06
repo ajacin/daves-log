@@ -4,6 +4,7 @@ import { useBabyActivities } from "../lib/context/activities";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faExclamationCircle, faBook } from "@fortawesome/free-solid-svg-icons";
 import LastActivity from "../components/LastActivity";
+import { LineWave } from "react-loader-spinner";
 
 export function Home() {
   const user = useUser();
@@ -76,8 +77,19 @@ export function Home() {
           </section>
         </>
       ) : (
-        <section className="mt-8">
-          <p className="text-lg">Please login to view dashboard.</p>
+        <section className=" flex justify-center items-center">
+          <LineWave
+            visible={true}
+            height="200"
+            width="200"
+            color="#4fa94d"
+            ariaLabel="line-wave-loading"
+            wrapperStyle={{}}
+            wrapperClass=""
+            firstLineColor="red"
+            middleLineColor="blue"
+            lastLineColor="green"
+          />
         </section>
       )}
     </div>
