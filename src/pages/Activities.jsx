@@ -3,6 +3,7 @@ import { useBabyActivities } from "../lib/context/activities";
 import SelectBox from "../components/SelectBox";
 import { useUser } from "../lib/context/user";
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 
 export function Activities() {
   const babyActivities = useBabyActivities();
@@ -10,7 +11,11 @@ export function Activities() {
   const navigate = useNavigate();
 
   const onSuccessAdd = (activityName) => {
-    alert(`${activityName} added!`);
+    // https://react-hot-toast.com/docs/toast
+    toast.success(`${activityName} added!`, {
+      id: "saveActivitySuccessToast",
+      duration: 4000,
+    });
   };
 
   function pad(num) {
@@ -235,6 +240,10 @@ export function Activities() {
                 );
                 return;
               }
+
+              toast.loading(`Saving ${activityName}`, {
+                id: "saveActivitySuccessToast",
+              });
 
               babyActivities.add(
                 {
