@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import { useBabyActivities } from "../lib/context/activities";
 import { useUser } from "../lib/context/user";
 import ReactTimeAgo from "react-time-ago";
-import { LineWave } from "react-loader-spinner";
 const LastActivity = ({ name, isOnlyTime = false }) => {
   const user = useUser();
   const activities = useBabyActivities();
@@ -14,20 +13,7 @@ const LastActivity = ({ name, isOnlyTime = false }) => {
   }, [activities, name]);
 
   if (!lastActivity || !user.current) {
-    return (
-      <LineWave
-        visible={true}
-        height="100"
-        width="100"
-        color="#4fa94d"
-        ariaLabel="line-wave-loading"
-        wrapperStyle={{}}
-        wrapperClass=""
-        firstLineColor=""
-        middleLineColor=""
-        lastLineColor=""
-      />
-    );
+    return <div>{"..."}</div>;
   }
   return (
     <div className="flex items-center space-x-1">

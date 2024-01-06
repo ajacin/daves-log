@@ -5,13 +5,16 @@ import { useUser } from "../lib/context/user";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import LastActivity from "../components/LastActivity";
+import { Vortex } from "react-loader-spinner";
 
 export function Activities() {
   const babyActivities = useBabyActivities();
   const user = useUser();
   const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(false);
 
   const onSuccessAdd = (activityName) => {
+    setIsLoading(false);
     // https://react-hot-toast.com/docs/toast
     toast.success(`${activityName} added!`, {
       id: "saveActivitySuccessToast",
@@ -77,6 +80,22 @@ export function Activities() {
   const quickValues = [60, 70, 80, 90, 1];
   if (!user.current) {
     navigate("/login");
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <Vortex
+          visible={true}
+          height="80"
+          width="80"
+          ariaLabel="vortex-loading"
+          wrapperStyle={{}}
+          wrapperClass="vortex-wrapper"
+          colors={["red", "green", "blue", "yellow", "orange", "purple"]}
+        />
+      </div>
+    );
   }
 
   return (
@@ -245,7 +264,9 @@ export function Activities() {
 
               toast.loading(`Saving ${activityName}`, {
                 id: "saveActivitySuccessToast",
+                position: "center",
               });
+              setIsLoading(true);
 
               babyActivities.add(
                 {
