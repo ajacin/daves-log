@@ -9,6 +9,10 @@ export function Activities() {
   const user = useUser();
   const navigate = useNavigate();
 
+  const onSuccessAdd = (activityName) => {
+    alert(`${activityName} added!`);
+  };
+
   function pad(num) {
     let norm = Math.floor(Math.abs(num));
     return (norm < 10 ? "0" : "") + norm;
@@ -173,7 +177,13 @@ export function Activities() {
                 onClick={() => setValue(qv)}
                 className="mr-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold rounded inline-flex items-center"
               >
-                <div className={` ${qv === value ? "bg-blue-500 py-2 px-4" : "bg-gray-200 py-2 px-4"}`}>
+                <div
+                  className={` ${
+                    qv === value
+                      ? "bg-blue-500 py-2 px-4"
+                      : "bg-gray-200 py-2 px-4"
+                  }`}
+                >
                   {qv}
                 </div>
               </button>
@@ -226,13 +236,16 @@ export function Activities() {
                 return;
               }
 
-              babyActivities.add({
-                activityName,
-                activityTime: activityDate, // use the possibly reset date
-                value: value.toString(),
-                unit,
-                remarks,
-              });
+              babyActivities.add(
+                {
+                  activityName,
+                  activityTime: activityDate, // use the possibly reset date
+                  value: value.toString(),
+                  unit,
+                  remarks,
+                },
+                onSuccessAdd
+              );
 
               // Reset form
               setActivityName("Feed");

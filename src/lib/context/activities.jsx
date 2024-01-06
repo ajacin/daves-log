@@ -17,7 +17,7 @@ export function useBabyActivities() {
 export function BabyActivitiesProvider(props) {
   const [babyActivities, setBabyActivities] = useState([]);
 
-  async function add(item) {
+  async function add(item, onSuccessAdd) {
     const response = await databases.createDocument(
       DATABASE_ID,
       COLLECTION_ID,
@@ -28,7 +28,7 @@ export function BabyActivitiesProvider(props) {
       [response.$id, ...babyActivities].slice(0, 10)
     );
     await init();
-    alert("Activity added successfully!");
+    onSuccessAdd(item.activityName);
   }
 
   async function remove(id) {
