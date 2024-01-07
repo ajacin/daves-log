@@ -68,6 +68,7 @@ export function Activities() {
       setValue("1");
       setUnit("unit");
     } else if (selectedActivity === "Vitamin D") {
+      setValue("1");
       setUnit("drops");
     } else {
       setUnit("unit");
