@@ -5,6 +5,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faExclamationCircle, faBook } from "@fortawesome/free-solid-svg-icons";
 import LastActivity from "../components/LastActivity";
 import { LineWave } from "react-loader-spinner";
+import BucketList from "../components/BucketList";
 
 export function Home() {
   const user = useUser();
@@ -74,6 +75,9 @@ export function Home() {
                 Thermometer Manual
               </a>
             </div>
+          </section>
+          <section>
+            <BucketList></BucketList>
           </section>
         </>
       ) : (
