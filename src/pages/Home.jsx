@@ -29,6 +29,7 @@ export function Home() {
       return acc;
     }, {});
     setLatestActivities(Object.values(activitiesByName));
+    window.scrollTo(0, 0);
   }, [activities]);
 
   return (
