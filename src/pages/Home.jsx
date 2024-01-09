@@ -36,9 +36,7 @@ export function Home() {
       {user.current ? (
         <>
           <section className="mt-8 border border-purple-700 p-2 rounded">
-            <strong className="text-md font-bold mb-4">
-              Latest Stats from last 10 activities
-            </strong>
+            <strong className="text-md font-bold mb-4">Last 24 Hours</strong>
             {latestActivities.map((activity) => {
               const now = new Date();
               const activityDate = new Date(activity.activityTime);
