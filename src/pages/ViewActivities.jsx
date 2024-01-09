@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useBabyActivities } from "../lib/context/activities";
 import { useUser } from "../lib/context/user";
 import ActivityTime from "../components/ActivityTime";
@@ -8,26 +8,28 @@ import {
   faBaby,
   faCapsules,
   faSun,
+  faEllipsisV,
 } from "@fortawesome/free-solid-svg-icons";
 
 const getActivityCardColor = (activityName) => {
   switch (activityName) {
     case "Feed":
-      return "bg-blue-50";
+      return "bg-blue-100";
     case "Diaper":
-      return "bg-red-50";
+      return "bg-green-100";
     case "Vitamin D":
-      return "bg-yellow-50";
+      return "bg-yellow-100";
     case "Medicine":
-      return "bg-purple-50";
+      return "bg-purple-100";
     default:
-      return "bg-gray-50";
+      return "bg-gray-100";
   }
 };
 
 export function ViewActivities() {
   const activities = useBabyActivities();
   const user = useUser();
+  const [selectedActivity, setSelectedActivity] = useState(null);
 
   const renderActivityTime = (activityName, activityTime) => {
     const now = new Date();
@@ -68,6 +70,7 @@ export function ViewActivities() {
         return;
       }
     }
+    setSelectedActivity(null);
   };
 
   const renderActivityIcon = (activityName) => {
@@ -106,6 +109,10 @@ export function ViewActivities() {
     }
   };
 
+  const toggleMenu = (activityId) => {
+    setSelectedActivity(selectedActivity === activityId ? null : activityId);
+  };
+
   return (
     <div className="container mx-auto p-4 sm:px-6 lg:px-8">
       <section className="mt-12">
@@ -127,32 +134,31 @@ export function ViewActivities() {
                     {renderActivityIcon(activity.activityName)}{" "}
                     {activity.activityName}
                   </p>
-                  <button
-                    className="text-red-400 border border-red-400 rounded px-2 py-1 hover:bg-red-400 hover:text-white transition duration-300 ease-in-out"
-                    onClick={() => deleteActivity(activity.$id)}
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      className="h-6 w-6"
+                  <div className="relative">
+                    <button
+                      onClick={() => toggleMenu(activity.$id)}
+                      className="focus:outline-none"
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                      />
-                    </svg>
-                  </button>
+                      <FontAwesomeIcon icon={faEllipsisV} className="h-4 w-4" />
+                    </button>
+                    {selectedActivity === activity.$id && (
+                      <div className="absolute right-0 mt-2 w-32 bg-white border border-gray-300 rounded-md shadow-lg z-10">
+                        <button
+                          onClick={() => deleteActivity(activity.$id)}
+                          className="block w-full py-2 px-4 text-left text-gray-700 hover:bg-gray-100"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <p>
-                  <span className="font-bold">Description:</span>{" "}
+                  {/* <span className="font-bold">Quantity / Unit:</span>{" "} */}
                   {activity.value} {activity.unit}
                 </p>
                 <div className="mt-2">
-                  <span className="font-bold">Time:</span>{" "}
+                  {/* <span className="font-bold">Time:</span>{" "} */}
                   {renderActivityTime(
                     activity.activityName,
                     activity.activityTime
