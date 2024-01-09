@@ -78,6 +78,28 @@ export function Activities() {
     setUnit(event.target.value);
   };
 
+  const getButtonLabel = () => {
+    let label = "";
+
+    if (activityName === "Feed") {
+      label = `Log ${value}${unit} Feed`;
+    } else if (activityName === "Diaper") {
+      label = "Log Diaper Change";
+    } else if (activityName === "Vitamin D") {
+      label = "Log Vitamin D";
+    } else {
+      label = "Log Activity";
+    }
+
+    if (selectedTimeDiff) {
+      label += ` (${
+        selectedTimeDiff === "NOW" ? "NOW" : `${selectedTimeDiff} mins ago`
+      })`;
+    }
+
+    return label;
+  };
+
   const quickValues = [60, 70, 80, 90, 1];
   if (!user.current) {
     navigate("/login");
@@ -249,7 +271,7 @@ export function Activities() {
         </div>
         <div>
           <button
-            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full"
+            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full mb-3"
             type="button"
             onClick={() => {
               const now = new Date();
@@ -289,7 +311,7 @@ export function Activities() {
               setSelectedTimeDiff(null);
             }}
           >
-            Log Activity
+            {getButtonLabel()}
           </button>
         </div>
       </form>
