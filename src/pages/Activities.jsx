@@ -157,7 +157,7 @@ export function Activities() {
             }}
             className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
           />
-          <div className="mt-2 overflow-x-auto whitespace-nowrap group">
+          <div className="mt-2  whitespace-nowrap group overflow-x-scroll">
             <button
               type="button"
               onClick={() => {

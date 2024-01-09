@@ -10,6 +10,21 @@ import {
   faSun,
 } from "@fortawesome/free-solid-svg-icons";
 
+const getActivityCardColor = (activityName) => {
+  switch (activityName) {
+    case "Feed":
+      return "bg-blue-50";
+    case "Diaper":
+      return "bg-red-50";
+    case "Vitamin D":
+      return "bg-yellow-50";
+    case "Medicine":
+      return "bg-purple-50";
+    default:
+      return "bg-gray-50";
+  }
+};
+
 export function ViewActivities() {
   const activities = useBabyActivities();
   const user = useUser();
@@ -30,7 +45,7 @@ export function ViewActivities() {
 
     return (
       <div
-        className={` ${
+        className={`${
           timeDifference > cutOffTime ? "text-red-500" : "text-green-500"
         }`}
       >
@@ -92,56 +107,26 @@ export function ViewActivities() {
   };
 
   return (
-    <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="container mx-auto p-4 sm:px-6 lg:px-8">
       <section className="mt-12">
         <h2 className="text-2xl font-bold mb-4 text-gray-800">
           Latest Activities
         </h2>
-        <div className="bg-white shadow-md rounded m-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {activities.current
             .sort((a, b) => new Date(b.activityTime) - new Date(a.activityTime))
             .map((activity) => (
               <div
-                className="flex flex-col sm:flex-row border-b border-grey-light py-4 m-2 relative"
                 key={activity.$id}
+                className={`flex flex-col border border-gray-200 rounded-md p-4 ${getActivityCardColor(
+                  activity.activityName
+                )}`}
               >
-                <div className="w-full sm:w-1/4 px-6 mb-4 sm:mb-0">
-                  <h4 className=" hidden md:flex font-bold uppercase text-sm text-grey">
-                    Activity
-                  </h4>
-                  <p className="font-bold text-2xl md:text-lg">
+                <div className="flex justify-between items-center mb-2">
+                  <p className="font-bold text-lg">
                     {renderActivityIcon(activity.activityName)}{" "}
                     {activity.activityName}
                   </p>
-                </div>
-                <div className="w-full sm:w-1/4 px-6 mb-2 sm:mb-0">
-                  <h4 className="hidden md:flex font-bold uppercase text-sm text-grey">
-                    Description
-                  </h4>
-                  <p>
-                    {activity.value} {activity.unit}
-                  </p>
-                </div>
-                <div className="w-full sm:w-1/4 px-6 mb-4 sm:mb-0">
-                  <h4 className="hidden md:flex font-bold uppercase text-sm text-grey">
-                    Time
-                  </h4>
-                  <div className="">
-                    {renderActivityTime(
-                      activity.activityName,
-                      activity.activityTime
-                    )}
-                  </div>
-                  <ActivityTime
-                    className=" top-0"
-                    activityName={activity.activityName}
-                    activityTime={activity.activityTime}
-                  />
-                </div>
-                <div className="w-full sm:w-1/4 px-6">
-                  <h4 className="hidden md:flex font-bold uppercase text-sm text-grey">
-                    Actions
-                  </h4>
                   <button
                     className="text-red-400 border border-red-400 rounded px-2 py-1 hover:bg-red-400 hover:text-white transition duration-300 ease-in-out"
                     onClick={() => deleteActivity(activity.$id)}
@@ -162,6 +147,22 @@ export function ViewActivities() {
                     </svg>
                   </button>
                 </div>
+                <p>
+                  <span className="font-bold">Description:</span>{" "}
+                  {activity.value} {activity.unit}
+                </p>
+                <div className="mt-2">
+                  <span className="font-bold">Time:</span>{" "}
+                  {renderActivityTime(
+                    activity.activityName,
+                    activity.activityTime
+                  )}
+                </div>
+                <ActivityTime
+                  className="mt-2"
+                  activityName={activity.activityName}
+                  activityTime={activity.activityTime}
+                />
               </div>
             ))}
         </div>
