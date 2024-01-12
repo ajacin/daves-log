@@ -1,3 +1,8 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+@import url("https://fonts.googleapis.com/css2?family=Digital+7&display=swap");
+
+.font-digital-7 {
+  font-family: "Digital 7", sans-serif;
+}

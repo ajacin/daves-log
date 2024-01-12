@@ -9,6 +9,7 @@ import {
   faCapsules,
   faSun,
   faEllipsisV,
+  faClock,
 } from "@fortawesome/free-solid-svg-icons";
 
 const getActivityCardColor = (activityName) => {
@@ -31,7 +32,11 @@ export function ViewActivities() {
   const user = useUser();
   const [selectedActivity, setSelectedActivity] = useState(null);
 
-  const renderActivityTime = (activityName, activityTime) => {
+  const renderActivityTime = (
+    activityName,
+    activityTime,
+    displayTimeOnly = false
+  ) => {
     const now = new Date();
     const activityDate = new Date(activityTime);
     const timeDifference = (now - activityDate) / (1000 * 60 * 60);
@@ -45,12 +50,31 @@ export function ViewActivities() {
         ? 24
         : 24;
 
+    const cutOffPassed = timeDifference > cutOffTime;
+
+    if (displayTimeOnly) {
+      return (
+        <div
+          className={`flex gap-1 text-lg text-center border font-digital-7 text-black pr-1 items-center ${
+            cutOffPassed ? "bg-red-400" : "bg-green-400"
+          } `}
+        >
+          <FontAwesomeIcon
+            color={"white"}
+            icon={faClock}
+            className="m-1"
+            size="small"
+          />
+          {activityDate.toLocaleTimeString(undefined, {
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
+        </div>
+      );
+    }
+
     return (
-      <div
-        className={`${
-          timeDifference > cutOffTime ? "text-red-500" : "text-green-500"
-        }`}
-      >
+      <div className={`${cutOffPassed ? "text-red-500" : "text-green-500"}`}>
         {activityDate.toLocaleTimeString(undefined, {
           weekday: "short",
           year: "numeric",
@@ -128,10 +152,17 @@ export function ViewActivities() {
                 )}`}
               >
                 <div className="flex justify-between items-center mb-2">
-                  <p className="font-bold text-lg">
+                  <p className="font-bold text-lg w-[60%]">
                     {renderActivityIcon(activity.activityName)}{" "}
                     {activity.activityName}
                   </p>
+                  <div>
+                    {renderActivityTime(
+                      activity.activityName,
+                      activity.activityTime,
+                      true
+                    )}
+                  </div>
                   <div className="relative">
                     <button
                       onClick={() => toggleMenu(activity.$id)}
