@@ -158,7 +158,7 @@ export function ViewActivities() {
                 )}`}
               >
                 <div className="flex justify-between items-center mb-2">
-                  <p className="font-bold text-lg w-[60%]">
+                  <p className="font-bold text-lg w-[55%]">
                     {renderActivityIcon(activity.activityName)}{" "}
                     {activity.activityName}
                   </p>
