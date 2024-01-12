@@ -11,6 +11,7 @@ import {
   faEllipsisV,
   faClock,
 } from "@fortawesome/free-solid-svg-icons";
+import Clock from "../components/Clock";
 
 const getActivityCardColor = (activityName) => {
   switch (activityName) {
@@ -140,7 +141,12 @@ export function ViewActivities() {
   return (
     <div className="container mx-auto p-4 sm:px-6 lg:px-8">
       <section className="mt-12">
-        <h2 className="text-2xl font-bold mb-4 text-gray-800">Last 24 hours</h2>
+        <div className="flex justify-between">
+          <h2 className="text-2xl font-bold mb-4 text-gray-800">
+            Last 24 hours
+          </h2>
+          <Clock></Clock>
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {activities.current
             .sort((a, b) => new Date(b.activityTime) - new Date(a.activityTime))
