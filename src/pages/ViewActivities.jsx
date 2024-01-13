@@ -16,15 +16,16 @@ import {
 const getActivityCardColor = (activityName) => {
   switch (activityName) {
     case "Feed":
-      return "bg-blue-100";
+      // return "bg-blue-100";
+      return "border-blue-500";
     case "Diaper":
-      return "bg-green-100";
+      return "border-violet-500";
     case "Vitamin D":
-      return "bg-yellow-100";
+      return "border-pink-500";
     case "Medicine":
-      return "bg-purple-100";
+      return "border-purple-500";
     default:
-      return "bg-gray-100";
+      return "border-gray-500";
   }
 };
 
@@ -56,12 +57,12 @@ export function ViewActivities() {
     if (displayTimeOnly) {
       return (
         <div
-          className={`flex gap-1 text-lg text-center border font-digital-7 text-black pr-1 items-center ${
-            cutOffPassed ? "bg-red-400" : "bg-green-400"
+          className={`flex gap-1 text-lg text-center rounded-md border-x-4 font-digital-7 text-black pr-1 items-center ${
+            cutOffPassed ? "border-red-400" : "border-green-400"
           } `}
         >
           <FontAwesomeIcon
-            color={"white"}
+            // color={"whi}
             icon={faClock}
             className="m-1"
             size="small"
@@ -153,7 +154,7 @@ export function ViewActivities() {
             .map((activity) => (
               <div
                 key={activity.$id}
-                className={`flex flex-col border border-gray-200 rounded-md p-4 ${getActivityCardColor(
+                className={`flex flex-col bg-white shadow-xl  rounded-md p-4 border-l-8 border-solid ${getActivityCardColor(
                   activity.activityName
                 )}`}
               >
