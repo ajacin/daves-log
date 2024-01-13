@@ -11,7 +11,7 @@ import {
   faEllipsisV,
   faClock,
 } from "@fortawesome/free-solid-svg-icons";
-import Clock from "../components/Clock";
+// import Clock from "../components/Clock";
 
 const getActivityCardColor = (activityName) => {
   switch (activityName) {
