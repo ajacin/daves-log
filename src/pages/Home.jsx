@@ -64,7 +64,7 @@ export function Home() {
             })}
           </section>
           <section className="mt-6">
-            <div className="flex justify-center items-center min-h-screen bg-gray-100">
+            <div className="flex justify-center items-center bg-gray-100 border border-red-300 rounded">
               <a
                 href="https://ajacin.notion.site/Thermometer-Reading-87631db6625c45608bc21d895b4ab917"
                 target="_blank"
