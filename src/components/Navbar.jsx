@@ -15,7 +15,7 @@ export function Navbar({ setIsDrawerOpen }) {
                 className="px-3 py-2 flex items-center text-xs uppercase font-bold leading-snug  hover:opacity-75"
                 to="/"
               >
-                Home
+                <div className="text-lg">Home</div>
               </Link>
             </li>
             {/* <li className="nav-item">
@@ -33,7 +33,7 @@ export function Navbar({ setIsDrawerOpen }) {
                 className="px-3 py-2 flex items-center text-xs uppercase font-bold leading-snug  hover:opacity-75"
                 to="/ideas"
               >
-                Ideas
+                <div className="text-lg">Ideas</div>
               </Link>
             </li>
             <li className="nav-item">
@@ -42,7 +42,7 @@ export function Navbar({ setIsDrawerOpen }) {
                 className="px-3 py-2 flex items-center text-xs uppercase font-bold leading-snug  hover:opacity-75"
                 to="/activities"
               >
-                Activities
+                <div className="text-lg">Log Activities</div>
               </Link>
             </li>
             <li className="nav-item">
@@ -51,7 +51,7 @@ export function Navbar({ setIsDrawerOpen }) {
                 className="px-3 py-2 flex items-center text-xs uppercase font-bold leading-snug  hover:opacity-75"
                 to="/view-activities"
               >
-                View
+                <div className="text-lg">View Activities</div>
               </Link>
             </li>
           </ul>

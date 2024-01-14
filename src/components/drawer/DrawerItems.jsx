@@ -4,12 +4,15 @@ import { faBars, faPowerOff } from "@fortawesome/free-solid-svg-icons";
 import { Navbar } from "../Navbar";
 import { useUser } from "../../lib/context/user";
 
-const DrawerItems = ({ setIsDrawerOpen }) => {
+const DrawerItems = ({ setIsDrawerOpen, toggleDrawer }) => {
   const user = useUser();
   return (
     <div className="flex flex-col gap-1 align-start justify-between text-black h-screen">
       <div>
-        <div className="flex justify-start gap-2 m-2 items-center">
+        <div
+          className="flex justify-start gap-2 m-2 items-center"
+          onClick={toggleDrawer}
+        >
           <FontAwesomeIcon
             color={"RED"}
             icon={faBars}
@@ -18,6 +21,7 @@ const DrawerItems = ({ setIsDrawerOpen }) => {
           />
           <p>DAVE'S LOG</p>
         </div>
+        <div className="border"></div>
         <Navbar setIsDrawerOpen={setIsDrawerOpen}></Navbar>
       </div>
       <div>

@@ -31,7 +31,10 @@ const AppDrawer = () => {
         direction="left"
         className="text-white"
       >
-        <DrawerItems setIsDrawerOpen={setIsDrawerOpen}></DrawerItems>
+        <DrawerItems
+          setIsDrawerOpen={setIsDrawerOpen}
+          toggleDrawer={toggleDrawer}
+        ></DrawerItems>
       </Drawer>
     </>
   );
