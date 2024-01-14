@@ -1,31 +1,54 @@
-import { useUser } from "../lib/context/user";
+import { Link } from "react-router-dom";
 
 export function Navbar() {
-    const user = useUser();
-  
-    return (
-        <nav className="flex items-center justify-between flex-wrap bg-blue-500 p-6">
-            <div className="flex items-center flex-shrink-0 text-white mr-6">
-                <a href="/" className="font-semibold text-xl tracking-tight">Idea tracker</a>
-            </div>
-            <div className="block">
-                {user.current ? (
-                    <div className="flex gap-1">
-                        {/* <span className="inline-block text-sm px-4 py-2 leading-none border rounded text-white border-white hover:border-transparent hover:text-blue-500 hover:bg-white mt-4 lg:mt-0">{user.current.email}</span> */}
-                        <a href="/activities" className="inline-block text-sm px-4 py-2 leading-none border rounded text-white border-white hover:border-transparent hover:text-blue-500 hover:bg-white mt-4 lg:mt-0">Activities</a>
-                        <a href="/view-activities" className="inline-block text-sm px-4 py-2 leading-none border rounded text-white border-white hover:border-transparent hover:text-blue-500 hover:bg-white mt-4 lg:mt-0">View Activities</a>
-                        <button 
-                            type="button" 
-                            onClick={() => user.logout()} 
-                            className="inline-block text-sm px-4 py-2 leading-none border rounded text-white border-white hover:border-transparent hover:text-blue-500 hover:bg-white mt-4 lg:mt-0 ml-2"
-                        >
-                            Logout
-                        </button>
-                    </div>
-                ) : (
-                    <a href="/login" className="inline-block text-sm px-4 py-2 leading-none border rounded text-white border-white hover:border-transparent hover:text-blue-500 hover:bg-white mt-4 lg:mt-0">Login</a>
-                )}
-            </div>
-        </nav>
-    );
+  return (
+    <nav className=" p-2 mt-0 mb-4">
+      <div className="container mx-auto flex flex-wrap items-center">
+        <div className="flex w-full md:w-auto">
+          <ul className="flex flex-col pl-0 mb-0 list-none text-gray-700">
+            <li className="nav-item">
+              <Link
+                className="px-3 py-2 flex items-center text-xs uppercase font-bold leading-snug  hover:opacity-75"
+                to="/"
+              >
+                Home
+              </Link>
+            </li>
+            <li className="nav-item">
+              <Link
+                className="px-3 py-2 flex items-center text-xs uppercase font-bold leading-snug  hover:opacity-75"
+                to="/login"
+              >
+                Login
+              </Link>
+            </li>
+            <li className="nav-item">
+              <Link
+                className="px-3 py-2 flex items-center text-xs uppercase font-bold leading-snug  hover:opacity-75"
+                to="/ideas"
+              >
+                Ideas
+              </Link>
+            </li>
+            <li className="nav-item">
+              <Link
+                className="px-3 py-2 flex items-center text-xs uppercase font-bold leading-snug  hover:opacity-75"
+                to="/activities"
+              >
+                Activities
+              </Link>
+            </li>
+            <li className="nav-item">
+              <Link
+                className="px-3 py-2 flex items-center text-xs uppercase font-bold leading-snug  hover:opacity-75"
+                to="/view-activities"
+              >
+                View
+              </Link>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+  );
 }
