@@ -6,6 +6,8 @@ import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import LastActivity from "../components/LastActivity";
 import { Vortex } from "react-loader-spinner";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faCheck } from "@fortawesome/free-solid-svg-icons";
 
 export function Activities() {
   const babyActivities = useBabyActivities();
@@ -16,10 +18,23 @@ export function Activities() {
   const onSuccessAdd = (activityName) => {
     setIsLoading(false);
     // https://react-hot-toast.com/docs/toast
-    toast.success(`${activityName} added!`, {
-      id: "saveActivitySuccessToast",
-      duration: 4000,
-    });
+    toast(
+      <div className=" bg-green-600 border border-green-600 rounded p-2 text-white ">
+        <h3>{`${activityName} saved`}</h3>
+      </div>,
+      {
+        icon: (
+          <FontAwesomeIcon
+            color={"green"}
+            icon={faCheck}
+            className="h-6 w-6 mr-2"
+          />
+        ),
+        position: "top-center",
+        id: "saveActivitySuccessToast",
+        duration: 6000,
+      }
+    );
   };
 
   function pad(num) {
