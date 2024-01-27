@@ -6,6 +6,7 @@ import {
   faEllipsisV,
   faTrash,
   faPlus,
+  faInfoCircle,
 } from "@fortawesome/free-solid-svg-icons";
 
 export function Ideas() {
@@ -134,9 +135,17 @@ export function Ideas() {
                   </button>
                   {selectedIdea === idea.$id && (
                     <div className="absolute right-0 mt-2 w-32 bg-white border border-gray-300 rounded-md shadow-lg z-10">
+                      <div className="flex gap-1 items-center m-1 justify-center">
+                        <FontAwesomeIcon
+                          icon={faInfoCircle}
+                          className="h-4 w-4"
+                        />
+                        <span>Your note</span>
+                      </div>
+
                       <button
                         onClick={() => handleRemove(idea.$id)}
-                        className="block w-full py-2 px-4 text-left text-gray-700 hover:bg-gray-100"
+                        className="block w-full py-2 px-4 text-left text-red-700 hover:bg-gray-100"
                       >
                         <FontAwesomeIcon icon={faTrash} className="mr-2" />
                         Remove
