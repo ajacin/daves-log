@@ -39,7 +39,12 @@ export function Ideas() {
       return;
     }
 
-    ideas.add({ userId: user.current.$id, title, description });
+    const entryDate = new Date().toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "numeric",
+      day: "numeric",
+    }); // Capture current date
+    ideas.add({ userId: user.current.$id, title, description, entryDate });
     cancelResetForm();
   };
 
@@ -103,6 +108,17 @@ export function Ideas() {
               </div>
               <div className="mt-2">
                 <p>{idea.description}</p>
+                <p className="text-gray-600 mt-2">
+                  {" "}
+                  <p className="text-gray-600 mt-2">
+                    {new Date(idea.entryDate).toLocaleDateString(undefined, {
+                      weekday: "short",
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </p>
+                </p>
               </div>
               {user.current && user.current.$id === idea.userId && (
                 <div className="absolute top-2 right-2">
