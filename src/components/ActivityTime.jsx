@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import ReactTimeAgo from "react-time-ago";
+// import ReactTimeAgo from "react-time-ago";
+import TimeAgo from "./TImeAgo";
 
 const ActivityTime = ({ activityName, activityTime }) => {
   const activityDate = useMemo(() => new Date(activityTime), [activityTime]);
@@ -41,7 +42,8 @@ const ActivityTime = ({ activityName, activityTime }) => {
         timeDifference > cutOffTime ? "text-red-500" : "text-green-500"
       }`}
     >
-      {activityDate && <ReactTimeAgo date={activityDate} locale="en-US" />}
+      {/* {activityDate && <ReactTimeAgo date={activityDate} locale="en-US" />} */}
+      {activityDate && <TimeAgo date={activityDate} threshold={cutOffTime} />}
       {/* <p> / {cutOffTime} hours </p> */}
     </div>
   );

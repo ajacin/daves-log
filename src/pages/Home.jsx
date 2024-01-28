@@ -58,7 +58,10 @@ export function Home() {
                     icon={faExclamationCircle}
                     className="h-6 w-6 mr-2"
                   />
-                  <LastActivity name={activity.activityName} />
+                  <LastActivity
+                    name={activity.activityName}
+                    threshold={cutOffTime}
+                  />
                 </div>
               );
             })}
