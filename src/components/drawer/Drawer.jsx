@@ -30,6 +30,7 @@ const AppDrawer = () => {
         onClose={toggleDrawer}
         direction="left"
         className="text-white"
+        overlayColor={"purple"}
       >
         <DrawerItems
           setIsDrawerOpen={setIsDrawerOpen}
