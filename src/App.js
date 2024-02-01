@@ -1,3 +1,4 @@
+import React from "react";
 import { Route, Routes } from "react-router-dom";
 import { ViewActivities } from "./pages/ViewActivities";
 import { Activities } from "./pages/Activities";
@@ -7,9 +8,11 @@ import { Home } from "./pages/Home";
 import AppDrawer from "./components/drawer/Drawer";
 import { useUser } from "./lib/context/user";
 import { Resources } from "./pages/Resources";
+import BottomNavigation from "./components/BottomNavigation";
 
 export default function App() {
   const user = useUser();
+
   return (
     <div>
       <div className="bg-gray-800 p-2 mt-0 fixed w-full z-10 top-0 mb-4">
@@ -18,7 +21,7 @@ export default function App() {
             <AppDrawer></AppDrawer>
             <h1>DAVE'S LOG</h1>
             {user.current ? (
-              <span className="bg-red-100self-end text-purple-300">
+              <span className=" text-purple-300">
                 {" | "} {user.current.name}
               </span>
             ) : null}
@@ -35,6 +38,9 @@ export default function App() {
           <Route path="/view-activities" element={<ViewActivities />} />
         </Routes>
       </div>
+      {user?.current?.labels?.includes("admin") && (
+        <BottomNavigation className="w-[100%] pt-1" />
+      )}
     </div>
   );
 }
