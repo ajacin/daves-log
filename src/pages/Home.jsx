@@ -51,6 +51,44 @@ export function Home() {
                   : 24;
               const timeDifference = (now - activityDate) / (1000 * 60 * 60);
 
+              /*
+              <div class="p-6 max-w-sm mx-auto bg-white rounded-xl shadow-md flex items-center space-x-4">
+  <div class="flex-shrink-0">
+    <svg class="h-12 w-12 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+    </svg>
+  </div>
+  <div>
+    <div class="text-xl font-medium text-black">Last Feed</div>
+    <p class="text-gray-500">Fed 2 hours and 3 minutes ago.</p>
+  </div>
+</div>
+
+<div class="p-6 max-w-sm mx-auto bg-white rounded-xl shadow-md flex items-center space-x-4 mt-6">
+  <div class="flex-shrink-0">
+    <svg class="h-12 w-12 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+    </svg>
+  </div>
+  <div>
+    <div class="text-xl font-medium text-black">Last Diaper Change</div>
+    <p class="text-gray-500">Changed 1 hour and 30 minutes ago.</p>
+  </div>
+</div>
+
+<div class="p-6 max-w-sm mx-auto bg-white rounded-xl shadow-md flex items-center space-x-4 mt-6">
+  <div class="flex-shrink-0">
+    <svg class="h-12 w-12 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+    </svg>
+  </div>
+  <div>
+    <div class="text-xl font-medium text-black">Last Vitamin D Intake</div>
+    <p class="text-gray-500">Taken 3 hours and 15 minutes ago.</p>
+  </div>
+</div>
+              */
+
               return (
                 <div key={activity.$id} className="flex items-center m-2">
                   <FontAwesomeIcon
