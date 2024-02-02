@@ -4,7 +4,7 @@ import { useBabyActivities } from "../lib/context/activities";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBook } from "@fortawesome/free-solid-svg-icons";
 import LastActivity from "../components/LastActivity";
-import { LineWave } from "react-loader-spinner";
+import { ColorRing } from "react-loader-spinner";
 import BucketList from "../components/BucketList";
 
 export function Home() {
@@ -33,7 +33,7 @@ export function Home() {
   }, [activities]);
 
   return (
-    <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="container mx-auto px-4 sm:px-6 lg:px-8 justify-center items-center">
       {user.current ? (
         <>
           <section className="mt-8 border-xl p-4 rounded">
@@ -84,12 +84,12 @@ export function Home() {
             })}
           </section>
           <section className="mt-6">
-            <div className="flex justify-center items-center bg-gray-100 border border-red-300 rounded">
+            <div className="flex justify-start items-start">
               <a
                 href="https://ajacin.notion.site/Thermometer-Reading-87631db6625c45608bc21d895b4ab917"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-6 py-3 text-white bg-blue-500 rounded-lg shadow-lg text-lg hover:bg-blue-600 transition-colors duration-200 flex items-center"
+                className="px-6 py-3 text-black  hover:bg-blue-600 transition-colors duration-200 flex items-center"
               >
                 <FontAwesomeIcon icon={faBook} className="h-6 w-6 mr-2" />
                 Thermometer Manual
@@ -101,20 +101,17 @@ export function Home() {
           </section>
         </>
       ) : (
-        <section className="flex justify-center items-center mt-8">
-          <LineWave
+        <div className="flex w-full h-screen justify-center items-center">
+          <ColorRing
             visible={true}
-            height={200}
-            width={200}
-            color="#4fa94d"
-            ariaLabel="line-wave-loading"
+            height="80"
+            width="80"
+            ariaLabel="color-ring-loading"
             wrapperStyle={{}}
-            wrapperClass=""
-            firstLineColor="red"
-            middleLineColor="blue"
-            lastLineColor="green"
+            wrapperClass="color-ring-wrapper"
+            colors={["#e15b64", "#f47e60", "#f8b26a", "#abbd81", "#849b87"]}
           />
-        </section>
+        </div>
       )}
     </div>
   );
