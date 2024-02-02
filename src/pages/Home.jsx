@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useUser } from "../lib/context/user";
 import { useBabyActivities } from "../lib/context/activities";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faExclamationCircle, faBook } from "@fortawesome/free-solid-svg-icons";
+import { faBook } from "@fortawesome/free-solid-svg-icons";
 import LastActivity from "../components/LastActivity";
 import { LineWave } from "react-loader-spinner";
 import BucketList from "../components/BucketList";
@@ -51,12 +51,6 @@ export function Home() {
                   : 24;
               const timeDifference = (now - activityDate) / (1000 * 60 * 60);
 
-              // `${cutOffPassed ? "text-red-500" : "text-green-500"}`;
-              const getIconColor = () => {
-                return timeDifference > cutOffTime
-                  ? "text-indigo-100"
-                  : "text-indigo-500";
-              };
               return (
                 <div class="p-6 max-w-sm w-full md-w-auto mx-auto bg-white rounded-xl shadow-md flex space-x-4 mt-6">
                   <div class="flex-shrink-0">
