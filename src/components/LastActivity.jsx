@@ -17,10 +17,12 @@ const LastActivity = ({ name, isOnlyTime = false, threshold = 0 }) => {
     return <div>{"..."}</div>;
   }
   return (
-    <div className="flex items-center space-x-1">
+    <div className="flex-col items-center space-x-1">
       {/* {isOnlyTime ? null : <span>{"Last"}</span>} */}
       {isOnlyTime ? null : (
-        <span>{lastActivity.activityName.toLowerCase()}</span>
+        <div className="text-purple-600 text-lg">
+          {lastActivity.activityName}
+        </div>
       )}
 
       {/* <ReactTimeAgo date={lastActivity.activityTime} locale="en-US" /> */}
