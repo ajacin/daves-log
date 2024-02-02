@@ -9,14 +9,14 @@ const BucketList = () => {
 
   return (
     <div className="container mx-auto py-8">
-      <h3 className="text-3xl font-bold mb-6 text-center text-gray-800">
-        Before Next Winter
-      </h3>
+      <h5 className="text-3xl font-bold mb-6 text-center text-gray-800">
+        Bucket list
+      </h5>
       <ul className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {placesToVisit.map((place, index) => (
           <li
             key={index}
-            className="bg-white p-4 shadow-md rounded-md transition duration-300 ease-in-out transform hover:scale-105 flex items-center"
+            className="bg-white p-4 transition duration-300 ease-in-out transform hover:scale-105 flex items-center"
           >
             {/* <FaSquare className="text-gray-500 mr-2" /> Unchecked icon */}
             <FontAwesomeIcon
