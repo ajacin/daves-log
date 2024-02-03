@@ -62,7 +62,7 @@ export function Activities() {
 
   const [activityName, setActivityName] = useState("Feed");
   const [activityTime, setActivityTime] = useState(getLocalDateTime());
-  const [value, setValue] = useState("90");
+  const [value, setValue] = useState("100");
   const [unit, setUnit] = useState("mL");
   const [remarks, setRemarks] = useState("");
 
@@ -115,7 +115,7 @@ export function Activities() {
     return label;
   };
 
-  const quickValues = [60, 70, 80, 90, 1];
+  const quickValues = [80, 90, 100, 1];
   if (!user.current) {
     navigate("/login");
   }
@@ -153,7 +153,7 @@ export function Activities() {
             value={activityName}
             options={activityNames}
           />
-          <LastActivity name={activityName} />
+          <LastActivity isOnlyTime name={activityName} />
         </div>
         <div className="mb-4">
           <label
@@ -275,13 +275,13 @@ export function Activities() {
           >
             Remarks
           </label>
-          <textarea
+          <input
             id="remarks"
             value={remarks}
             onChange={(event) => {
               setRemarks(event.target.value);
             }}
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline h-24"
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline h-10"
           />
         </div>
         <div>
@@ -320,7 +320,7 @@ export function Activities() {
               // Reset form
               setActivityName("Feed");
               setActivityTime(getLocalDateTime());
-              setValue("90");
+              setValue("100");
               setUnit("mL");
               setRemarks("");
               setSelectedTimeDiff(null);
