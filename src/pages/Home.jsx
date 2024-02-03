@@ -2,15 +2,69 @@ import React, { useState, useEffect } from "react";
 import { useUser } from "../lib/context/user";
 import { useBabyActivities } from "../lib/context/activities";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBook } from "@fortawesome/free-solid-svg-icons";
+import {
+  faBook,
+  faEye,
+  faLightbulb,
+  faPlus,
+} from "@fortawesome/free-solid-svg-icons";
 import LastActivity from "../components/LastActivity";
 import { ColorRing } from "react-loader-spinner";
 import BucketList from "../components/BucketList";
+import { Fab, Action } from "react-tiny-fab";
+import "react-tiny-fab/dist/styles.css";
+import { useNavigate } from "react-router-dom";
 
 export function Home() {
   const user = useUser();
   const activities = useBabyActivities();
+  const navigate = useNavigate();
   const [latestActivities, setLatestActivities] = useState([]);
+
+  ///FAB
+  // Placeholder values for FAB
+  const mainButtonStyles = {
+    backgroundColor: "#007BFF",
+    color: "white",
+  };
+
+  const actionButtonStyles = {
+    backgroundColor: "#fff",
+    color: "white",
+  };
+
+  const style = {
+    position: "fixed",
+    bottom: 20,
+    right: 20,
+  };
+
+  const event = "click";
+
+  // Placeholder function for FAB main button
+  // const someFunctionForTheMainButton = () => {
+  //   console.log("Main button clicked");
+  //   // Add your logic here
+  // };
+
+  // Placeholder function for FAB action button
+  const handleAddOnClick = () => {
+    navigate("/activities");
+  };
+
+  // Placeholder function for another FAB action button
+  const handleHelpOnClick = () => {
+    console.log("Help action clicked");
+    navigate("/view-activities");
+    // Add your logic here
+  };
+
+  // Placeholder function for a custom FAB action button
+  // const handleTheFooBarOnClick = () => {
+  //   console.log("FooBar action clicked");
+  //   // Add your logic here
+  // };
+  ///END OF FAB
 
   useEffect(() => {
     const filterFeedDiaperVitaminD = activities.current.filter(
@@ -112,6 +166,38 @@ export function Home() {
             colors={["#e15b64", "#f47e60", "#f8b26a", "#abbd81", "#849b87"]}
           />
         </div>
+      )}
+
+      {user?.current?.labels.includes("admin") && (
+        <Fab
+          mainButtonStyles={mainButtonStyles}
+          actionButtonStyles={actionButtonStyles}
+          style={style}
+          icon={<FontAwesomeIcon icon={faLightbulb} className="h-6 w-6" />}
+          event={event}
+          alwaysShowTitle={true}
+          v
+          // onClick={someFunctionForTheMainButton}
+        >
+          <Action
+            text="Add"
+            onClick={handleAddOnClick}
+            style={actionButtonStyles}
+          >
+            <FontAwesomeIcon color="purple" icon={faPlus} className="h-6 w-6" />
+          </Action>
+          <Action
+            text="View"
+            onClick={handleHelpOnClick}
+            style={actionButtonStyles}
+          >
+            <FontAwesomeIcon color="purple" icon={faEye} className="h-6 w-6" />
+          </Action>
+          {/* add custom components */}
+          {/* <div text="Quick Actions" onClick={handleTheFooBarOnClick}>
+            <i className="fa fa-foo-bar-fa-foo" />
+          </div> */}
+        </Fab>
       )}
     </div>
   );
