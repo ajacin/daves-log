@@ -175,7 +175,7 @@ export function Home() {
         </div>
       )}
 
-      {user?.current?.labels.includes("admin") && (
+      {user?.current && (
         <Fab
           mainButtonStyles={mainButtonStyles}
           actionButtonStyles={actionButtonStyles}
