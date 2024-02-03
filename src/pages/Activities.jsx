@@ -5,7 +5,7 @@ import { useUser } from "../lib/context/user";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import LastActivity from "../components/LastActivity";
-import { Vortex } from "react-loader-spinner";
+import { ColorRing } from "react-loader-spinner";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheck } from "@fortawesome/free-solid-svg-icons";
 
@@ -123,14 +123,14 @@ export function Activities() {
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-screen">
-        <Vortex
+        <ColorRing
           visible={true}
           height="80"
           width="80"
-          ariaLabel="vortex-loading"
+          ariaLabel="color-ring-loading"
           wrapperStyle={{}}
-          wrapperClass="vortex-wrapper"
-          colors={["red", "green", "blue", "yellow", "orange", "purple"]}
+          wrapperClass="color-ring-wrapper"
+          colors={["#e15b64", "#f47e60", "#f8b26a", "#abbd81", "#849b87"]}
         />
       </div>
     );

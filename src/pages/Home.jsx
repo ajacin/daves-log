@@ -4,13 +4,13 @@ import { useBabyActivities } from "../lib/context/activities";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faBook,
+  faBucket,
   faEye,
-  faLightbulb,
+  faNavicon,
   faPlus,
 } from "@fortawesome/free-solid-svg-icons";
 import LastActivity from "../components/LastActivity";
 import { ColorRing } from "react-loader-spinner";
-import BucketList from "../components/BucketList";
 import { Fab, Action } from "react-tiny-fab";
 import "react-tiny-fab/dist/styles.css";
 import { useNavigate } from "react-router-dom";
@@ -35,8 +35,8 @@ export function Home() {
 
   const style = {
     position: "fixed",
-    bottom: 20,
-    right: 20,
+    bottom: 10,
+    right: 10,
   };
 
   const event = "click";
@@ -137,6 +137,7 @@ export function Home() {
               );
             })}
           </section>
+
           <section className="mt-6">
             <div className="flex justify-start items-start">
               <a
@@ -148,10 +149,16 @@ export function Home() {
                 <FontAwesomeIcon icon={faBook} className="h-6 w-6 mr-2" />
                 Thermometer Manual
               </a>
+              <a
+                href="https://ajacin.notion.site/Bucket-List-of-Places-2024-f800a995a8f943139d45cd1f7b638b50?pvs=4"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-6 py-3 text-black  hover:bg-blue-600 transition-colors duration-200 flex items-center"
+              >
+                <FontAwesomeIcon icon={faBucket} className="h-6 w-6 mr-2" />
+                Bucket list
+              </a>
             </div>
-          </section>
-          <section className="mt-6">
-            <BucketList />
           </section>
         </>
       ) : (
@@ -173,7 +180,7 @@ export function Home() {
           mainButtonStyles={mainButtonStyles}
           actionButtonStyles={actionButtonStyles}
           style={style}
-          icon={<FontAwesomeIcon icon={faLightbulb} className="h-6 w-6" />}
+          icon={<FontAwesomeIcon icon={faNavicon} className="h-6 w-6" />}
           event={event}
           alwaysShowTitle={true}
           v
