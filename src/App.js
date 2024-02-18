@@ -7,6 +7,7 @@ import { Home } from "./pages/Home";
 import AppDrawer from "./components/drawer/Drawer";
 import { useUser } from "./lib/context/user";
 import { Resources } from "./pages/Resources";
+import { DueDates } from "./pages/DueDates";
 
 export default function App() {
   const user = useUser();
@@ -32,6 +33,7 @@ export default function App() {
           <Route path="/ideas" element={<Ideas />} />
           <Route path="/resources" element={<Resources />} />
           <Route path="/activities" element={<Activities />} />
+          <Route path="/due-dates" element={<DueDates />} />
           <Route path="/view-activities" element={<ViewActivities />} />
         </Routes>
       </div>
