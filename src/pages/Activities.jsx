@@ -300,6 +300,11 @@ export function Activities() {
                 return;
               }
 
+              if (activityName === "Medicine" && !remarks.trim()) {
+                alert("Please enter the medicine name in the Remarks field");
+                return;
+              }
+
               toast.loading(`Saving ${activityName}`, {
                 id: "saveActivitySuccessToast",
                 position: "center",
