@@ -10,6 +10,7 @@ import {
   faSun,
   faEllipsisV,
   faClock,
+  faListCheck,
 } from "@fortawesome/free-solid-svg-icons";
 // import Clock from "../components/Clock";
 
@@ -205,6 +206,15 @@ export function ViewActivities() {
                   activityName={activity.activityName}
                   activityTime={activity.activityTime}
                 />
+                <div>
+                  {activity.remarks ? (
+                    <div>
+                      {" "}
+                      <FontAwesomeIcon icon={faListCheck} className="mr-2" />
+                      {activity.remarks}
+                    </div>
+                  ) : null}
+                </div>
               </div>
             ))}
         </div>
