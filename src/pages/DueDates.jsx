@@ -1,6 +1,8 @@
 import { useUser } from "../lib/context/user";
 import jsonData from "../components/DueDateData";
 import DueDateDisplay from "../components/DueDateDisplay";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faClock } from "@fortawesome/free-solid-svg-icons";
 
 export function DueDates() {
   const user = useUser();
@@ -13,11 +15,17 @@ export function DueDates() {
           <div>
             {jsonData && jsonData.length > 0 ? (
               jsonData.map((item, index) => (
-                <DueDateDisplay
-                  key={index}
-                  title={item.title}
-                  date={item.date}
-                />
+                <div className="flex flex-row gap-1 items-center">
+                  <FontAwesomeIcon
+                    icon={faClock}
+                    color="purple"
+                  ></FontAwesomeIcon>
+                  <DueDateDisplay
+                    key={index}
+                    title={item.title}
+                    date={item.date}
+                  />
+                </div>
               ))
             ) : (
               <p>No due dates available</p>
