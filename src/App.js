@@ -8,6 +8,7 @@ import AppDrawer from "./components/drawer/Drawer";
 import { useUser } from "./lib/context/user";
 import { Resources } from "./pages/Resources";
 import { DueDates } from "./pages/DueDates";
+import Automations from "./pages/Automations";
 
 export default function App() {
   const user = useUser();
@@ -35,6 +36,7 @@ export default function App() {
           <Route path="/activities" element={<Activities />} />
           <Route path="/due-dates" element={<DueDates />} />
           <Route path="/view-activities" element={<ViewActivities />} />
+          <Route path="/automations" element={<Automations />} />
         </Routes>
       </div>
     </div>
