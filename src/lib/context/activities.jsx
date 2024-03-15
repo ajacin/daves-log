@@ -44,7 +44,7 @@ export function BabyActivitiesProvider(props) {
     const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
     const response = await databases.listDocuments(DATABASE_ID, COLLECTION_ID, [
       Query.orderDesc("$createdAt"),
-      // Query.limit(10),
+      Query.limit(1),
       Query.greaterThan("$createdAt", oneHourAgo.toISOString()),
       Query.equal("activityName", [activityName]),
     ]);
