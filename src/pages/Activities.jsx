@@ -77,7 +77,7 @@ export function Activities() {
     setActivityName(selectedActivity);
 
     if (selectedActivity === "Feed") {
-      setValue("90");
+      setValue("100");
       setUnit("mL");
     } else if (selectedActivity === "Diaper") {
       setValue("1");
