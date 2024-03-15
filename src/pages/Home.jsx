@@ -106,10 +106,10 @@ export function Home() {
               const timeDifference = (now - activityDate) / (1000 * 60 * 60);
 
               return (
-                <div class="p-6 max-w-sm w-full md-w-auto mx-auto bg-white rounded-xl shadow-md flex space-x-4 mt-6">
-                  <div class="flex-shrink-0">
+                <div className="p-6 max-w-sm w-full md-w-auto mx-auto bg-white rounded-xl shadow-md flex space-x-4 mt-6">
+                  <div className="flex-shrink-0">
                     <svg
-                      class={
+                      className={
                         timeDifference > cutOffTime
                           ? "h-12 w-12 text-red-200"
                           : "h-12 w-12 text-green-500"
