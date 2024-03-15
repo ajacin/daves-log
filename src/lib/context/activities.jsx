@@ -39,12 +39,12 @@ export function BabyActivitiesProvider(props) {
     await init(); // Refetch babyActivities to ensure we have 10 items
   }
 
-  async function sameActivityInTheLastOneHour(activityName) {
+  async function getNActivitiesLastXHours(activityName, hours = 1, count = 1) {
     const now = new Date();
-    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+    const oneHourAgo = new Date(now.getTime() - hours * 60 * 60 * 1000);
     const response = await databases.listDocuments(DATABASE_ID, COLLECTION_ID, [
       Query.orderDesc("$createdAt"),
-      Query.limit(1),
+      Query.limit(count),
       Query.greaterThan("$createdAt", oneHourAgo.toISOString()),
       Query.equal("activityName", [activityName]),
     ]);
@@ -74,7 +74,7 @@ export function BabyActivitiesProvider(props) {
         current: babyActivities,
         add,
         remove,
-        sameActivityInTheLastOneHour,
+        getNActivitiesLastXHours,
       }}
     >
       {props.children}

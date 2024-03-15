@@ -26,7 +26,7 @@ export function Activities() {
     const fetchExistingActivities = async () => {
       try {
         // Fetch activities from the past one hour
-        const activities = await babyActivities.sameActivityInTheLastOneHour(
+        const activities = await babyActivities.getNActivitiesLastXHours(
           activityName
         );
 
