@@ -23,13 +23,13 @@ const Automations = () => {
 
   const bedroomButtons = [
     {
-      name: "Bedroom Light 2",
-      url: "https://example.com/bedroom_light2",
+      name: "ON",
+      url: "https://www.virtualsmarthome.xyz/url_routine_trigger/activate.php?trigger=ac6834a8-8042-4230-af8f-c2c784d1905a&token=1b1a74d3-9054-4ee0-9abc-912bdb057b61&response=smartphone",
       icon: faLightbulb,
     },
     {
-      name: "Bedroom Light 3",
-      url: "https://example.com/bedroom_light3",
+      name: "OFF",
+      url: "https://www.virtualsmarthome.xyz/url_routine_trigger/activate.php?trigger=df44ec0c-e405-45e3-b810-e91cc1cd1d2e&token=60c2e96e-e7f2-45bf-96c0-2ccf1fd24228&response=smartphone",
       icon: faLightbulb,
     },
   ];

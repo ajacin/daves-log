@@ -4,14 +4,11 @@ import { useUser } from "../lib/context/user";
 import ActivityTime from "../components/ActivityTime";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faUtensils,
-  faBaby,
-  faCapsules,
-  faSun,
   faEllipsisV,
   faClock,
   faListCheck,
 } from "@fortawesome/free-solid-svg-icons";
+import { ActivityIcon } from "../components/ActivityIcon";
 // import Clock from "../components/Clock";
 
 const getActivityCardColor = (activityName) => {
@@ -100,41 +97,41 @@ export function ViewActivities() {
     setSelectedActivity(null);
   };
 
-  const renderActivityIcon = (activityName) => {
-    const iconColor = "purple";
-    switch (activityName) {
-      case "Feed":
-        return (
-          <FontAwesomeIcon
-            color={iconColor}
-            icon={faUtensils}
-            className="h-6 w-6"
-          />
-        );
-      case "Diaper":
-        return (
-          <FontAwesomeIcon
-            color={iconColor}
-            icon={faBaby}
-            className="h-6 w-6"
-          />
-        );
-      case "Vitamin D":
-        return (
-          <FontAwesomeIcon color={iconColor} icon={faSun} className="h-6 w-6" />
-        );
-      case "Medicine":
-        return (
-          <FontAwesomeIcon
-            color={iconColor}
-            icon={faCapsules}
-            className="h-6 w-6"
-          />
-        );
-      default:
-        return null;
-    }
-  };
+  // const ActivityIcon = ({ activityName }) => {
+  //   const iconColor = "purple";
+  //   switch (activityName) {
+  //     case "Feed":
+  //       return (
+  //         <FontAwesomeIcon
+  //           color={iconColor}
+  //           icon={faUtensils}
+  //           className="h-6 w-6"
+  //         />
+  //       );
+  //     case "Diaper":
+  //       return (
+  //         <FontAwesomeIcon
+  //           color={iconColor}
+  //           icon={faBaby}
+  //           className="h-6 w-6"
+  //         />
+  //       );
+  //     case "Vitamin D":
+  //       return (
+  //         <FontAwesomeIcon color={iconColor} icon={faSun} className="h-6 w-6" />
+  //       );
+  //     case "Medicine":
+  //       return (
+  //         <FontAwesomeIcon
+  //           color={iconColor}
+  //           icon={faCapsules}
+  //           className="h-6 w-6"
+  //         />
+  //       );
+  //     default:
+  //       return null;
+  //   }
+  // };
 
   const toggleMenu = (activityId) => {
     setSelectedActivity(selectedActivity === activityId ? null : activityId);
@@ -161,7 +158,7 @@ export function ViewActivities() {
               >
                 <div className="flex justify-between items-center mb-2">
                   <p className="font-bold text-lg w-[55%]">
-                    {renderActivityIcon(activity.activityName)}{" "}
+                    <ActivityIcon activityName={activity.activityName} />{" "}
                     {activity.activityName}
                   </p>
                   <div>

@@ -1,6 +1,5 @@
 import React from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCircle } from "@fortawesome/free-solid-svg-icons";
+import { ActivityIcon } from "./ActivityIcon";
 
 const SelectBox = ({ onChange, value, options }) => {
   return (
@@ -9,11 +8,11 @@ const SelectBox = ({ onChange, value, options }) => {
         <div
           key={option}
           onClick={() => onChange({ target: { value: option } })}
-          className={`cursor-pointer flex flex-col ${
-            value === option ? "text-purple-500" : "text-gray-500"
+          className={`cursor-pointer border p-2 rounded-lg min-w-16 justify-center items-center flex flex-col ${
+            value === option ? "text-purple-700 bg-purple-300" : "text-gray-500"
           }`}
         >
-          <FontAwesomeIcon icon={faCircle} size="2x" />
+          <ActivityIcon activityName={option}></ActivityIcon>
           <span>{option}</span>
         </div>
       ))}
