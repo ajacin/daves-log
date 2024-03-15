@@ -30,7 +30,7 @@ const DrawerItems = ({ setIsDrawerOpen, toggleDrawer }) => {
             color={"RED"}
             icon={faPowerOff}
             className="m-1"
-            //   size="small"
+            //   size="sm"
           />
           <button onClick={() => user.logout()}>Logout</button>
         </div>

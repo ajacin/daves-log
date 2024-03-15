@@ -63,7 +63,7 @@ export function ViewActivities() {
             // color={"whi}
             icon={faClock}
             className="m-1"
-            size="small"
+            size="sm"
           />
           {activityDate.toLocaleTimeString(undefined, {
             hour: "2-digit",
