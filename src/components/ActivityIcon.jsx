@@ -9,8 +9,8 @@ import {
   faListNumeric,
   faRuler,
 } from "@fortawesome/free-solid-svg-icons";
-export const ActivityIcon = ({ activityName }) => {
-  const iconColor = "purple";
+export const ActivityIcon = ({ activityName, color }) => {
+  const iconColor = color ?? "purple";
   switch (activityName) {
     case "Feed":
       return (

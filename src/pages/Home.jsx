@@ -14,6 +14,7 @@ import { ColorRing } from "react-loader-spinner";
 import { Fab, Action } from "react-tiny-fab";
 import "react-tiny-fab/dist/styles.css";
 import { useNavigate } from "react-router-dom";
+import { ActivityIcon } from "../components/ActivityIcon";
 
 export function Home() {
   const user = useUser();
@@ -108,24 +109,10 @@ export function Home() {
               return (
                 <div className="p-6 max-w-sm w-full md-w-auto mx-auto bg-white rounded-xl shadow-md flex space-x-4 mt-6">
                   <div className="flex-shrink-0">
-                    <svg
-                      className={
-                        timeDifference > cutOffTime
-                          ? "h-12 w-12 text-red-200"
-                          : "h-12 w-12 text-green-500"
-                      }
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M13 10V3L4 14h7v7l9-11h-7z"
-                      ></path>
-                    </svg>
+                    <ActivityIcon
+                      activityName={activity.activityName}
+                      color={timeDifference > cutOffTime ? "red" : "green"}
+                    />
                   </div>
                   <div>
                     <LastActivity
