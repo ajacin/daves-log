@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useBabyActivities } from "../lib/context/activities";
 import SelectBox from "../components/SelectBox";
 import { useUser } from "../lib/context/user";
@@ -14,12 +14,36 @@ export function Activities() {
   const user = useUser();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
+  const [existingActivities, setExistingActivities] = useState([]);
+  const [activityName, setActivityName] = useState("Feed");
+  const [activityTime, setActivityTime] = useState(getLocalDateTime());
+  const [value, setValue] = useState("100");
+  const [unit, setUnit] = useState("mL");
+  const [remarks, setRemarks] = useState("");
+  const [selectedTimeDiff, setSelectedTimeDiff] = useState(null);
+
+  useEffect(() => {
+    const fetchExistingActivities = async () => {
+      try {
+        // Fetch activities from the past one hour
+        const activities = await babyActivities.sameActivityInTheLastOneHour(
+          activityName
+        );
+
+        setExistingActivities(activities);
+      } catch (error) {
+        console.error("Error fetching existing activities:", error);
+      }
+    };
+
+    // Fetch existing activities when component mounts
+    fetchExistingActivities();
+  }, [babyActivities, activityName]);
 
   const onSuccessAdd = (activityName) => {
     setIsLoading(false);
-    // https://react-hot-toast.com/docs/toast
     toast(
-      <div className=" bg-green-600 border border-green-600 rounded p-2 text-white ">
+      <div className="bg-green-600 border border-green-600 rounded p-2 text-white">
         <h3>{`${activityName} saved`}</h3>
       </div>,
       {
@@ -44,9 +68,6 @@ export function Activities() {
 
   function getLocalDateTime() {
     const now = new Date();
-    // let tzo = -now.getTimezoneOffset(),
-    //   dif = tzo >= 0 ? "+" : "-";
-
     return (
       now.getFullYear() +
       "-" +
@@ -60,17 +81,9 @@ export function Activities() {
     );
   }
 
-  const [activityName, setActivityName] = useState("Feed");
-  const [activityTime, setActivityTime] = useState(getLocalDateTime());
-  const [value, setValue] = useState("100");
-  const [unit, setUnit] = useState("mL");
-  const [remarks, setRemarks] = useState("");
-
-  // Assuming you have these lists
   const activityNames = ["Feed", "Diaper", "Vitamin D", "Medicine"];
   const unitOptions = ["mL", "drops", "unit"];
-  const [selectedTimeDiff, setSelectedTimeDiff] = useState(null);
-  const timeDifferences = [5, 10, 15, 30, 60]; // time differences in minutes
+  const timeDifferences = [5, 10, 15, 30, 60];
 
   const onActivityNameChange = (event) => {
     const selectedActivity = event.target.value;
@@ -89,6 +102,7 @@ export function Activities() {
       setUnit("unit");
     }
   };
+
   const onUnitChange = (event) => {
     setUnit(event.target.value);
   };
@@ -116,6 +130,75 @@ export function Activities() {
   };
 
   const quickValues = [80, 90, 100, 1];
+
+  const handleClickSave = () => {
+    const now = new Date();
+    let activityDate = new Date(activityTime);
+
+    if (activityDate > now) {
+      activityDate = now;
+      alert(
+        "Future dates are not allowed. The activity time has been reset to the current date and time."
+      );
+      return;
+    }
+
+    if (activityName === "Medicine" && !remarks.trim()) {
+      alert("Please enter the medicine name in the Remarks field");
+      return;
+    }
+
+    // Check if the same activity exists within the past one hour
+    console.log({ existingActivities });
+    console.log({ activityName });
+    const isDuplicate = existingActivities.some((activity) => {
+      const timeDifference = now - new Date(activity.activityTime);
+      return (
+        activity.activityName === activityName &&
+        timeDifference <= 60 * 60 * 1000 // Within the past one hour
+      );
+    });
+
+    if (isDuplicate) {
+      const result = window.confirm(
+        ` You have logged ${existingActivities[0].activityName} within the last one hour. Sure you want to proceed?`
+      );
+      if (result) {
+        // Code to execute if user clicks OK
+        console.log("User clicked OK");
+      } else {
+        // Code to execute if user clicks Cancel
+        console.log("User clicked Cancel");
+        return;
+      }
+    }
+
+    toast.loading(`Saving ${activityName}`, {
+      id: "saveActivitySuccessToast",
+      position: "center",
+    });
+    setIsLoading(true);
+
+    babyActivities.add(
+      {
+        activityName,
+        activityTime: activityDate,
+        value: value.toString(),
+        unit,
+        remarks,
+      },
+      onSuccessAdd
+    );
+
+    // Reset form
+    setActivityName("Feed");
+    setActivityTime(getLocalDateTime());
+    setValue("100");
+    setUnit("mL");
+    setRemarks("");
+    setSelectedTimeDiff(null);
+  };
+
   if (!user.current) {
     navigate("/login");
   }
@@ -288,48 +371,7 @@ export function Activities() {
           <button
             className="bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full mb-3"
             type="button"
-            onClick={() => {
-              const now = new Date();
-              let activityDate = new Date(activityTime);
-
-              if (activityDate > now) {
-                activityDate = now; // reset to current date and time
-                alert(
-                  "Future dates are not allowed. The activity time has been reset to the current date and time."
-                );
-                return;
-              }
-
-              if (activityName === "Medicine" && !remarks.trim()) {
-                alert("Please enter the medicine name in the Remarks field");
-                return;
-              }
-
-              toast.loading(`Saving ${activityName}`, {
-                id: "saveActivitySuccessToast",
-                position: "center",
-              });
-              setIsLoading(true);
-
-              babyActivities.add(
-                {
-                  activityName,
-                  activityTime: activityDate, // use the possibly reset date
-                  value: value.toString(),
-                  unit,
-                  remarks,
-                },
-                onSuccessAdd
-              );
-
-              // Reset form
-              setActivityName("Feed");
-              setActivityTime(getLocalDateTime());
-              setValue("100");
-              setUnit("mL");
-              setRemarks("");
-              setSelectedTimeDiff(null);
-            }}
+            onClick={handleClickSave}
           >
             {getButtonLabel()}
           </button>

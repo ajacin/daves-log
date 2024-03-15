@@ -39,6 +39,18 @@ export function BabyActivitiesProvider(props) {
     await init(); // Refetch babyActivities to ensure we have 10 items
   }
 
+  async function sameActivityInTheLastOneHour(activityName) {
+    const now = new Date();
+    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+    const response = await databases.listDocuments(DATABASE_ID, COLLECTION_ID, [
+      Query.orderDesc("$createdAt"),
+      // Query.limit(10),
+      Query.greaterThan("$createdAt", oneHourAgo.toISOString()),
+      Query.equal("activityName", [activityName]),
+    ]);
+    console.log({ response });
+    return response?.documents ?? [];
+  }
   async function init() {
     const now = new Date();
     const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
@@ -58,7 +70,12 @@ export function BabyActivitiesProvider(props) {
 
   return (
     <BabyActivitiesContext.Provider
-      value={{ current: babyActivities, add, remove }}
+      value={{
+        current: babyActivities,
+        add,
+        remove,
+        sameActivityInTheLastOneHour,
+      }}
     >
       {props.children}
     </BabyActivitiesContext.Provider>
