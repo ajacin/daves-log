@@ -7,7 +7,7 @@ import toast from "react-hot-toast";
 import LastActivity from "../components/LastActivity";
 import { ColorRing } from "react-loader-spinner";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCheck } from "@fortawesome/free-solid-svg-icons";
+import { faCheck, faPlus, faMinus } from "@fortawesome/free-solid-svg-icons"; // Import plus and minus icons
 
 export function Activities() {
   const babyActivities = useBabyActivities();
@@ -17,7 +17,7 @@ export function Activities() {
   const [existingActivities, setExistingActivities] = useState([]);
   const [activityName, setActivityName] = useState("Feed");
   const [activityTime, setActivityTime] = useState(getLocalDateTime());
-  const [value, setValue] = useState("100");
+  const [value, setValue] = useState("120"); // Default value changed to 120
   const [unit, setUnit] = useState("mL");
   const [remarks, setRemarks] = useState("");
   const [selectedTimeDiff, setSelectedTimeDiff] = useState(null);
@@ -90,7 +90,7 @@ export function Activities() {
     setActivityName(selectedActivity);
 
     if (selectedActivity === "Feed") {
-      setValue("100");
+      setValue("120"); // Default value changed to 120
       setUnit("mL");
     } else if (selectedActivity === "Diaper") {
       setValue("1");
@@ -128,8 +128,6 @@ export function Activities() {
 
     return label;
   };
-
-  const quickValues = [80, 90, 100, 1];
 
   const handleClickSave = () => {
     const now = new Date();
@@ -193,7 +191,7 @@ export function Activities() {
     // Reset form
     setActivityName("Feed");
     setActivityTime(getLocalDateTime());
-    setValue("100");
+    setValue("120"); // Default value changed to 120
     setUnit("mL");
     setRemarks("");
     setSelectedTimeDiff(null);
@@ -313,28 +311,34 @@ export function Activities() {
             }}
             className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
           />
-          <div className="mt-2">
-            {quickValues.map((qv) => (
-              <button
-                key={qv}
-                type="button"
-                disabled={
-                  activityName === "Vitamin D" || activityName === "Diaper"
-                }
-                onClick={() => setValue(qv)}
-                className="mr-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold rounded inline-flex items-center"
-              >
-                <div
-                  className={` ${
-                    qv === value
-                      ? "bg-blue-500 py-2 px-4"
-                      : "bg-gray-200 py-2 px-4"
-                  }`}
-                >
-                  {qv}
-                </div>
-              </button>
-            ))}
+          <div className="mt-2 flex justify-center items-center">
+            <button
+              type="button"
+              onClick={() =>
+                setValue((prev) =>
+                  prev === "1"
+                    ? "10"
+                    : String(Math.max(parseInt(prev, 10) + 10, 1))
+                )
+              } // Increment by 10 until 10, then set to 1
+              className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold rounded-full h-10 w-10 flex items-center justify-center"
+            >
+              <FontAwesomeIcon icon={faPlus} />
+            </button>
+            <span className="mx-4 text-gray-700 font-bold">{value}</span>
+            <button
+              type="button"
+              onClick={() =>
+                setValue((prev) =>
+                  prev === "10"
+                    ? "1"
+                    : String(Math.max(parseInt(prev, 10) - 10, 1))
+                )
+              } // Decrement by 10 until 1, then set to 10
+              className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold rounded-full h-10 w-10 flex items-center justify-center"
+            >
+              <FontAwesomeIcon icon={faMinus} />
+            </button>
           </div>
         </div>
         <div className="mb-4">
