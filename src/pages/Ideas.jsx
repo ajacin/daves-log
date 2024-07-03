@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useUser } from "../lib/context/user";
 import { useIdeas } from "../lib/context/ideas";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -17,6 +17,10 @@ export function Ideas() {
   const [description, setDescription] = useState("");
   const [selectedIdea, setSelectedIdea] = useState(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
+
+  useEffect(() => {
+    ideas.init();
+  }, [ideas]);
 
   const handleRemove = (ideaId) => {
     ideas.remove(ideaId);
@@ -60,6 +64,7 @@ export function Ideas() {
             <FontAwesomeIcon icon={faPlus} className="mr-2" />
             Add Idea
           </button>
+          <h4>user ID:{user?.current?.$id}</h4>
           {isFormOpen && (
             <div className="mt-4">
               <h2 className="text-xl font-bold mb-2">Add Idea</h2>

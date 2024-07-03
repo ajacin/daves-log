@@ -44,7 +44,7 @@ export function IdeasProvider(props) {
   }, []);
 
   return (
-    <IdeasContext.Provider value={{ current: ideas, add, remove }}>
+    <IdeasContext.Provider value={{ current: ideas, add, remove, init }}>
       {props.children}
     </IdeasContext.Provider>
   );
