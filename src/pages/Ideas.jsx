@@ -33,6 +33,21 @@ export function Ideas() {
     setIsFormOpen(false);
   };
 
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    const options = {
+      weekday: "short",
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      timeZoneName: "short",
+    };
+    return date.toLocaleString(undefined, options);
+  };
+
   const handleFormSubmit = () => {
     // Basic validation
     if (!title || !description) {
@@ -44,11 +59,7 @@ export function Ideas() {
       return;
     }
 
-    const entryDate = new Date().toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "numeric",
-      day: "numeric",
-    }); // Capture current date
+    const entryDate = new Date().toISOString(); // Capture current date and time
     ideas.add({ userId: user.current.$id, title, description, entryDate });
     cancelResetForm();
   };
@@ -64,7 +75,6 @@ export function Ideas() {
             <FontAwesomeIcon icon={faPlus} className="mr-2" />
             Add Idea
           </button>
-          <h4>user ID:{user?.current?.$id}</h4>
           {isFormOpen && (
             <div className="mt-4">
               <h2 className="text-xl font-bold mb-2">Add Idea</h2>
@@ -115,17 +125,7 @@ export function Ideas() {
               <div className="mt-2">
                 <p>{idea.description}</p>
                 <p className="text-gray-600 mt-2">
-                  {" "}
-                  <p className="text-gray-600 mt-2">
-                    {new Date(idea.entryDate).toLocaleDateString(undefined, {
-                      weekday: "short",
-                      year: "numeric",
-                      month: "short",
-                      day: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </p>
+                  {formatDate(idea.entryDate)}
                 </p>
               </div>
               {user.current && user.current.$id === idea.userId && (

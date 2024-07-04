@@ -11,27 +11,40 @@ export function UserProvider(props) {
   const [user, setUser] = useState(null);
 
   async function login(email, password) {
-    const loggedIn = await account.createEmailSession(email, password);
-    setUser(loggedIn);
-    alert('Login successful')
+    try {
+      await account.createEmailSession(email, password);
+      const loggedInUser = await account.get();
+      setUser(loggedInUser);
+      alert("Login successful");
+    } catch (error) {
+      alert(`Login failed: ${error.message}`);
+    }
   }
 
   async function logout() {
-    await account.deleteSession("current");
-    setUser(null);
-    alert('Logged out')
+    try {
+      await account.deleteSession("current");
+      setUser(null);
+      alert("Logged out");
+    } catch (error) {
+      alert(`Logout failed: ${error.message}`);
+    }
   }
 
   async function register(email, password) {
-    await account.create(email, password);
-    await login(email, password);
+    try {
+      await account.create(email, password);
+      await login(email, password);
+    } catch (error) {
+      alert(`Registration failed: ${error.message}`);
+    }
   }
 
   async function init() {
     try {
-      const loggedIn = await account.get();
-      setUser(loggedIn);
-    } catch (err) {
+      const loggedInUser = await account.get();
+      setUser(loggedInUser);
+    } catch (error) {
       setUser(null);
     }
   }
