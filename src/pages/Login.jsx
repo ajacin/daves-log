@@ -11,7 +11,7 @@ export function Login() {
 
   useEffect(() => {
     if (user.current) {
-      return navigate("/activities");
+      navigate("/");
     }
   }, [navigate, user]);
 

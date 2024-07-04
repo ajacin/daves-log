@@ -1,13 +1,21 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useUser } from "../lib/context/user";
 import { useIdeas } from "../lib/context/ideas";
+import { useNavigate } from "react-router-dom";
 
 export function Resources() {
   const user = useUser();
   const ideas = useIdeas();
+  const navigate = useNavigate();
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+
+  useEffect(() => {
+    if (!user.current) {
+      navigate("/login");
+    }
+  }, [user, navigate]);
 
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8">

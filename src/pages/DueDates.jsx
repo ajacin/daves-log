@@ -3,9 +3,18 @@ import jsonData from "../components/DueDateData";
 import DueDateDisplay from "../components/DueDateDisplay";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faClock } from "@fortawesome/free-solid-svg-icons";
+import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 
 export function DueDates() {
   const user = useUser();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!user.current) {
+      navigate("/login");
+    }
+  }, [user, navigate]);
 
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8">

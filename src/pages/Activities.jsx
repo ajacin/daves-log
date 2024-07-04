@@ -196,10 +196,11 @@ export function Activities() {
     setRemarks("");
     setSelectedTimeDiff(null);
   };
-
-  if (!user.current) {
-    navigate("/login");
-  }
+  useEffect(() => {
+    if (!user.current) {
+      navigate("/login");
+    }
+  }, [user, navigate]);
 
   if (isLoading) {
     return (

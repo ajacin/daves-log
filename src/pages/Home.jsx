@@ -48,6 +48,12 @@ export function Home() {
   //   // Add your logic here
   // };
 
+  useEffect(() => {
+    if (!user.current) {
+      navigate("/login");
+    }
+  }, [user, navigate]);
+
   // Placeholder function for FAB action button
   const handleAddOnClick = () => {
     navigate("/activities");

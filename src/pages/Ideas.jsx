@@ -8,10 +8,12 @@ import {
   faPlus,
   faInfoCircle,
 } from "@fortawesome/free-solid-svg-icons";
+import { useNavigate } from "react-router-dom";
 
 export function Ideas() {
   const user = useUser();
   const ideas = useIdeas();
+  const navigate = useNavigate();
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -19,8 +21,12 @@ export function Ideas() {
   const [isFormOpen, setIsFormOpen] = useState(false);
 
   useEffect(() => {
-    ideas.init();
-  }, [ideas]);
+    if (!user.current) {
+      navigate("/login");
+    } else {
+      ideas.init();
+    }
+  }, [ideas, navigate, user]);
 
   const handleRemove = (ideaId) => {
     ideas.remove(ideaId);
