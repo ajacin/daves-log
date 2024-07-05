@@ -17,7 +17,7 @@ export function Login() {
 
   return (
     <section className="flex flex-col items-center justify-center h-screen bg-gradient-to-r from-purple-400 via-blue-500 to-purple-500 p-4">
-      <h1 className="mb-6 text-3xl font-bold text-white">Login 4292 FALCONS</h1>
+      <h1 className="mb-6 text-2xl font-bold text-white">4292 FALCONS</h1>
       <form className="w-full max-w-sm bg-white p-6 rounded-lg shadow-lg">
         <div className="mb-4">
           <input
