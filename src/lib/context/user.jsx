@@ -15,7 +15,6 @@ export function UserProvider(props) {
       await account.createEmailSession(email, password);
       const loggedInUser = await account.get();
       setUser(loggedInUser);
-      alert("Login successful");
     } catch (error) {
       alert(`Login failed: ${error.message}`);
     }
