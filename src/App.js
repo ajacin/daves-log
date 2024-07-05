@@ -27,7 +27,7 @@ export default function App() {
           </div>
         </div>
       )}
-      <div className="pt-16">
+      <div className={user.current ? "pt-16" : ""}>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
