@@ -16,7 +16,7 @@ export function Login() {
   }, [navigate, user]);
 
   return (
-    <section className="flex flex-col items-center justify-center h-screen bg-gradient-to-r from-purple-500 via-purple-900 to-black p-4">
+    <section className="flex flex-col items-center justify-center h-screen bg-gradient-to-r from-purple-700 via-purple-600 to-purple-700 p-4">
       <h1 className="mb-6 text-2xl text-white shadow-lg shadow-black w-full rounded-md p-2 justify-center text-center max-w-sm">
         4292 FALCONS
       </h1>
