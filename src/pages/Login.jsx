@@ -16,48 +16,52 @@ export function Login() {
   }, [navigate, user]);
 
   return (
-    <section className="flex flex-col items-center justify-center h-screen bg-gradient-to-r from-purple-400 via-blue-500 to-purple-500 p-4">
-      <h1 className="mb-6 text-2xl font-bold text-white">4292 FALCONS</h1>
-      <form className="w-full max-w-sm bg-white p-6 rounded-lg shadow-lg">
-        <div className="mb-4">
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(event) => {
-              setEmail(event.target.value);
-            }}
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          />
-        </div>
-        <div className="mb-6">
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(event) => {
-              setPassword(event.target.value);
-            }}
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          />
-        </div>
-        <div className="flex items-center justify-between">
-          <button
-            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-            type="button"
-            onClick={() => user.login(email, password)}
-          >
-            Login
-          </button>
-          <button
-            className="ml-4 bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-            type="button"
-            onClick={() => user.register(email, password)}
-          >
-            Signup
-          </button>
-        </div>
-      </form>
+    <section className="flex flex-col items-center justify-center h-screen bg-gradient-to-r from-purple-500 via-purple-900 to-black p-4">
+      <h1 className="mb-6 text-2xl text-white shadow-lg shadow-black w-full rounded-md p-2 justify-center text-center max-w-sm">
+        4292 FALCONS
+      </h1>
+      <div className=" shadow-lg shadow-black w-full rounded-md p-2 justify-center text-center max-w-sm">
+        <form className="w-full max-w-sm">
+          <div className="my-6 mx-2">
+            <input
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={(event) => {
+                setEmail(event.target.value);
+              }}
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            />
+          </div>
+          <div className="my-6 mx-2">
+            <input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(event) => {
+                setPassword(event.target.value);
+              }}
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            />
+          </div>
+          <div className="flex items-center justify-end gap-2 mx-2 my-6">
+            <button
+              className="ml-4 bg-white hover:bg-purple-100 text-purple-900 font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+              type="button"
+              onClick={() => user.register(email, password)}
+            >
+              Create account
+            </button>
+            <button
+              className=" bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+              type="button"
+              onClick={() => user.login(email, password)}
+            >
+              Login
+            </button>
+          </div>
+        </form>
+      </div>
     </section>
   );
 }
