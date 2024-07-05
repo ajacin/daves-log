@@ -13,7 +13,7 @@ import Automations from "./pages/Automations";
 export default function App() {
   const user = useUser();
   return (
-    <div className="bg-black">
+    <div>
       {user.current && (
         <div className="bg-gray-800 p-2 mt-0 fixed w-full z-10 top-0 mb-4">
           <div className="container mx-auto flex flex-wrap items-center">
