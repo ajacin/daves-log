@@ -61,7 +61,7 @@ export function Ideas() {
       return;
     }
     if (description.length > 500) {
-      alert("Enter less than 500 chars for description");
+      alert(`Enter less than 500 chars for description (${description.legnth} characters now)`);
       return;
     }
 
