@@ -61,7 +61,7 @@ export function Ideas() {
       return;
     }
     if (description.length > 500) {
-      alert(`Enter less than 500 chars for description (${description.legnth} characters now)`);
+      alert(`Enter less than 500 chars for description`);
       return;
     }
 
@@ -98,6 +98,7 @@ export function Ideas() {
                   onChange={(event) => setDescription(event.target.value)}
                   className="w-full p-2 mb-4 border rounded"
                 />
+                <label>{description?.length}</label>
                 <button
                   type="button"
                   onClick={handleFormSubmit}
