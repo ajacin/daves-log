@@ -98,7 +98,8 @@ export function Ideas() {
                   onChange={(event) => setDescription(event.target.value)}
                   className="w-full p-2 mb-4 border rounded"
                 />
-                <span className={description?length>500?"text-red":"text-black"}>{description?.length} characters</span><br/>
+                <span className={description?.length > 500 ? "text-red":"text-black"}
+>{description?.length} characters</span><br/>
                 <button
                   type="button"
                   onClick={handleFormSubmit}
