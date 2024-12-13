@@ -131,7 +131,7 @@ export function Ideas() {
               </div>
               <div className="mt-2">
                 <p>{idea.description}</p>
-                <p className="text-blue-600 mt-2 border border-blue-200 bg-blue-100">
+                <p className="text-xs	text-blue-600 mt-2 border border-blue-200 bg-blue-100">
                   {formatDate(idea.entryDate)}
                 </p>
               </div>
