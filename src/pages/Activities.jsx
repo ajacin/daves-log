@@ -43,7 +43,7 @@ export function Activities() {
   const onSuccessAdd = (activityName) => {
     setIsLoading(false);
     toast(
-      <div className="bg-green-600 border border-green-600 rounded p-2 text-white">
+      <div className="  text-green-600">
         <h3>{`${activityName} saved`}</h3>
       </div>,
       {
@@ -129,7 +129,7 @@ export function Activities() {
     return label;
   };
 
-  const handleClickSave = () => {
+  const handleClickSave = async () => {
     const now = new Date();
     let activityDate = new Date(activityTime);
 
@@ -147,8 +147,6 @@ export function Activities() {
     }
 
     // Check if the same activity exists within the past one hour
-    console.log({ existingActivities });
-    console.log({ activityName });
     const isDuplicate = existingActivities.some((activity) => {
       const timeDifference = now - new Date(activity.activityTime);
       return (
@@ -159,14 +157,9 @@ export function Activities() {
 
     if (isDuplicate) {
       const result = window.confirm(
-        ` You have logged ${existingActivities[0].activityName} within the last one hour. Sure you want to proceed?`
+        `You have logged ${existingActivities[0].activityName} within the last one hour. Sure you want to proceed?`
       );
-      if (result) {
-        // Code to execute if user clicks OK
-        console.log("User clicked OK");
-      } else {
-        // Code to execute if user clicks Cancel
-        console.log("User clicked Cancel");
+      if (!result) {
         return;
       }
     }
@@ -177,7 +170,7 @@ export function Activities() {
     });
     setIsLoading(true);
 
-    babyActivities.add(
+    const success = await babyActivities.add(
       {
         activityName,
         activityTime: activityDate,
@@ -188,10 +181,19 @@ export function Activities() {
       onSuccessAdd
     );
 
+    if (!success) {
+      toast.error(`Failed to save ${activityName}`, {
+        id: "saveActivitySuccessToast",
+        position: "center",
+      });
+      setIsLoading(false);
+      return;
+    }
+
     // Reset form
     setActivityName("Feed");
     setActivityTime(getLocalDateTime());
-    setValue("120"); // Default value changed to 120
+    setValue("120");
     setUnit("mL");
     setRemarks("");
     setSelectedTimeDiff(null);
@@ -219,7 +221,7 @@ export function Activities() {
   }
 
   return (
-    <section className="flex flex-col items-center justify-center p-2">
+    <section className="flex flex-col items-center justify-center p-4">
       <h1 className="mb-6 text-3xl font-bold text-gray-700">Activities Log</h1>
       <form className="w-full max-w-xl">
         <div className="mb-4">

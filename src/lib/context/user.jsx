@@ -1,5 +1,7 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, useCallback } from "react";
+import { ID } from "appwrite";
 import { account } from "../appwrite";
+import { useNavigate } from "react-router-dom";
 
 const UserContext = createContext();
 
@@ -9,14 +11,35 @@ export function useUser() {
 
 export function UserProvider(props) {
   const [user, setUser] = useState(null);
+  const [isInitialized, setIsInitialized] = useState(false);
+  const navigate = useNavigate();
+
+  const init = useCallback(async () => {
+    try {
+      const loggedInUser = await account.get();
+      setUser(loggedInUser);
+    } catch (error) {
+      console.error("Init error:", error);
+      setUser(null);
+      // If on a protected route, redirect to login
+      const currentPath = window.location.pathname;
+      if (currentPath.startsWith("/dashboard")) {
+        navigate("/login");
+      }
+    } finally {
+      setIsInitialized(true);
+    }
+  }, [navigate]);
 
   async function login(email, password) {
     try {
       await account.createEmailSession(email, password);
       const loggedInUser = await account.get();
       setUser(loggedInUser);
+      navigate("/dashboard");
     } catch (error) {
-      alert(`Login failed: ${error.message}`);
+      console.error("Login error:", error);
+      throw error;
     }
   }
 
@@ -24,36 +47,60 @@ export function UserProvider(props) {
     try {
       await account.deleteSession("current");
       setUser(null);
-      alert("Logged out");
+      navigate("/");
     } catch (error) {
-      alert(`Logout failed: ${error.message}`);
+      console.error("Logout error:", error);
+      throw error;
     }
   }
 
-  async function register(email, password) {
+  async function register(email, password, name) {
     try {
-      await account.create(email, password);
-      await login(email, password);
+      const newUser = await account.create(ID.unique(), email, password, name);
+      if (newUser) {
+        await login(email, password);
+      }
     } catch (error) {
-      alert(`Registration failed: ${error.message}`);
-    }
-  }
-
-  async function init() {
-    try {
-      const loggedInUser = await account.get();
-      setUser(loggedInUser);
-    } catch (error) {
-      setUser(null);
+      console.error("Register error:", error);
+      throw error;
     }
   }
 
   useEffect(() => {
     init();
-  }, []);
+  }, [init]);
+
+  // Protect routes that require authentication
+  useEffect(() => {
+    if (!isInitialized) return;
+
+    const currentPath = window.location.pathname;
+    const publicRoutes = ["/", "/login", "/register"];
+    const isPublicRoute = publicRoutes.includes(currentPath);
+    const isDashboardRoute = currentPath.startsWith("/dashboard");
+
+    if (user && isPublicRoute && currentPath !== "/") {
+      navigate("/dashboard");
+    } else if (!user && isDashboardRoute) {
+      navigate("/login");
+    }
+  }, [user, navigate, isInitialized]);
+
+  const contextValue = {
+    current: user,
+    login,
+    logout,
+    register,
+    isInitialized,
+    isAuthenticated: !!user
+  };
+
+  if (!isInitialized) {
+    return null;
+  }
 
   return (
-    <UserContext.Provider value={{ current: user, login, logout, register }}>
+    <UserContext.Provider value={contextValue}>
       {props.children}
     </UserContext.Provider>
   );

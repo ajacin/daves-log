@@ -1,6 +1,13 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+} from "react";
 import { databases } from "../appwrite";
 import { ID, Query } from "appwrite";
+import { useUser } from "./user";
 // import * as dotenv from 'dotenv';
 // dotenv.config()
 
@@ -14,59 +21,134 @@ export function useBabyActivities() {
   return useContext(BabyActivitiesContext);
 }
 
-export function BabyActivitiesProvider(props) {
+export function BabyActivitiesProvider({ children }) {
   const [babyActivities, setBabyActivities] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [hasPermission, setHasPermission] = useState(true);
+  const { current: user } = useUser();
 
-  async function add(item, onSuccessAdd) {
-    const response = await databases.createDocument(
-      DATABASE_ID,
-      COLLECTION_ID,
-      ID.unique(),
-      item
-    );
-    setBabyActivities((babyActivities) =>
-      [response.$id, ...babyActivities].slice(0, 10)
-    );
-    await init();
-    onSuccessAdd(item.activityName);
-  }
+  const handleError = useCallback((error) => {
+    console.error("Operation error:", error);
+    if (
+      error.code === 403 ||
+      error.message?.toLowerCase().includes("permission denied") ||
+      error.message?.toLowerCase().includes("not authorized")
+    ) {
+      setHasPermission(false);
+      setError(null);
+    } else {
+      setError(error.message);
+    }
+  }, []);
 
-  async function remove(id) {
-    await databases.deleteDocument(DATABASE_ID, COLLECTION_ID, id);
-    setBabyActivities((babyActivities) =>
-      babyActivities.filter((item) => item.$id !== id)
-    );
-    await init(); // Refetch babyActivities to ensure we have 10 items
-  }
+  const init = useCallback(async () => {
+    if (!user) {
+      setBabyActivities([]);
+      setIsLoading(false);
+      setError(null);
+      return;
+    }
 
-  async function getNActivitiesLastXHours(activityName, hours = 1, count = 1) {
-    const now = new Date();
-    const oneHourAgo = new Date(now.getTime() - hours * 60 * 60 * 1000);
-    const response = await databases.listDocuments(DATABASE_ID, COLLECTION_ID, [
-      Query.orderDesc("$createdAt"),
-      Query.limit(count),
-      Query.greaterThan("$createdAt", oneHourAgo.toISOString()),
-      Query.equal("activityName", [activityName]),
-    ]);
-    console.log({ response });
-    return response?.documents ?? [];
-  }
-  async function init() {
-    const now = new Date();
-    const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    try {
+      setIsLoading(true);
+      setError(null);
+      const now = new Date();
+      const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
-    const response = await databases.listDocuments(DATABASE_ID, COLLECTION_ID, [
-      Query.orderDesc("$createdAt"),
-      // Query.limit(10),
-      Query.greaterThan("$createdAt", twentyFourHoursAgo.toISOString()),
-    ]);
+      const response = await databases.listDocuments(
+        DATABASE_ID,
+        COLLECTION_ID,
+        [
+          Query.orderDesc("$createdAt"),
+          Query.greaterThan("$createdAt", twentyFourHoursAgo.toISOString()),
+        ]
+      );
 
-    setBabyActivities(response.documents);
-  }
+      setHasPermission(true);
+      if (response?.documents) {
+        setBabyActivities(response.documents);
+      } else {
+        setBabyActivities([]);
+      }
+    } catch (error) {
+      handleError(error);
+      setBabyActivities([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user, handleError]);
+
+  const add = useCallback(
+    async (item, onSuccessAdd) => {
+      if (!hasPermission) return false;
+      try {
+        const response = await databases.createDocument(
+          DATABASE_ID,
+          COLLECTION_ID,
+          ID.unique(),
+          item
+        );
+
+        if (response && response.$id) {
+          setBabyActivities((prev) => [response, ...prev].slice(0, 10));
+          await init();
+          onSuccessAdd?.(item.activityName);
+          return true;
+        }
+        return false;
+      } catch (error) {
+        handleError(error);
+        return false;
+      }
+    },
+    [hasPermission, handleError, init]
+  );
+
+  const remove = useCallback(
+    async (id) => {
+      if (!hasPermission) return false;
+      try {
+        await databases.deleteDocument(DATABASE_ID, COLLECTION_ID, id);
+        setBabyActivities((prev) => prev.filter((item) => item.$id !== id));
+        await init();
+        return true;
+      } catch (error) {
+        handleError(error);
+        return false;
+      }
+    },
+    [hasPermission, handleError, init]
+  );
+
+  const getNActivitiesLastXHours = useCallback(
+    async (activityName, hours = 1, count = 1) => {
+      if (!hasPermission) return [];
+      try {
+        const now = new Date();
+        const oneHourAgo = new Date(now.getTime() - hours * 60 * 60 * 1000);
+        const response = await databases.listDocuments(
+          DATABASE_ID,
+          COLLECTION_ID,
+          [
+            Query.orderDesc("$createdAt"),
+            Query.limit(count),
+            Query.greaterThan("$createdAt", oneHourAgo.toISOString()),
+            Query.equal("activityName", [activityName]),
+          ]
+        );
+        return response?.documents ?? [];
+      } catch (error) {
+        handleError(error);
+        return [];
+      }
+    },
+    [hasPermission, handleError]
+  );
 
   useEffect(() => {
     init();
-  }, []);
+  }, [init]);
 
   return (
     <BabyActivitiesContext.Provider
@@ -75,9 +157,13 @@ export function BabyActivitiesProvider(props) {
         add,
         remove,
         getNActivitiesLastXHours,
+        isLoading,
+        error,
+        hasPermission,
+        retry: init,
       }}
     >
-      {props.children}
+      {children}
     </BabyActivitiesContext.Provider>
   );
 }

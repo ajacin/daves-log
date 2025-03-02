@@ -1,12 +1,16 @@
-import React, { useState } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { useBabyActivities } from "../lib/context/activities";
-import { useUser } from "../lib/context/user";
 import ActivityTime from "../components/ActivityTime";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faEllipsisV,
   faClock,
   faListCheck,
+  faDroplet,
+  faRuler,
+  faExclamationTriangle,
+  faWifi,
+  faList,
 } from "@fortawesome/free-solid-svg-icons";
 import { ActivityIcon } from "../components/ActivityIcon";
 // import Clock from "../components/Clock";
@@ -14,22 +18,40 @@ import { ActivityIcon } from "../components/ActivityIcon";
 const getActivityCardColor = (activityName) => {
   switch (activityName) {
     case "Feed":
-      // return "bg-blue-100";
-      return "border-blue-500";
+      return "from-blue-50 to-blue-100 border-blue-500";
     case "Diaper":
-      return "border-violet-500";
+      return "from-violet-50 to-violet-100 border-violet-500";
     case "Vitamin D":
-      return "border-pink-500";
+      return "from-pink-50 to-pink-100 border-pink-500";
     case "Medicine":
-      return "border-purple-500";
+      return "from-purple-50 to-purple-100 border-purple-500";
     default:
-      return "border-gray-500";
+      return "from-gray-50 to-gray-100 border-gray-500";
+  }
+};
+
+const getUnitIcon = (unit) => {
+  switch (unit?.toLowerCase()) {
+    case "ml":
+      return faDroplet;
+    case "unit":
+      return faRuler;
+    default:
+      return null;
   }
 };
 
 export function ViewActivities() {
-  const activities = useBabyActivities();
-  const user = useUser();
+  const {
+    current: activities,
+    remove: deleteActivity,
+    isLoading,
+    error,
+    hasPermission,
+    isOffline,
+    retry,
+  } = useBabyActivities();
+
   const [selectedActivity, setSelectedActivity] = useState(null);
 
   const renderActivityTime = (
@@ -55,16 +77,13 @@ export function ViewActivities() {
     if (displayTimeOnly) {
       return (
         <div
-          className={`flex gap-1 text-lg text-center rounded-md border-x-4 font-digital-7 text-black pr-1 items-center ${
-            cutOffPassed ? "border-red-400" : "border-green-400"
-          } `}
+          className={`flex gap-1 text-sm font-medium rounded-full px-3 py-1 items-center ${
+            cutOffPassed
+              ? "bg-red-100 text-red-700"
+              : "bg-green-100 text-green-700"
+          }`}
         >
-          <FontAwesomeIcon
-            // color={"whi}
-            icon={faClock}
-            className="m-1"
-            size="sm"
-          />
+          <FontAwesomeIcon icon={faClock} className="mr-1" size="sm" />
           {activityDate.toLocaleTimeString(undefined, {
             hour: "2-digit",
             minute: "2-digit",
@@ -85,135 +104,211 @@ export function ViewActivities() {
     );
   };
 
-  const deleteActivity = (id) => {
-    if (window.confirm("Are you sure you want to delete this activity?")) {
-      if (user.current) {
-        activities.remove(id);
-      } else {
-        alert("Please login to delete an activity.");
-        return;
-      }
-    }
-    setSelectedActivity(null);
-  };
+  const toggleMenu = useCallback((id) => {
+    setSelectedActivity((prev) => (prev === id ? null : id));
+  }, []);
 
-  // const ActivityIcon = ({ activityName }) => {
-  //   const iconColor = "purple";
-  //   switch (activityName) {
-  //     case "Feed":
-  //       return (
-  //         <FontAwesomeIcon
-  //           color={iconColor}
-  //           icon={faUtensils}
-  //           className="h-6 w-6"
-  //         />
-  //       );
-  //     case "Diaper":
-  //       return (
-  //         <FontAwesomeIcon
-  //           color={iconColor}
-  //           icon={faBaby}
-  //           className="h-6 w-6"
-  //         />
-  //       );
-  //     case "Vitamin D":
-  //       return (
-  //         <FontAwesomeIcon color={iconColor} icon={faSun} className="h-6 w-6" />
-  //       );
-  //     case "Medicine":
-  //       return (
-  //         <FontAwesomeIcon
-  //           color={iconColor}
-  //           icon={faCapsules}
-  //           className="h-6 w-6"
-  //         />
-  //       );
-  //     default:
-  //       return null;
-  //   }
-  // };
+  // Add auto-retry on regaining connection
+  useEffect(() => {
+    const handleOnline = () => {
+      retry();
+    };
 
-  const toggleMenu = (activityId) => {
-    setSelectedActivity(selectedActivity === activityId ? null : activityId);
-  };
+    window.addEventListener("online", handleOnline);
+    return () => window.removeEventListener("online", handleOnline);
+  }, [retry]);
+
+  if (!hasPermission) {
+    return (
+      <div className="p-4">
+        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <FontAwesomeIcon
+                icon={faExclamationTriangle}
+                className="h-5 w-5 text-yellow-400"
+              />
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-yellow-700">
+                You don't have permission to view activities. Please contact an
+                administrator.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto p-4 sm:px-6 lg:px-8">
+      {error && (
+        <div className="mb-4">
+          <div
+            className={`border-l-4 p-4 ${
+              isOffline
+                ? "bg-blue-50 border-blue-400"
+                : "bg-red-50 border-red-400"
+            }`}
+          >
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <FontAwesomeIcon
+                  icon={isOffline ? faWifi : faExclamationTriangle}
+                  className={`h-5 w-5 ${
+                    isOffline ? "text-blue-400" : "text-red-400"
+                  }`}
+                />
+              </div>
+              <div className="ml-3">
+                <p
+                  className={`text-sm ${
+                    isOffline ? "text-blue-700" : "text-red-700"
+                  }`}
+                >
+                  {error}
+                  {isOffline && (
+                    <button
+                      onClick={retry}
+                      className="ml-2 underline hover:text-blue-900"
+                    >
+                      Retry
+                    </button>
+                  )}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <section className="mt-12">
-        <div className="flex justify-between">
-          <h2 className="text-2xl font-bold mb-4 text-gray-800">
-            Last 24 hours
-          </h2>
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-gray-800">Last 24 hours</h2>
           {/* <Clock></Clock> */}
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {activities.current
-            .sort((a, b) => new Date(b.activityTime) - new Date(a.activityTime))
-            .map((activity) => (
-              <div
-                key={activity.$id}
-                className={`flex flex-col bg-white shadow-xl  rounded-md p-4 border-l-8 border-solid ${getActivityCardColor(
-                  activity.activityName
-                )}`}
-              >
-                <div className="flex justify-between items-center mb-2">
-                  <p className="font-bold text-lg w-[55%]">
-                    <ActivityIcon activityName={activity.activityName} />{" "}
-                    {activity.activityName}
-                  </p>
-                  <div>
-                    {renderActivityTime(
-                      activity.activityName,
-                      activity.activityTime,
-                      true
-                    )}
-                  </div>
-                  <div className="relative">
-                    <button
-                      onClick={() => toggleMenu(activity.$id)}
-                      className="focus:outline-none"
-                    >
-                      <FontAwesomeIcon icon={faEllipsisV} className="h-4 w-4" />
-                    </button>
-                    {selectedActivity === activity.$id && (
-                      <div className="absolute right-0 mt-2 w-32 bg-white border border-gray-300 rounded-md shadow-lg z-10">
-                        <button
-                          onClick={() => deleteActivity(activity.$id)}
-                          className="block w-full py-2 px-4 text-left text-gray-700 hover:bg-gray-100"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <p>
-                  {/* <span className="font-bold">Quantity / Unit:</span>{" "} */}
-                  {activity.value} {activity.unit}
-                </p>
-                <div className="mt-2">
-                  {/* <span className="font-bold">Time:</span>{" "} */}
-                  {renderActivityTime(
-                    activity.activityName,
-                    activity.activityTime
-                  )}
-                </div>
-                <ActivityTime
-                  className="mt-2"
-                  activityName={activity.activityName}
-                  activityTime={activity.activityTime}
-                />
-                <div>
-                  {activity.remarks ? (
-                    <div>
-                      {" "}
-                      <FontAwesomeIcon icon={faListCheck} className="mr-2" />
-                      {activity.remarks}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {isLoading ? (
+            <div className="p-8 text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+            </div>
+          ) : activities.length === 0 ? (
+            <div className="p-8 text-center">
+              <FontAwesomeIcon
+                icon={faList}
+                className="h-12 w-12 text-gray-400 mb-4"
+              />
+              <h3 className="text-lg font-medium text-gray-900 mb-1">
+                No activities found
+              </h3>
+              <p className="text-gray-500">
+                Activities from the last 24 hours will appear here.
+              </p>
+            </div>
+          ) : (
+            activities
+              .sort(
+                (a, b) => new Date(b.activityTime) - new Date(a.activityTime)
+              )
+              .map((activity) => (
+                <div
+                  key={activity.$id}
+                  className={`relative flex flex-col bg-gradient-to-br shadow-lg rounded-xl overflow-hidden border-l-4 ${getActivityCardColor(
+                    activity.activityName
+                  )}`}
+                >
+                  <div className="absolute top-3 right-3">
+                    <div className="relative">
+                      <button
+                        onClick={() => toggleMenu(activity.$id)}
+                        className="p-1 hover:bg-black/5 rounded-full transition-colors duration-200"
+                      >
+                        <FontAwesomeIcon
+                          icon={faEllipsisV}
+                          className="h-4 w-4 text-gray-600"
+                        />
+                      </button>
+                      {selectedActivity === activity.$id && (
+                        <div className="absolute right-0 mt-2 w-32 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                          <button
+                            onClick={() => deleteActivity(activity.$id)}
+                            className="block w-full py-2 px-4 text-left text-red-600 hover:bg-red-50 transition-colors duration-200"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      )}
                     </div>
-                  ) : null}
+                  </div>
+
+                  <div className="p-5">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center space-x-3">
+                        <div className="p-2 bg-white rounded-lg shadow-sm">
+                          <ActivityIcon activityName={activity.activityName} />
+                        </div>
+                        <h3 className="font-semibold text-lg text-gray-800">
+                          {activity.activityName}
+                        </h3>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      {activity.value && (
+                        <div className="flex items-center space-x-2 text-gray-600">
+                          {getUnitIcon(activity.unit) && (
+                            <FontAwesomeIcon
+                              icon={getUnitIcon(activity.unit)}
+                              className="h-4 w-4"
+                            />
+                          )}
+                          <span className="font-medium">
+                            {activity.value} {activity.unit}
+                          </span>
+                        </div>
+                      )}
+
+                      {activity.remarks && (
+                        <div className="flex items-start space-x-2 text-gray-600">
+                          <FontAwesomeIcon
+                            icon={faListCheck}
+                            className="h-4 w-4 mt-1"
+                          />
+                          <p className="text-sm">{activity.remarks}</p>
+                        </div>
+                      )}
+
+                      <div className="flex flex-col space-y-2 pt-2">
+                        <div className="flex items-center justify-between">
+                          <div className="text-sm text-gray-500">
+                            {new Date(activity.activityTime).toLocaleTimeString(
+                              undefined,
+                              {
+                                weekday: "short",
+                                month: "short",
+                                day: "numeric",
+                              }
+                            )}
+                          </div>
+                          {renderActivityTime(
+                            activity.activityName,
+                            activity.activityTime,
+                            true
+                          )}
+                        </div>
+                        <div className="text-sm">
+                          <ActivityTime
+                            activityName={activity.activityName}
+                            activityTime={activity.activityTime}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+          )}
         </div>
       </section>
     </div>

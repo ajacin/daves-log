@@ -1,44 +1,69 @@
-import { Route, Routes } from "react-router-dom";
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { Login } from './pages/Login';
+import { Register } from './pages/Register';
+import { Landing } from './pages/Landing';
+import { Dashboard } from './pages/Dashboard';
 import { ViewActivities } from "./pages/ViewActivities";
 import { Activities } from "./pages/Activities";
-import { Login } from "./pages/Login";
 import { Ideas } from "./pages/Ideas";
-import { Home } from "./pages/Home";
-import AppDrawer from "./components/drawer/Drawer";
-import { useUser } from "./lib/context/user";
 import { Resources } from "./pages/Resources";
 import { DueDates } from "./pages/DueDates";
 import Automations from "./pages/Automations";
+import AppDrawer from "./components/drawer/Drawer";
+import { useUser } from "./lib/context/user";
 
-export default function App() {
-  const user = useUser();
+// Wrapper component for protected routes
+function ProtectedLayout({ children }) {
+  const { current: user } = useUser();
+
+  if (!user) {
+    return <Navigate to="/" replace />;
+  }
+
   return (
-    <div>
-      {user.current && (
-        <div className="bg-gray-800 p-2 mt-0 fixed w-full z-10 top-0 mb-4">
-          <div className="container mx-auto flex flex-wrap items-center">
-            <div className="flex w-full md:w-auto text-white gap-2 items-center justify-start">
-              <AppDrawer></AppDrawer>
-              <h1>4292 FALCONS</h1>
-              <span className="bg-red-100self-end text-purple-300">
-                {" | "} {user.current.name}
-              </span>
-            </div>
-          </div>
-        </div>
-      )}
-      <div className={user.current ? "pt-16" : ""}>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/ideas" element={<Ideas />} />
-          <Route path="/resources" element={<Resources />} />
-          <Route path="/activities" element={<Activities />} />
-          <Route path="/due-dates" element={<DueDates />} />
-          <Route path="/view-activities" element={<ViewActivities />} />
-          <Route path="/automations" element={<Automations />} />
-        </Routes>
-      </div>
+    <div className="min-h-screen bg-gray-50">
+      <AppDrawer />
+      <main>
+        {children}
+      </main>
     </div>
   );
 }
+
+// Protected routes component
+function ProtectedRoutes() {
+  return (
+    <ProtectedLayout>
+      <Routes>
+        <Route index element={<Dashboard />} />
+        <Route path="activities" element={<Activities />} />
+        <Route path="view-activities" element={<ViewActivities />} />
+        <Route path="ideas" element={<Ideas />} />
+        <Route path="resources" element={<Resources />} />
+        <Route path="due-dates" element={<DueDates />} />
+        <Route path="automations" element={<Automations />} />
+      </Routes>
+    </ProtectedLayout>
+  );
+}
+
+// Root route component to handle authentication state
+function RootRoute() {
+  const { current: user } = useUser();
+  return user ? <Navigate to="/dashboard" replace /> : <Landing />;
+}
+
+function App() {
+  const { current: user } = useUser();
+
+  return (
+    <Routes>
+      <Route path="/" element={<RootRoute />} />
+      <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <Login />} />
+      <Route path="/register" element={user ? <Navigate to="/dashboard" replace /> : <Register />} />
+      <Route path="/dashboard/*" element={<ProtectedRoutes />} />
+    </Routes>
+  );
+}
+
+export default App;

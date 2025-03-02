@@ -13,7 +13,7 @@ export function Navbar({ setIsDrawerOpen }) {
               <Link
                 onClick={closeDrawer}
                 className="px-3 py-2 flex items-center text-xs uppercase font-bold leading-snug  hover:opacity-75"
-                to="/"
+                to="/dashboard"
               >
                 <div className="text-lg">Home</div>
               </Link>
@@ -31,16 +31,16 @@ export function Navbar({ setIsDrawerOpen }) {
               <Link
                 onClick={closeDrawer}
                 className="px-3 py-2 flex items-center text-xs uppercase font-bold leading-snug  hover:opacity-75"
-                to="/ideas"
+                to="/dashboard/ideas"
               >
-                <div className="text-lg">Ideas</div>
+                <div className="text-lg">Tasks</div>
               </Link>
             </li>
             <li className="nav-item">
               <Link
                 onClick={closeDrawer}
                 className="px-3 py-2 flex items-center text-xs uppercase font-bold leading-snug  hover:opacity-75"
-                to="/resources"
+                to="/dashboard/resources"
               >
                 <div className="text-lg">Resources</div>
               </Link>
@@ -49,7 +49,7 @@ export function Navbar({ setIsDrawerOpen }) {
               <Link
                 onClick={closeDrawer}
                 className="px-3 py-2 flex items-center text-xs uppercase font-bold leading-snug  hover:opacity-75"
-                to="/activities"
+                to="/dashboard/activities"
               >
                 <div className="text-lg">Log Activities</div>
               </Link>
@@ -58,7 +58,7 @@ export function Navbar({ setIsDrawerOpen }) {
               <Link
                 onClick={closeDrawer}
                 className="px-3 py-2 flex items-center text-xs uppercase font-bold leading-snug  hover:opacity-75"
-                to="/view-activities"
+                to="/dashboard/view-activities"
               >
                 <div className="text-lg">View Activities</div>
               </Link>
@@ -67,7 +67,7 @@ export function Navbar({ setIsDrawerOpen }) {
               <Link
                 onClick={closeDrawer}
                 className="px-3 py-2 flex items-center text-xs uppercase font-bold leading-snug  hover:opacity-75"
-                to="/due-dates"
+                to="/dashboard/due-dates"
               >
                 <div className="text-lg">Due Dates</div>
               </Link>
@@ -76,7 +76,7 @@ export function Navbar({ setIsDrawerOpen }) {
               <Link
                 onClick={closeDrawer}
                 className="px-3 py-2 flex items-center text-xs uppercase font-bold leading-snug  hover:opacity-75"
-                to="/automations"
+                to="/dashboard/automations"
               >
                 <div className="text-lg">Automations</div>
               </Link>
