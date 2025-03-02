@@ -24,7 +24,7 @@ const PREDEFINED_TAGS = [
   "dollarama",
   "shopping",
   "foodco",
-  "school"
+  "school",
 ];
 
 export function Ideas() {
@@ -57,13 +57,15 @@ export function Ideas() {
     const fetchUserNames = async () => {
       if (!ideas.current.length) return;
 
-      const uniqueUserIds = [...new Set(ideas.current.map(idea => idea.userId))];
-      const newUserIds = uniqueUserIds.filter(userId => !userNames[userId]);
-      
+      const uniqueUserIds = [
+        ...new Set(ideas.current.map((idea) => idea.userId)),
+      ];
+      const newUserIds = uniqueUserIds.filter((userId) => !userNames[userId]);
+
       if (newUserIds.length === 0) return;
 
       try {
-        const userDetailsPromises = newUserIds.map(async userId => {
+        const userDetailsPromises = newUserIds.map(async (userId) => {
           try {
             const userDetails = await account.get(userId);
             return [userId, userDetails.name];
@@ -76,12 +78,12 @@ export function Ideas() {
         const userDetailsResults = await Promise.all(userDetailsPromises);
         const newUserNames = Object.fromEntries(userDetailsResults);
 
-        setUserNames(prev => ({
+        setUserNames((prev) => ({
           ...prev,
-          ...newUserNames
+          ...newUserNames,
         }));
       } catch (error) {
-        console.error('Error fetching user details:', error);
+        console.error("Error fetching user details:", error);
       }
     };
 
@@ -99,17 +101,17 @@ export function Ideas() {
   };
 
   const handleTagToggle = (tag) => {
-    setTags(prevTags => 
+    setTags((prevTags) =>
       prevTags.includes(tag)
-        ? prevTags.filter(t => t !== tag)
+        ? prevTags.filter((t) => t !== tag)
         : [...prevTags, tag]
     );
   };
 
   const handleFilterTagToggle = (tag) => {
-    setSelectedTags(prevTags => 
+    setSelectedTags((prevTags) =>
       prevTags.includes(tag)
-        ? prevTags.filter(t => t !== tag)
+        ? prevTags.filter((t) => t !== tag)
         : [...prevTags, tag]
     );
   };
@@ -141,6 +143,7 @@ export function Ideas() {
     }
     if (description.length > 500) {
       alert(`Enter less than 500 chars for description`);
+      alert(`Enter less than 500 chars for description`);
       return;
     }
 
@@ -152,7 +155,7 @@ export function Ideas() {
       entryDate,
       tags,
       dueDate: dueDate || null,
-      completed: false
+      completed: false,
     });
     cancelResetForm();
   };
@@ -162,7 +165,7 @@ export function Ideas() {
     const now = new Date();
     const due = new Date(dueDate);
     const diffDays = Math.ceil((due - now) / (1000 * 60 * 60 * 24));
-    
+
     if (diffDays < 0) return "text-red-600";
     if (diffDays === 0) return "text-yellow-600";
     if (diffDays <= 3) return "text-orange-600";
@@ -171,13 +174,16 @@ export function Ideas() {
 
   // Filter and sort ideas
   const filteredAndSortedIdeas = ideas.current
-    .filter(idea => {
+    .filter((idea) => {
       // First filter by completion status if hideCompleted is true
       if (hideCompleted && idea.completed) {
         return false;
       }
       // Then filter by tags
-      return selectedTags.length === 0 || idea.tags?.some(tag => selectedTags.includes(tag));
+      return (
+        selectedTags.length === 0 ||
+        idea.tags?.some((tag) => selectedTags.includes(tag))
+      );
     })
     .sort((a, b) => {
       // First sort by completion status
@@ -185,8 +191,8 @@ export function Ideas() {
         return a.completed ? 1 : -1;
       }
       // Then sort by tags
-      const aTags = a.tags?.join(',') || '';
-      const bTags = b.tags?.join(',') || '';
+      const aTags = a.tags?.join(",") || "";
+      const bTags = b.tags?.join(",") || "";
       return aTags.localeCompare(bTags);
     });
 
@@ -217,7 +223,9 @@ export function Ideas() {
                 </div>
                 <form className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Task Title</label>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Task Title
+                    </label>
                     <input
                       type="text"
                       placeholder="Enter task title"
@@ -228,7 +236,9 @@ export function Ideas() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Description</label>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Description
+                    </label>
                     <textarea
                       placeholder="Enter task description"
                       value={description}
@@ -236,13 +246,21 @@ export function Ideas() {
                       className="mt-1 w-full p-2 border rounded focus:ring-2 focus:ring-purple-500"
                       rows="3"
                     />
-                    <span className={description?.length > 500 ? "text-red-500" : "text-gray-500"}>
+                    <span
+                      className={
+                        description?.length > 500
+                          ? "text-red-500"
+                          : "text-gray-500"
+                      }
+                    >
                       {description?.length} / 500 characters
                     </span>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Categories</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Categories
+                    </label>
                     <div className="flex flex-wrap gap-2">
                       {PREDEFINED_TAGS.map((tag) => (
                         <button
@@ -262,7 +280,9 @@ export function Ideas() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Due Date</label>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Due Date
+                    </label>
                     <input
                       type="datetime-local"
                       value={dueDate}
@@ -293,7 +313,7 @@ export function Ideas() {
           )}
         </section>
       )}
-      
+
       <section className="mt-8">
         <div className="flex flex-col space-y-4 mb-4">
           <div className="flex items-center justify-between">
@@ -306,7 +326,11 @@ export function Ideas() {
                     ? "bg-green-500 text-white hover:bg-green-600"
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                 }`}
-                title={hideCompleted ? "Show completed tasks" : "Hide completed tasks"}
+                title={
+                  hideCompleted
+                    ? "Show completed tasks"
+                    : "Hide completed tasks"
+                }
               >
                 <FontAwesomeIcon icon={hideCompleted ? faEyeSlash : faEye} />
                 <span className="hidden sm:inline">
@@ -331,11 +355,17 @@ export function Ideas() {
 
               <div className="flex items-center gap-4 text-sm border-l border-gray-200 pl-3">
                 <div className="flex items-center gap-2">
-                  <FontAwesomeIcon icon={faCircleCheck} className="text-green-500" />
+                  <FontAwesomeIcon
+                    icon={faCircleCheck}
+                    className="text-green-500"
+                  />
                   <span className="hidden sm:inline">Completed</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <FontAwesomeIcon icon={faCircleXmark} className="text-red-500" />
+                  <FontAwesomeIcon
+                    icon={faCircleXmark}
+                    className="text-red-500"
+                  />
                   <span className="hidden sm:inline">Pending</span>
                 </div>
               </div>
@@ -350,7 +380,8 @@ export function Ideas() {
               >
                 <FontAwesomeIcon icon={faFilter} />
                 <span className="hidden sm:inline">
-                  Filter{selectedTags.length > 0 ? ` (${selectedTags.length})` : ""}
+                  Filter
+                  {selectedTags.length > 0 ? ` (${selectedTags.length})` : ""}
                 </span>
               </button>
             </div>
@@ -358,7 +389,9 @@ export function Ideas() {
 
           {showFilters && (
             <div className="bg-white p-4 rounded-lg shadow-sm">
-              <h3 className="text-sm font-medium text-gray-700 mb-2">Filter by Category</h3>
+              <h3 className="text-sm font-medium text-gray-700 mb-2">
+                Filter by Category
+              </h3>
               <div className="flex flex-wrap gap-2">
                 {PREDEFINED_TAGS.map((tag) => (
                   <button
@@ -385,8 +418,8 @@ export function Ideas() {
               <div
                 key={idea.$id}
                 className={`flex items-center justify-between p-2 rounded-lg ${
-                  idea.completed 
-                    ? "bg-green-50 border border-green-200" 
+                  idea.completed
+                    ? "bg-green-50 border border-green-200"
                     : "bg-white border border-gray-200"
                 }`}
               >
@@ -394,17 +427,23 @@ export function Ideas() {
                   <button
                     onClick={() => handleToggleComplete(idea.$id)}
                     className={`p-1 rounded-full transition-colors duration-200 ${
-                      idea.completed ? "text-green-500 hover:text-green-600" : "text-gray-400 hover:text-gray-500"
+                      idea.completed
+                        ? "text-green-500 hover:text-green-600"
+                        : "text-gray-400 hover:text-gray-500"
                     }`}
                   >
-                    <FontAwesomeIcon 
+                    <FontAwesomeIcon
                       icon={idea.completed ? faCircleCheck : faCircleXmark}
                       className="h-5 w-5"
                     />
                   </button>
-                  <span className={`${
-                    idea.completed ? "text-green-700 line-through" : "text-gray-700"
-                  }`}>
+                  <span
+                    className={`${
+                      idea.completed
+                        ? "text-green-700 line-through"
+                        : "text-gray-700"
+                    }`}
+                  >
                     {idea.title}
                   </span>
                 </div>
@@ -433,17 +472,19 @@ export function Ideas() {
               <div
                 key={idea.$id}
                 className={`relative bg-white rounded-lg shadow-md transform transition-all duration-200 hover:scale-[1.02] ${
-                  idea.completed 
-                    ? "border-2 border-green-500 bg-green-50" 
+                  idea.completed
+                    ? "border-2 border-green-500 bg-green-50"
                     : "border-2 border-red-200 bg-white"
                 }`}
               >
-                <div className={`absolute top-0 left-0 w-full h-1 ${
-                  idea.completed ? "bg-green-500" : "bg-red-500"
-                }`} />
+                <div
+                  className={`absolute top-0 left-0 w-full h-1 ${
+                    idea.completed ? "bg-green-500" : "bg-red-500"
+                  }`}
+                />
                 <div className="absolute top-4 left-4">
-                  <FontAwesomeIcon 
-                    icon={idea.completed ? faCircleCheck : faCircleXmark} 
+                  <FontAwesomeIcon
+                    icon={idea.completed ? faCircleCheck : faCircleXmark}
                     className={`${
                       idea.completed ? "text-green-500" : "text-red-500"
                     } h-5 w-5`}
@@ -452,45 +493,66 @@ export function Ideas() {
                 <div className="p-4 pt-8">
                   <div className="flex items-center justify-between mb-2">
                     <div className="pl-6">
-                      <h3 className={`font-semibold ${
-                        idea.completed 
-                          ? "text-green-700" 
-                          : "text-gray-900"
-                      }`}>
+                      <h3
+                        className={`font-semibold ${
+                          idea.completed ? "text-green-700" : "text-gray-900"
+                        }`}
+                      >
                         {idea.title}
                       </h3>
                       <div className="flex items-center text-xs text-gray-500 mt-1">
                         <FontAwesomeIcon icon={faUser} className="mr-1" />
-                        <span>Added by {idea.userId === user.current.$id ? "you" : userNames[idea.userId] || "Loading..."}</span>
+                        <span>
+                          Added by{" "}
+                          {idea.userId === user.current.$id
+                            ? "you"
+                            : userNames[idea.userId] || "Loading..."}
+                        </span>
                       </div>
                     </div>
                     {user.current && user.current.$id === idea.userId && (
                       <div className="relative">
                         <button
-                          onClick={() => setSelectedIdea(selectedIdea === idea.$id ? null : idea.$id)}
+                          onClick={() =>
+                            setSelectedIdea(
+                              selectedIdea === idea.$id ? null : idea.$id
+                            )
+                          }
                           className="p-1 hover:bg-gray-100 rounded-full"
                         >
-                          <FontAwesomeIcon icon={faEllipsisV} className="h-4 w-4 text-gray-600" />
+                          <FontAwesomeIcon
+                            icon={faEllipsisV}
+                            className="h-4 w-4 text-gray-600"
+                          />
                         </button>
                         {selectedIdea === idea.$id && (
                           <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
                             <button
                               onClick={() => handleToggleComplete(idea.$id)}
                               className={`block w-full py-2 px-4 text-left hover:bg-gray-100 ${
-                                idea.completed ? "text-red-600" : "text-green-600"
+                                idea.completed
+                                  ? "text-red-600"
+                                  : "text-green-600"
                               }`}
                             >
-                              <FontAwesomeIcon 
-                                icon={idea.completed ? faCircleXmark : faCircleCheck} 
-                                className="mr-2" 
+                              <FontAwesomeIcon
+                                icon={
+                                  idea.completed ? faCircleXmark : faCircleCheck
+                                }
+                                className="mr-2"
                               />
-                              {idea.completed ? "Mark Incomplete" : "Mark Complete"}
+                              {idea.completed
+                                ? "Mark Incomplete"
+                                : "Mark Complete"}
                             </button>
                             <button
                               onClick={() => handleRemove(idea.$id)}
                               className="block w-full py-2 px-4 text-left text-red-600 hover:bg-gray-100 border-t border-gray-100"
                             >
-                              <FontAwesomeIcon icon={faTrash} className="mr-2" />
+                              <FontAwesomeIcon
+                                icon={faTrash}
+                                className="mr-2"
+                              />
                               Remove
                             </button>
                           </div>
@@ -498,10 +560,12 @@ export function Ideas() {
                       </div>
                     )}
                   </div>
-                  
-                  <p className={`text-sm mb-3 pl-6 ${
-                    idea.completed ? "text-green-600" : "text-gray-700"
-                  }`}>
+
+                  <p
+                    className={`text-sm mb-3 pl-6 ${
+                      idea.completed ? "text-green-600" : "text-gray-700"
+                    }`}
+                  >
                     {idea.description}
                   </p>
 
@@ -528,8 +592,15 @@ export function Ideas() {
                       {formatDate(idea.entryDate)}
                     </div>
                     {idea.dueDate && (
-                      <div className={`flex items-center ${getDueDateStatus(idea.dueDate)}`}>
-                        <FontAwesomeIcon icon={faCalendarAlt} className="mr-1" />
+                      <div
+                        className={`flex items-center ${getDueDateStatus(
+                          idea.dueDate
+                        )}`}
+                      >
+                        <FontAwesomeIcon
+                          icon={faCalendarAlt}
+                          className="mr-1"
+                        />
                         Due: {formatDate(idea.dueDate)}
                       </div>
                     )}
