@@ -8,27 +8,14 @@ import { Activities } from "./pages/Activities";
 import { Ideas } from "./pages/Ideas";
 import { Resources } from "./pages/Resources";
 import { DueDates } from "./pages/DueDates";
-import Automations from "./pages/Automations";
-import AppDrawer from "./components/drawer/Drawer";
+import { Automations } from "./pages/Automations";
 import { useUser } from "./lib/context/user";
-
-// Wrapper component for protected routes
-function ProtectedLayout({ children }) {
-  const { current: user } = useUser();
-
-  if (!user) {
-    return <Navigate to="/" replace />;
-  }
-
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <AppDrawer />
-      <main>
-        {children}
-      </main>
-    </div>
-  );
-}
+import { ProtectedLayout } from "./components/ProtectedLayout";
+import { UserProvider } from "./lib/context/user";
+import { IdeasProvider } from "./lib/context/ideas";
+import { BabyActivitiesProvider } from "./lib/context/activities";
+import { AutomationsProvider } from "./lib/context/automations";
+import { Toaster } from "react-hot-toast";
 
 // Protected routes component
 function ProtectedRoutes() {
@@ -57,12 +44,21 @@ function App() {
   const { current: user } = useUser();
 
   return (
-    <Routes>
-      <Route path="/" element={<RootRoute />} />
-      <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <Login />} />
-      <Route path="/register" element={user ? <Navigate to="/dashboard" replace /> : <Register />} />
-      <Route path="/dashboard/*" element={<ProtectedRoutes />} />
-    </Routes>
+    <UserProvider>
+      <IdeasProvider>
+        <BabyActivitiesProvider>
+          <AutomationsProvider>
+            <Routes>
+              <Route path="/" element={<RootRoute />} />
+              <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <Login />} />
+              <Route path="/register" element={user ? <Navigate to="/dashboard" replace /> : <Register />} />
+              <Route path="/dashboard/*" element={<ProtectedRoutes />} />
+            </Routes>
+            <Toaster position="top-right" />
+          </AutomationsProvider>
+        </BabyActivitiesProvider>
+      </IdeasProvider>
+    </UserProvider>
   );
 }
 

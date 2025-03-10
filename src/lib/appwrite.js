@@ -5,8 +5,14 @@ const createClientWithRetry = () => {
   const client = new Client();
   
   // Configure retry logic
-  client.setEndpoint("https://cloud.appwrite.io/v1")
-    .setProject(process.env.REACT_APP_PROJECT_ID);
+  const endpoint = process.env.REACT_APP_ENDPOINT || "https://cloud.appwrite.io/v1";
+  const projectId = process.env.REACT_APP_PROJECT_ID;
+
+  if (!projectId) {
+    throw new Error("REACT_APP_PROJECT_ID is not defined in environment variables");
+  }
+
+  client.setEndpoint(endpoint).setProject(projectId);
 
   // Add request interceptor for retry logic
   const MAX_RETRIES = 3;

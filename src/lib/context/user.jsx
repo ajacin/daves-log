@@ -39,7 +39,7 @@ export function UserProvider(props) {
       navigate("/dashboard");
     } catch (error) {
       console.error("Login error:", error);
-      throw error;
+      throw new Error(error.message || "Failed to login. Please check your credentials.");
     }
   }
 
@@ -56,13 +56,30 @@ export function UserProvider(props) {
 
   async function register(email, password, name) {
     try {
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        throw new Error("Please enter a valid email address");
+      }
+
+      // Validate password strength
+      if (password.length < 8) {
+        throw new Error("Password must be at least 8 characters long");
+      }
+
       const newUser = await account.create(ID.unique(), email, password, name);
       if (newUser) {
         await login(email, password);
       }
     } catch (error) {
       console.error("Register error:", error);
-      throw error;
+      if (error.code === 409) {
+        throw new Error("An account with this email already exists");
+      } else if (error.code === 400) {
+        throw new Error("Invalid email or password format");
+      } else {
+        throw new Error(error.message || "Failed to create account. Please try again.");
+      }
     }
   }
 

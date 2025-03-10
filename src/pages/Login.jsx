@@ -12,7 +12,6 @@ export function Login() {
     e.preventDefault();
     try {
       await user.login(email, password);
-      // After successful login, user will be redirected to activities by the UserProvider
     } catch (error) {
       console.error("Login error:", error);
     }
@@ -41,6 +40,7 @@ export function Login() {
                       onChange={(event) => setEmail(event.target.value)}
                       className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition duration-150"
                       required
+                      autoComplete="username"
                     />
                   </div>
                   <div className="space-y-2">
@@ -54,6 +54,7 @@ export function Login() {
                       onChange={(event) => setPassword(event.target.value)}
                       className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition duration-150"
                       required
+                      autoComplete="current-password"
                     />
                   </div>
                   <div className="pt-4 space-y-4">

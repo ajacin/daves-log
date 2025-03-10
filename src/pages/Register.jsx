@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { useUser } from "../lib/context/user";
 import { Link } from "react-router-dom";
+import toast from 'react-hot-toast';
 
 export function Register() {
   const user = useUser();
+  const [isLoading, setIsLoading] = useState(false);
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -13,20 +15,31 @@ export function Register() {
 
   const handleRegister = async (e) => {
     e.preventDefault();
+    setIsLoading(true);
+
     if (password !== confirmPassword) {
-      alert("Passwords do not match!");
+      toast.error("Passwords do not match!");
+      setIsLoading(false);
       return;
     }
     if (!firstName.trim() || !lastName.trim()) {
-      alert("First name and last name are required!");
+      toast.error("First name and last name are required!");
+      setIsLoading(false);
+      return;
+    }
+    if (password.length < 8) {
+      toast.error("Password must be at least 8 characters long!");
+      setIsLoading(false);
       return;
     }
     try {
       await user.register(email, password, `${firstName} ${lastName}`);
-      // After successful registration, user will be automatically logged in
-      // and redirected to activities by the UserProvider
+      toast.success("Account created successfully!");
     } catch (error) {
       console.error("Registration error:", error);
+      toast.error(error.message || "Failed to create account. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -54,6 +67,7 @@ export function Register() {
                         onChange={(event) => setFirstName(event.target.value)}
                         className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition duration-150"
                         required
+                        disabled={isLoading}
                       />
                     </div>
                     <div className="space-y-2">
@@ -67,6 +81,7 @@ export function Register() {
                         onChange={(event) => setLastName(event.target.value)}
                         className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition duration-150"
                         required
+                        disabled={isLoading}
                       />
                     </div>
                   </div>
@@ -82,6 +97,7 @@ export function Register() {
                       onChange={(event) => setEmail(event.target.value)}
                       className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition duration-150"
                       required
+                      disabled={isLoading}
                     />
                   </div>
 
@@ -96,6 +112,7 @@ export function Register() {
                       onChange={(event) => setPassword(event.target.value)}
                       className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition duration-150"
                       required
+                      disabled={isLoading}
                     />
                   </div>
 
@@ -112,14 +129,16 @@ export function Register() {
                       }
                       className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition duration-150"
                       required
+                      disabled={isLoading}
                     />
                   </div>
 
                   <button
                     type="submit"
-                    className="w-full px-4 py-3 bg-gradient-to-r from-cyan-400 to-light-blue-500 text-white rounded-lg shadow-md hover:from-cyan-500 hover:to-light-blue-600 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-opacity-50 transition duration-150"
+                    disabled={isLoading}
+                    className={`w-full px-4 py-3 bg-gradient-to-r from-cyan-400 to-light-blue-500 text-white rounded-lg shadow-md hover:from-cyan-500 hover:to-light-blue-600 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-opacity-50 transition duration-150 ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
-                    Create Account
+                    {isLoading ? 'Creating Account...' : 'Create Account'}
                   </button>
                 </form>
 

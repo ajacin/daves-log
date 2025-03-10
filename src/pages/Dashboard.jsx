@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useUser } from "../lib/context/user";
 import { useBabyActivities } from "../lib/context/activities";
+import { useIdeas } from "../lib/context/ideas";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faBook,
@@ -8,6 +9,13 @@ import {
   faEye,
   faNavicon,
   faPlus,
+  faListUl,
+  faCircleCheck,
+  faCircleXmark,
+  faUser,
+  faCalendarDay,
+  faExclamationTriangle,
+  faChartLine,
 } from "@fortawesome/free-solid-svg-icons";
 import LastActivity from "../components/LastActivity";
 import { ColorRing } from "react-loader-spinner";
@@ -15,12 +23,16 @@ import { Fab, Action } from "react-tiny-fab";
 import "react-tiny-fab/dist/styles.css";
 import { useNavigate } from "react-router-dom";
 import { ActivityIcon } from "../components/ActivityIcon";
+import toast from 'react-hot-toast';
 
 export function Dashboard() {
   const { current: user } = useUser();
   const activities = useBabyActivities();
+  const ideas = useIdeas();
   const navigate = useNavigate();
   const [latestActivities, setLatestActivities] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const initRef = useRef(false);
 
   // FAB Configuration
   const mainButtonStyles = {
@@ -50,33 +62,83 @@ export function Dashboard() {
   };
 
   useEffect(() => {
+    if (!user) {
+      navigate("/login");
+      return;
+    }
+    
+    const initializeIdeas = async () => {
+      if (!initRef.current && !ideas.initialized) {
+        setIsLoading(true);
+        try {
+          await ideas.init();
+        } catch (error) {
+          console.error("Error initializing ideas:", error);
+          toast.error("Failed to load tasks. Please try again.");
+        } finally {
+          setIsLoading(false);
+          initRef.current = true;
+        }
+      }
+    };
+
+    initializeIdeas();
+  }, [navigate, user, ideas]);
+
+  useEffect(() => {
     if (!activities?.current) return;
 
-    try {
-      const filterFeedDiaperVitaminD = activities.current.filter(
-        (each) =>
-          each.activityName === "Feed" ||
-          each.activityName === "Diaper" ||
-          each.activityName === "Vitamin D"
-      );
-      const sortedActivities = filterFeedDiaperVitaminD.sort(
-        (a, b) => new Date(b.activityTime) - new Date(a.activityTime)
-      );
-      const activitiesByName = sortedActivities.reduce((acc, activity) => {
-        if (!acc[activity.activityName]) {
-          acc[activity.activityName] = activity;
-        }
-        return acc;
-      }, {});
-      setLatestActivities(Object.values(activitiesByName));
-      window.scrollTo(0, 0);
-    } catch (error) {
-      console.error("Error processing activities:", error);
-      setLatestActivities([]);
-    }
+    const filterFeedDiaperVitaminD = activities.current.filter(
+      (each) =>
+        each.activityName === "Feed" ||
+        each.activityName === "Diaper" ||
+        each.activityName === "Vitamin D"
+    );
+    const sortedActivities = filterFeedDiaperVitaminD.sort(
+      (a, b) => new Date(b.activityTime) - new Date(a.activityTime)
+    );
+    const activitiesByName = sortedActivities.reduce((acc, activity) => {
+      if (!acc[activity.activityName]) {
+        acc[activity.activityName] = activity;
+      }
+      return acc;
+    }, {});
+    setLatestActivities(Object.values(activitiesByName));
+    window.scrollTo(0, 0);
   }, [activities]);
 
-  if (activities.isLoading) {
+  // Calculate dashboard statistics
+  const dashboardStats = {
+    totalTasks: ideas.current?.length || 0,
+    completedTasks: ideas.current?.filter(idea => idea.completed).length || 0,
+    completedToday: ideas.current?.filter(idea => {
+      if (!idea.completed) return false;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const completedDate = new Date(idea.completedAt || idea.entryDate);
+      return completedDate >= today;
+    }).length || 0,
+    completedByMe: ideas.current?.filter(idea => 
+      idea.completed && idea.userId === user?.$id
+    ).length || 0,
+    pendingTasks: ideas.current?.filter(idea => !idea.completed).length || 0,
+    overdueTasks: ideas.current?.filter(idea => {
+      if (!idea.dueDate || idea.completed) return false;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const dueDate = new Date(idea.dueDate);
+      return dueDate < today;
+    }).length || 0,
+    tasksDueToday: ideas.current?.filter(idea => {
+      if (!idea.dueDate || idea.completed) return false;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const dueDate = new Date(idea.dueDate);
+      return dueDate.getTime() === today.getTime();
+    }).length || 0,
+  };
+
+  if (isLoading || !user) {
     return (
       <div className="min-h-screen bg-gray-100 flex justify-center items-center">
         <ColorRing
@@ -98,7 +160,7 @@ export function Dashboard() {
         <header>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <h1 className="text-3xl font-bold leading-tight text-gray-900">
-              Welcome back, {user?.name || 'User'}!
+              Welcome back, {user.name || 'User'}!
             </h1>
           </div>
         </header>
@@ -203,6 +265,126 @@ export function Dashboard() {
           </Action>
         </Fab>
       )}
+
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="mt-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-8">Dashboard</h1>
+          
+          {!ideas.hasPermission && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+              <strong className="font-bold">Permission Error!</strong>
+              <span className="block sm:inline"> You don't have permission to perform this action.</span>
+              <button
+                onClick={() => ideas.retry()}
+                className="ml-4 text-red-700 hover:text-red-900 underline"
+              >
+                Retry
+              </button>
+            </div>
+          )}
+
+          {ideas.error && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+              <strong className="font-bold">Error!</strong>
+              <span className="block sm:inline"> {ideas.error}</span>
+              <button
+                onClick={() => ideas.retry()}
+                className="ml-4 text-red-700 hover:text-red-900 underline"
+              >
+                Retry
+              </button>
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
+            <div className="bg-white rounded-lg shadow-md p-2 sm:p-4 border-l-4 border-blue-500">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs sm:text-sm text-gray-600">Total Tasks</p>
+                  <h3 className="text-lg sm:text-2xl font-bold text-gray-900">{dashboardStats.totalTasks}</h3>
+                </div>
+                <div className="bg-blue-100 p-2 sm:p-3 rounded-full">
+                  <FontAwesomeIcon icon={faListUl} className="text-blue-500 text-sm sm:text-xl" />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-md p-2 sm:p-4 border-l-4 border-green-500">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs sm:text-sm text-gray-600">Completed Today</p>
+                  <h3 className="text-lg sm:text-2xl font-bold text-gray-900">{dashboardStats.completedToday}</h3>
+                </div>
+                <div className="bg-green-100 p-2 sm:p-3 rounded-full">
+                  <FontAwesomeIcon icon={faCircleCheck} className="text-green-500 text-sm sm:text-xl" />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-md p-2 sm:p-4 border-l-4 border-purple-500">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs sm:text-sm text-gray-600">Completed by Me</p>
+                  <h3 className="text-lg sm:text-2xl font-bold text-gray-900">{dashboardStats.completedByMe}</h3>
+                </div>
+                <div className="bg-purple-100 p-2 sm:p-3 rounded-full">
+                  <FontAwesomeIcon icon={faUser} className="text-purple-500 text-sm sm:text-xl" />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-md p-2 sm:p-4 border-l-4 border-red-500">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs sm:text-sm text-gray-600">Pending Tasks</p>
+                  <h3 className="text-lg sm:text-2xl font-bold text-gray-900">{dashboardStats.pendingTasks}</h3>
+                </div>
+                <div className="bg-red-100 p-2 sm:p-3 rounded-full">
+                  <FontAwesomeIcon icon={faCircleXmark} className="text-red-500 text-sm sm:text-xl" />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-md p-2 sm:p-4 border-l-4 border-yellow-500">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs sm:text-sm text-gray-600">Due Today</p>
+                  <h3 className="text-lg sm:text-2xl font-bold text-gray-900">{dashboardStats.tasksDueToday}</h3>
+                </div>
+                <div className="bg-yellow-100 p-2 sm:p-3 rounded-full">
+                  <FontAwesomeIcon icon={faCalendarDay} className="text-yellow-500 text-sm sm:text-xl" />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-md p-2 sm:p-4 border-l-4 border-orange-500">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs sm:text-sm text-gray-600">Overdue Tasks</p>
+                  <h3 className="text-lg sm:text-2xl font-bold text-gray-900">{dashboardStats.overdueTasks}</h3>
+                </div>
+                <div className="bg-orange-100 p-2 sm:p-3 rounded-full">
+                  <FontAwesomeIcon icon={faExclamationTriangle} className="text-orange-500 text-sm sm:text-xl" />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-md p-2 sm:p-4 border-l-4 border-indigo-500">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs sm:text-sm text-gray-600">Completion Rate</p>
+                  <h3 className="text-lg sm:text-2xl font-bold text-gray-900">
+                    {Math.round((dashboardStats.completedTasks / dashboardStats.totalTasks) * 100)}%
+                  </h3>
+                </div>
+                <div className="bg-indigo-100 p-2 sm:p-3 rounded-full">
+                  <FontAwesomeIcon icon={faChartLine} className="text-indigo-500 text-sm sm:text-xl" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 } 

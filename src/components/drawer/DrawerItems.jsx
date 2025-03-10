@@ -5,7 +5,7 @@ import { Navbar } from "../Navbar";
 import { useUser } from "../../lib/context/user";
 
 const DrawerItems = ({ setIsDrawerOpen, toggleDrawer }) => {
-  const { logout } = useUser();
+  const { logout, current: user } = useUser();
 
   const handleLogout = async () => {
     try {
@@ -20,15 +20,18 @@ const DrawerItems = ({ setIsDrawerOpen, toggleDrawer }) => {
     <div className="flex flex-col h-screen bg-white">
       <div className="flex-grow">
         <div
-          className="flex items-center gap-2 p-4 border-b border-gray-200 cursor-pointer hover:bg-gray-50"
+          className="flex items-center justify-between p-4 border-b border-gray-200 cursor-pointer hover:bg-gray-50"
           onClick={toggleDrawer}
         >
-          <FontAwesomeIcon
-            icon={faBars}
-            className="text-cyan-600"
-            size="xl"
-          />
-          <h1 className="text-xl font-bold text-cyan-600">4292 FALCONS</h1>
+          <div className="flex items-center gap-2">
+            <FontAwesomeIcon
+              icon={faBars}
+              className="text-cyan-600"
+              size="xl"
+            />
+            <h1 className="text-xl font-bold text-cyan-600">4292 FALCONS</h1>
+          </div>
+          <span className="text-sm text-gray-600">{user?.name}</span>
         </div>
         <div className="py-2">
           <Navbar setIsDrawerOpen={setIsDrawerOpen} />

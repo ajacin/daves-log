@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useUser } from "../lib/context/user";
 import { useBabyActivities } from "../lib/context/activities";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -21,6 +21,7 @@ export function Home() {
   const activities = useBabyActivities();
   const navigate = useNavigate();
   const [latestActivities, setLatestActivities] = useState([]);
+  const initRef = useRef(false);
 
   ///FAB
   // Placeholder values for FAB
@@ -52,7 +53,30 @@ export function Home() {
     if (!user.current) {
       navigate("/login");
     }
-  }, [user, navigate]);
+  }, [user.current, navigate]);
+
+  useEffect(() => {
+    if (!initRef.current && activities.current) {
+      const filterFeedDiaperVitaminD = activities.current.filter(
+        (each) =>
+          each.activityName === "Feed" ||
+          each.activityName === "Diaper" ||
+          each.activityName === "Vitamin D"
+      );
+      const sortedActivities = filterFeedDiaperVitaminD.sort(
+        (a, b) => new Date(b.activityTime) - new Date(a.activityTime)
+      );
+      const activitiesByName = sortedActivities.reduce((acc, activity) => {
+        if (!acc[activity.activityName]) {
+          acc[activity.activityName] = activity;
+        }
+        return acc;
+      }, {});
+      setLatestActivities(Object.values(activitiesByName));
+      initRef.current = true;
+      window.scrollTo(0, 0);
+    }
+  }, [activities.current]);
 
   // Placeholder function for FAB action button
   const handleAddOnClick = () => {
@@ -72,26 +96,6 @@ export function Home() {
   //   // Add your logic here
   // };
   ///END OF FAB
-
-  useEffect(() => {
-    const filterFeedDiaperVitaminD = activities.current.filter(
-      (each) =>
-        each.activityName === "Feed" ||
-        each.activityName === "Diaper" ||
-        each.activityName === "Vitamin D"
-    );
-    const sortedActivities = filterFeedDiaperVitaminD.sort(
-      (a, b) => new Date(b.activityTime) - new Date(a.activityTime)
-    );
-    const activitiesByName = sortedActivities.reduce((acc, activity) => {
-      if (!acc[activity.activityName]) {
-        acc[activity.activityName] = activity;
-      }
-      return acc;
-    }, {});
-    setLatestActivities(Object.values(activitiesByName));
-    window.scrollTo(0, 0);
-  }, [activities]);
 
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 justify-center items-center">

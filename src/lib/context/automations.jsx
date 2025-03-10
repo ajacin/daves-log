@@ -3,17 +3,21 @@ import { databases } from "../appwrite";
 import { ID, Query } from "appwrite";
 import { useUser } from "./user";
 
-export const DATABASE_ID = process.env.REACT_APP_DATABASE_ID; // Replace with your database ID
-export const COLLECTION_ID = process.env.REACT_APP_COLLECTION_ID_IDEAS_TRACKER;
+const DATABASE_ID = process.env.REACT_APP_DATABASE_ID;
+const COLLECTION_ID = "67c546700031843e4f23";
 
-const IdeasContext = createContext();
-
-export function useIdeas() {
-  return useContext(IdeasContext);
+if (!DATABASE_ID) {
+  throw new Error("REACT_APP_DATABASE_ID is not defined in environment variables");
 }
 
-export function IdeasProvider(props) {
-  const [ideas, setIdeas] = useState([]);
+const AutomationsContext = createContext();
+
+export function useAutomations() {
+  return useContext(AutomationsContext);
+}
+
+export function AutomationsProvider({ children }) {
+  const [automations, setAutomations] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [hasPermission, setHasPermission] = useState(true);
@@ -35,130 +39,129 @@ export function IdeasProvider(props) {
 
   const init = useCallback(async () => {
     if (!user) {
-      setIdeas([]);
+      console.log("No user found, skipping initialization");
+      setAutomations([]);
       setIsLoading(false);
       setError(null);
       return;
     }
 
     try {
+      console.log("Starting initialization...");
       setIsLoading(true);
       setError(null);
+      
+      // Try to list documents directly
       const response = await databases.listDocuments(DATABASE_ID, COLLECTION_ID, [
         Query.orderDesc("$createdAt"),
       ]);
 
+      console.log("Documents fetched successfully:", response?.documents?.length || 0);
       setHasPermission(true);
       if (response?.documents) {
-        setIdeas(response.documents);
+        setAutomations(response.documents);
       } else {
-        setIdeas([]);
+        setAutomations([]);
       }
     } catch (error) {
+      console.error("Initialization error:", error);
       handleError(error);
-      setIdeas([]);
+      setAutomations([]);
     } finally {
       setIsLoading(false);
+      console.log("Initialization complete");
     }
   }, [user, handleError]);
 
-  const add = useCallback(async (idea) => {
+  const add = useCallback(async (automation) => {
     if (!hasPermission) return false;
     try {
-      // Ensure tags is an array and completed has a default value
-      const ideaWithDefaults = {
-        ...idea,
-        tags: idea.tags || [],
-        completed: idea.completed || false,
-        dueDate: idea.dueDate || null
+      const automationWithDefaults = {
+        ...automation,
+        name: automation.name || "",
+        url: automation.url || "",
+        icon: automation.icon || "fa-lightbulb",
+        category: automation.category || "bulb",
+        room: automation.room || "",
+        createdAt: new Date().toISOString(),
       };
 
+      console.log("Adding automation:", automationWithDefaults);
       const response = await databases.createDocument(
         DATABASE_ID,
         COLLECTION_ID,
         ID.unique(),
-        ideaWithDefaults
+        automationWithDefaults
       );
 
       if (response && response.$id) {
-        setIdeas((prev) => [response, ...prev].slice(0, 10));
-        await init();
+        console.log("Automation added successfully:", response.$id);
+        setAutomations((prev) => [response, ...prev]);
         return true;
       }
       return false;
     } catch (error) {
+      console.error("Add automation error:", error);
       handleError(error);
       return false;
     }
-  }, [hasPermission, handleError, init]);
+  }, [hasPermission, handleError]);
 
   const remove = useCallback(async (id) => {
     if (!hasPermission) return false;
     try {
+      console.log("Removing automation:", id);
       await databases.deleteDocument(DATABASE_ID, COLLECTION_ID, id);
-      setIdeas((prev) => prev.filter((idea) => idea.$id !== id));
-      await init();
+      setAutomations((prev) => prev.filter((automation) => automation.$id !== id));
       return true;
     } catch (error) {
+      console.error("Remove automation error:", error);
       handleError(error);
       return false;
     }
-  }, [hasPermission, handleError, init]);
+  }, [hasPermission, handleError]);
 
   const update = useCallback(async (id, updates) => {
     if (!hasPermission) return false;
     try {
+      console.log("Updating automation:", id, updates);
       const response = await databases.updateDocument(
         DATABASE_ID,
         COLLECTION_ID,
         id,
         updates
       );
-      setIdeas((prev) =>
-        prev.map((idea) => (idea.$id === id ? response : idea))
+      setAutomations((prev) =>
+        prev.map((automation) => (automation.$id === id ? response : automation))
       );
-      await init();
       return true;
     } catch (error) {
+      console.error("Update automation error:", error);
       handleError(error);
       return false;
     }
-  }, [hasPermission, handleError, init]);
-
-  const toggleComplete = useCallback(async (id) => {
-    if (!hasPermission) return false;
-    try {
-      const idea = ideas.find((i) => i.$id === id);
-      if (idea) {
-        return await update(id, { completed: !idea.completed });
-      }
-      return false;
-    } catch (error) {
-      handleError(error);
-      return false;
-    }
-  }, [ideas, update, hasPermission, handleError]);
+  }, [hasPermission, handleError]);
 
   useEffect(() => {
+    console.log("AutomationsProvider mounted, user:", user?.$id);
     init();
-  }, [init]);
+  }, [init,user?.$id]);
 
   return (
-    <IdeasContext.Provider 
-      value={{ 
-        current: ideas, 
-        add, 
-        remove, 
-        update, 
-        toggleComplete, 
+    <AutomationsContext.Provider
+      value={{
+        current: automations,
+        add,
+        remove,
+        update,
         init,
         isLoading,
         error,
         hasPermission,
-        retry: init
+        retry: init,
       }}
     >
-      {props.children}
-    </IdeasContext.Provider>
+      {children}
+    </AutomationsContext.Provider>
   );
-}
+} 
