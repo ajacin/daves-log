@@ -156,7 +156,6 @@ export function Ideas() {
   const [hideCompleted, setHideCompleted] = useState(false);
   const [isMinimalView, setIsMinimalView] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [isInitialized, setIsInitialized] = useState(false);
   const [timeFilter, setTimeFilter] = useState(null);
   const [userFilter, setUserFilter] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
