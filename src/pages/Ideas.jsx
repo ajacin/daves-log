@@ -330,12 +330,17 @@ export function Ideas() {
   const filteredAndSortedIdeas = useMemo(() => {
     return ideas.current
       .filter((idea) => {
+        // Base conditions that must always be met
         if (hideCompleted && idea.completed) {
           return false;
         }
+
+        // User filter (if active)
         if (userFilter && idea.userId !== userFilter) {
           return false;
         }
+
+        // Time filter (if active)
         if (timeFilter) {
           const now = new Date();
           const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -347,19 +352,26 @@ export function Ideas() {
 
           switch (timeFilter) {
             case 'today':
-              return ideaDate >= today && ideaDate < tomorrow;
+              if (!(ideaDate >= today && ideaDate < tomorrow)) return false;
+              break;
             case 'overdue':
-              return ideaDate < today && !idea.completed;
+              if (!(ideaDate < today && !idea.completed)) return false;
+              break;
             case 'week':
-              return ideaDate >= today && ideaDate <= weekEnd;
+              if (!(ideaDate >= today && ideaDate <= weekEnd)) return false;
+              break;
             default:
-              return true;
+              break;
           }
         }
-        return (
-          selectedTags.length === 0 ||
-          idea.tags?.some((tag) => selectedTags.includes(tag))
-        );
+
+        // Tag filter (if active)
+        if (selectedTags.length > 0) {
+          // Check if the idea has ALL selected tags
+          return selectedTags.every(tag => idea.tags?.includes(tag));
+        }
+
+        return true;
       })
       .sort((a, b) => {
         if (a.completed !== b.completed) {
