@@ -166,6 +166,8 @@ export function Ideas() {
   const [expandedMenus, setExpandedMenus] = useState(new Set());
   const cardRefs = useRef({});
   const initRef = useRef(false);
+  const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
+  const [bulkTasksInput, setBulkTasksInput] = useState("");
 
   useEffect(() => {
     if (!user.current) {
@@ -510,18 +512,168 @@ export function Ideas() {
     });
   }, []);
 
+  const handleBulkUpload = async () => {
+    try {
+      const tasksArray = bulkTasksInput
+        .split('\n')
+        .map(task => task.trim())
+        .filter(task => task.length > 0)
+        .map(task => {
+          const hashtags = task.match(/#\w+/g) || [];
+          const title = task.replace(/#\w+/g, '').trim();
+          const tags = hashtags.map(tag => tag.substring(1)); // Remove # from tags
+          return { title, tags: [...tags, 'bulk'] };
+        })
+        .filter(task => task.title.length > 0);
+
+      if (tasksArray.length === 0) {
+        toast.error("Please enter at least one task");
+        return;
+      }
+
+      let successCount = 0;
+      for (const task of tasksArray) {
+        const success = await ideas.add({
+          userId: user.current.$id,
+          userName: user.current.name,
+          title: task.title,
+          description: "",
+          entryDate: new Date().toISOString(),
+          tags: task.tags,
+          completed: false,
+        });
+        if (success) successCount++;
+      }
+
+      if (successCount > 0) {
+        toast.success(`Successfully added ${successCount} tasks!`);
+        setIsBulkUploadOpen(false);
+        setBulkTasksInput("");
+      }
+    } catch (error) {
+      toast.error("Failed to create tasks");
+    }
+  };
+
+  const getTaskPreview = (input) => {
+    return input
+      .split('\n')
+      .map(task => task.trim())
+      .filter(task => task.length > 0)
+      .map(task => {
+        const hashtags = task.match(/#\w+/g) || [];
+        const title = task.replace(/#\w+/g, '').trim();
+        const tags = hashtags.map(tag => tag.substring(1));
+        return { title, tags };
+      })
+      .filter(task => task.title.length > 0);
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold text-gray-900">Tasks</h1>
-        <button
-          onClick={() => setIsFormOpen(true)}
-          className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors"
-        >
-          <FontAwesomeIcon icon={faPlus} className="mr-2" />
-          Add Task
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setIsBulkUploadOpen(true)}
+            className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors"
+          >
+            <FontAwesomeIcon icon={faPlus} className="mr-2" />
+            Bulk Upload
+          </button>
+          <button
+            onClick={() => setIsFormOpen(true)}
+            className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors"
+          >
+            <FontAwesomeIcon icon={faPlus} className="mr-2" />
+            Add Task
+          </button>
+        </div>
       </div>
+
+      {/* Add Bulk Upload Modal */}
+      {isBulkUploadOpen && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-full max-w-md bg-white shadow-lg rounded-lg">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Bulk Upload Tasks</h2>
+              <button
+                onClick={() => setIsBulkUploadOpen(false)}
+                className="text-gray-600 hover:text-gray-800"
+              >
+                ×
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Enter Tasks (one per line)
+                </label>
+                <div className="text-xs text-gray-500 mb-2">
+                  Example:<br />
+                  Buy groceries #walmart<br />
+                  Call dentist #appointment<br />
+                  Send email to team #work
+                </div>
+                <textarea
+                  value={bulkTasksInput}
+                  onChange={(e) => setBulkTasksInput(e.target.value)}
+                  className="w-full p-2 border rounded focus:ring-2 focus:ring-green-500 font-mono text-sm"
+                  rows="6"
+                  placeholder="Enter tasks here..."
+                />
+                <div className="mt-2 text-sm">
+                  {bulkTasksInput && (
+                    <div className="space-y-1">
+                      <div className="font-medium text-gray-700">
+                        Will create {getTaskPreview(bulkTasksInput).length} tasks:
+                      </div>
+                      <div className="bg-gray-50 p-2 rounded max-h-32 overflow-y-auto">
+                        {getTaskPreview(bulkTasksInput).map((task, index) => (
+                          <div key={index} className="text-xs text-gray-600">
+                            <div className="flex items-center gap-2">
+                              <span className="text-gray-400">{index + 1}.</span>
+                              <span className="truncate">{task.title}</span>
+                            </div>
+                            {task.tags.length > 0 && (
+                              <div className="ml-6 mt-0.5 flex gap-1 flex-wrap">
+                                {task.tags.map((tag, tagIndex) => (
+                                  <span key={tagIndex} className="px-1.5 py-0.5 bg-purple-50 text-purple-700 rounded-full text-[10px]">
+                                    {tag}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex gap-2 pt-4">
+                <button
+                  onClick={handleBulkUpload}
+                  className="flex-1 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+                  disabled={getTaskPreview(bulkTasksInput).length === 0}
+                >
+                  Upload Tasks
+                </button>
+                <button
+                  onClick={() => {
+                    setIsBulkUploadOpen(false);
+                    setBulkTasksInput("");
+                  }}
+                  className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {user.current && (
         <section className="mt-8 relative z-10">
