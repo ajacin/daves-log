@@ -159,7 +159,7 @@ export function Ideas() {
     }
 
     const initialize = async () => {
-      if (!initRef.current && !ideas.initialized) {
+      if (!initRef.current) {
         setIsLoading(true);
         await ideas.init();
         initRef.current = true;
@@ -169,6 +169,11 @@ export function Ideas() {
 
     initialize();
   }, [navigate, ideas, user, initRef]);
+
+  // Add a new effect to reset initRef when ideas change
+  useEffect(() => {
+    initRef.current = false;
+  }, [ideas.current]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
