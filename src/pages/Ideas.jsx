@@ -168,12 +168,12 @@ export function Ideas() {
     };
 
     initialize();
-  }, [navigate, ideas, user, initRef]);
+  }, [navigate, ideas, user]);
 
-  // Add a new effect to reset initRef when ideas change
+  // Reset initRef when ideas object changes
   useEffect(() => {
     initRef.current = false;
-  }, [ideas.current]);
+  }, [ideas]); // Depend on ideas object itself, not ideas.current
 
   useEffect(() => {
     const handleClickOutside = (event) => {
