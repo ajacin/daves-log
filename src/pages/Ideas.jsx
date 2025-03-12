@@ -41,32 +41,13 @@ const PREDEFINED_TAGS = [
 
   // Home & Family
   "home",
-  "cleaning",
-  "laundry",
-  "cooking",
-  "meal-prep",
-  "repairs",
-  "garden",
-  "family",
   "kids",
-  "pets",
 
   // Work & Education
   "school",
   "work",
   "study",
-  "meeting",
-  "deadline",
-  "project",
-  "homework",
-  "research",
-
   // Health & Wellness
-  "health",
-  "exercise",
-  "doctor",
-  "dentist",
-  "medication",
   "appointment",
 
   // Personal
@@ -168,6 +149,8 @@ export function Ideas() {
   const initRef = useRef(false);
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
   const [bulkTasksInput, setBulkTasksInput] = useState("");
+  const [customTagInput, setCustomTagInput] = useState("");
+  const [editCustomTagInput, setEditCustomTagInput] = useState("");
 
   useEffect(() => {
     if (!user.current) {
@@ -429,6 +412,17 @@ export function Ideas() {
     }, {});
   }, [ideas, user]);
 
+  // Memoize unique tags from all tasks
+  const availableTags = useMemo(() => {
+    const tagSet = new Set();
+    ideas.current.forEach(idea => {
+      if (idea.tags) {
+        idea.tags.forEach(tag => tagSet.add(tag));
+      }
+    });
+    return Array.from(tagSet).sort();
+  }, [ideas]);
+
   const handleOpenEdit = (idea) => {
     setEditingIdea(idea);
     setEditTitle(idea.title);
@@ -567,6 +561,25 @@ export function Ideas() {
         return { title, tags };
       })
       .filter(task => task.title.length > 0);
+  };
+
+  const handleCustomTagAdd = (event, isEdit = false) => {
+    if (event.key === 'Enter' && event.target.value.trim()) {
+      event.preventDefault();
+      const newTag = event.target.value.trim().toLowerCase();
+      
+      if (isEdit) {
+        if (!editTags.includes(newTag)) {
+          setEditTags(prev => [...prev, newTag]);
+        }
+        setEditCustomTagInput("");
+      } else {
+        if (!tags.includes(newTag)) {
+          setTags(prev => [...prev, newTag]);
+        }
+        setCustomTagInput("");
+      }
+    }
   };
 
   return (
@@ -798,21 +811,46 @@ export function Ideas() {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Categories
                     </label>
-                    <div className="flex flex-wrap gap-2">
-                      {PREDEFINED_TAGS.map((tag) => (
-                        <button
-                          key={tag}
-                          type="button"
-                          onClick={() => handleTagToggle(tag)}
-                          className={`px-3 py-1 rounded-full text-sm ${
-                            tags.includes(tag)
-                              ? "bg-purple-500 text-white"
-                              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                          }`}
-                        >
-                          {tag}
-                        </button>
-                      ))}
+                    <div className="space-y-3">
+                      <input
+                        type="text"
+                        placeholder="Type a custom tag and press Enter"
+                        value={customTagInput}
+                        onChange={(e) => setCustomTagInput(e.target.value)}
+                        onKeyDown={(e) => handleCustomTagAdd(e)}
+                        className="w-full p-2 border rounded text-sm focus:ring-2 focus:ring-purple-500"
+                      />
+                      <div className="flex flex-wrap gap-2">
+                        {tags.map((tag) => (
+                          <button
+                            key={tag}
+                            type="button"
+                            onClick={() => handleTagToggle(tag)}
+                            className="px-3 py-1 rounded-full text-sm bg-purple-500 text-white hover:bg-purple-600"
+                          >
+                            {tag}
+                            <span className="ml-2" onClick={(e) => {
+                              e.stopPropagation();
+                              setTags(prev => prev.filter(t => t !== tag));
+                            }}>×</span>
+                          </button>
+                        ))}
+                      </div>
+                      <div className="border-t pt-2">
+                        <div className="text-sm text-gray-500 mb-2">Suggested tags:</div>
+                        <div className="flex flex-wrap gap-2">
+                          {PREDEFINED_TAGS.filter(tag => !tags.includes(tag)).map((tag) => (
+                            <button
+                              key={tag}
+                              type="button"
+                              onClick={() => handleTagToggle(tag)}
+                              className="px-3 py-1 rounded-full text-sm bg-gray-100 text-gray-700 hover:bg-gray-200"
+                            >
+                              {tag}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                     </div>
                   </div>
 
@@ -931,19 +969,27 @@ export function Ideas() {
                   Filter by Category
                 </h3>
                 <div className="flex flex-wrap gap-2">
-                  {PREDEFINED_TAGS.map((tag) => (
+                  {availableTags.map((tag) => (
                     <button
                       key={tag}
                       onClick={() => handleFilterTagToggle(tag)}
-                      className={`px-3 py-1 rounded-full text-sm ${
+                      className={`px-3 py-1 rounded-full text-sm flex items-center gap-2 ${
                         selectedTags.includes(tag)
                           ? "bg-purple-500 text-white"
                           : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                       }`}
                     >
-                      {tag}
+                      <span>{tag}</span>
+                      {selectedTags.includes(tag) && (
+                        <span className="text-xs bg-purple-600 text-white px-1.5 rounded-full">
+                          {ideas.current.filter(idea => idea.tags?.includes(tag)).length}
+                        </span>
+                      )}
                     </button>
                   ))}
+                  {availableTags.length === 0 && (
+                    <span className="text-sm text-gray-500">No tags available</span>
+                  )}
                 </div>
               </div>
 
@@ -1252,27 +1298,53 @@ export function Ideas() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Categories
                 </label>
-                <div className="flex flex-wrap gap-2">
-                  {PREDEFINED_TAGS.map((tag) => (
-                    <button
-                      key={tag}
-                      type="button"
-                      onClick={() => {
-                        setEditTags(prevTags =>
-                          prevTags.includes(tag)
-                            ? prevTags.filter(t => t !== tag)
-                            : [...prevTags, tag]
-                        );
-                      }}
-                      className={`px-3 py-1 rounded-full text-sm ${
-                        editTags.includes(tag)
-                          ? "bg-purple-500 text-white"
-                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                      }`}
-                    >
-                      {tag}
-                    </button>
-                  ))}
+                <div className="space-y-3">
+                  <input
+                    type="text"
+                    placeholder="Type a custom tag and press Enter"
+                    value={editCustomTagInput}
+                    onChange={(e) => setEditCustomTagInput(e.target.value)}
+                    onKeyDown={(e) => handleCustomTagAdd(e, true)}
+                    className="w-full p-2 border rounded text-sm focus:ring-2 focus:ring-purple-500"
+                  />
+                  <div className="flex flex-wrap gap-2">
+                    {editTags.map((tag) => (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => {
+                          setEditTags(prevTags =>
+                            prevTags.filter(t => t !== tag)
+                          );
+                        }}
+                        className="px-3 py-1 rounded-full text-sm bg-purple-500 text-white hover:bg-purple-600"
+                      >
+                        {tag}
+                        <span className="ml-2">×</span>
+                      </button>
+                    ))}
+                  </div>
+                  <div className="border-t pt-2">
+                    <div className="text-sm text-gray-500 mb-2">Suggested tags:</div>
+                    <div className="flex flex-wrap gap-2">
+                      {PREDEFINED_TAGS.filter(tag => !editTags.includes(tag)).map((tag) => (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() => {
+                            setEditTags(prevTags =>
+                              prevTags.includes(tag)
+                                ? prevTags.filter(t => t !== tag)
+                                : [...prevTags, tag]
+                            );
+                          }}
+                          className="px-3 py-1 rounded-full text-sm bg-gray-100 text-gray-700 hover:bg-gray-200"
+                        >
+                          {tag}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
 
