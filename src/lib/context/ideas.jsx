@@ -81,8 +81,7 @@ export function IdeasProvider(props) {
       );
 
       if (response && response.$id) {
-        setIdeas((prev) => [response, ...prev].slice(0, 10));
-        await init();
+        setIdeas((prev) => [response, ...prev]);
         return true;
       }
       return false;
@@ -90,20 +89,19 @@ export function IdeasProvider(props) {
       handleError(error);
       return false;
     }
-  }, [hasPermission, handleError, init]);
+  }, [hasPermission, handleError]);
 
   const remove = useCallback(async (id) => {
     if (!hasPermission) return false;
     try {
       await databases.deleteDocument(DATABASE_ID, COLLECTION_ID, id);
       setIdeas((prev) => prev.filter((idea) => idea.$id !== id));
-      await init();
       return true;
     } catch (error) {
       handleError(error);
       return false;
     }
-  }, [hasPermission, handleError, init]);
+  }, [hasPermission, handleError]);
 
   const update = useCallback(async (id, updates) => {
     if (!hasPermission) return false;
@@ -117,13 +115,12 @@ export function IdeasProvider(props) {
       setIdeas((prev) =>
         prev.map((idea) => (idea.$id === id ? response : idea))
       );
-      await init();
       return true;
     } catch (error) {
       handleError(error);
       return false;
     }
-  }, [hasPermission, handleError, init]);
+  }, [hasPermission, handleError]);
 
   const toggleComplete = useCallback(async (id) => {
     if (!hasPermission) return false;
