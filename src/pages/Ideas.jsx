@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { useUser } from "../lib/context/user";
 import { useIdeas } from "../lib/context/ideas";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -115,9 +115,9 @@ function TruncatedDescription({ text, maxLength = 150, isMinimal = false }) {
   const truncatedText = isExpanded ? text : text.slice(0, maxLength);
   
   return (
-    <div className="mt-2">
+    <div className="mt-1">
       <div className={`relative ${!isExpanded ? 'max-h-[4.5em] overflow-hidden' : ''}`}>
-        <div className={`text-gray-600 break-words ${!isExpanded ? 'line-clamp-3' : ''}`}>
+        <div className={`text-gray-500 text-sm break-words leading-relaxed ${!isExpanded ? 'line-clamp-3' : ''}`}>
           {renderTextWithLinks(truncatedText)}
           {!isExpanded && shouldTruncate && '...'}
         </div>
@@ -131,7 +131,7 @@ function TruncatedDescription({ text, maxLength = 150, isMinimal = false }) {
             e.stopPropagation();
             setIsExpanded(!isExpanded);
           }}
-          className="mt-1 text-blue-500 hover:text-blue-600 focus:outline-none text-sm font-medium"
+          className="mt-1 text-blue-500 hover:text-blue-600 focus:outline-none text-xs font-medium"
         >
           {isExpanded ? 'Show less' : 'Read more'}
         </button>
@@ -151,7 +151,6 @@ export function Ideas() {
   const [selectedTags, setSelectedTags] = useState([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [dueDate, setDueDate] = useState("");
-  const [selectedIdea, setSelectedIdea] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
   const [hideCompleted, setHideCompleted] = useState(false);
   const [isMinimalView, setIsMinimalView] = useState(false);
@@ -164,8 +163,8 @@ export function Ideas() {
   const [editDescription, setEditDescription] = useState("");
   const [editTags, setEditTags] = useState([]);
   const [editDueDate, setEditDueDate] = useState("");
-  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
-  const menuRef = useRef(null);
+  const [expandedMenus, setExpandedMenus] = useState(new Set());
+  const cardRefs = useRef({});
   const initRef = useRef(false);
 
   useEffect(() => {
@@ -184,7 +183,26 @@ export function Ideas() {
     };
 
     initialize();
-  }, [navigate, ideas, user]);
+  }, [navigate, ideas, user, initRef]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      expandedMenus.forEach(ideaId => {
+        if (cardRefs.current[ideaId] && !cardRefs.current[ideaId].contains(event.target)) {
+          setExpandedMenus(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(ideaId);
+            return newSet;
+          });
+        }
+      });
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [expandedMenus, cardRefs]);
 
   const handleRemove = async (ideaId) => {
     const idea = ideas.current.find(i => i.$id === ideaId);
@@ -201,7 +219,6 @@ export function Ideas() {
 
     const success = await ideas.remove(ideaId);
     if (success) {
-      setSelectedIdea(null);
       toast.success("Task removed successfully!");
     } else {
       toast.error("Failed to remove task. Please try again.");
@@ -220,7 +237,6 @@ export function Ideas() {
     });
     
     if (success) {
-      setSelectedIdea(null);
       toast.success("Task status updated successfully!");
     } else {
       toast.error("Failed to update task. Please try again.");
@@ -260,7 +276,8 @@ export function Ideas() {
       hour: "2-digit",
       minute: "2-digit",
     };
-    return date.toLocaleString(undefined, options);
+    const weekday = date.toLocaleDateString(undefined, { weekday: 'short' }).toLowerCase();
+    return `${weekday}, ${date.toLocaleString(undefined, options)}`;
   };
 
   const handleFormSubmit = async () => {
@@ -310,7 +327,7 @@ export function Ideas() {
   };
 
   // Memoize filteredAndSortedIdeas to prevent unnecessary recalculations
-  const filteredAndSortedIdeas = React.useMemo(() => {
+  const filteredAndSortedIdeas = useMemo(() => {
     return ideas.current
       .filter((idea) => {
         if (hideCompleted && idea.completed) {
@@ -355,7 +372,7 @@ export function Ideas() {
   }, [ideas, hideCompleted, userFilter, timeFilter, selectedTags]);
 
   // Memoize dashboard stats
-  const dashboardStats = React.useMemo(() => ({
+  const dashboardStats = useMemo(() => ({
     totalTasks: ideas.current.length,
     completedTasks: ideas.current.filter(idea => idea.completed).length,
     completedToday: ideas.current.filter(idea => {
@@ -386,7 +403,7 @@ export function Ideas() {
   }), [ideas, user]);
 
   // Memoize unique users
-  const uniqueUsers = React.useMemo(() => {
+  const uniqueUsers = useMemo(() => {
     return ideas.current.reduce((acc, idea) => {
       if (!acc[idea.userId]) {
         acc[idea.userId] = {
@@ -405,7 +422,6 @@ export function Ideas() {
     setEditTags(idea.tags || []);
     setEditDueDate(idea.dueDate || "");
     setIsEditModalOpen(true);
-    setSelectedIdea(null);
   };
 
   const handleQuickDateUpdate = async (ideaId, dateType) => {
@@ -423,6 +439,10 @@ export function Ideas() {
         const daysUntilSunday = 7 - now.getDay();
         newDueDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + daysUntilSunday, 23, 59);
         break;
+      case 'weekend':
+        const daysUntilSaturday = (6 - now.getDay() + 7) % 7;
+        newDueDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + daysUntilSaturday, 23, 59);
+        break;
       default:
         return;
     }
@@ -432,7 +452,6 @@ export function Ideas() {
     });
 
     if (success) {
-      setSelectedIdea(null);
       toast.success("Due date updated successfully!");
     } else {
       toast.error("Failed to update due date. Please try again.");
@@ -465,33 +484,19 @@ export function Ideas() {
     }
   };
 
-  const handleMenuClick = (event, ideaId) => {
-    event.stopPropagation();
-    if (selectedIdea === ideaId) {
-      setSelectedIdea(null);
-    } else {
-      const rect = event.currentTarget.getBoundingClientRect();
-      setMenuPosition({
-        top: rect.bottom + window.scrollY,
-        left: rect.right - 192, // 192px is the menu width (w-48)
-      });
-      setSelectedIdea(ideaId);
-    }
-  };
-
-  // Click outside handler with proper cleanup
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (menuRef.current && !menuRef.current.contains(event.target)) {
-        setSelectedIdea(null);
+  const toggleMenu = useCallback((ideaId, event) => {
+    event.stopPropagation(); // Prevent event from bubbling up
+    setExpandedMenus(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(ideaId)) {
+        newSet.delete(ideaId);
+      } else {
+        newSet.clear(); // Close any other open menus
+        newSet.add(ideaId);
       }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [menuRef]);
+      return newSet;
+    });
+  }, []);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -863,47 +868,30 @@ export function Ideas() {
             {filteredAndSortedIdeas.map((idea) => (
               <div
                 key={idea.$id}
-                className={`flex items-center justify-between p-2 rounded-lg ${
+                ref={el => cardRefs.current[idea.$id] = el}
+                className={`flex items-center justify-between p-3 rounded-lg ${
                   idea.completed
                     ? "bg-green-50 border border-green-200"
                     : "bg-white border border-gray-200"
                 }`}
               >
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={(e) => handleMenuClick(e, idea.$id)}
-                    className="p-1 hover:bg-gray-100 rounded-full"
-                  >
-                    <FontAwesomeIcon
-                      icon={faEllipsisV}
-                      className="h-4 w-4 text-gray-600"
-                    />
-                  </button>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-lg font-medium text-gray-900 truncate">
-                      {idea.title}
-                    </h3>
-                    <TruncatedDescription text={idea.description} isMinimal={true} maxLength={100} />
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  {idea.tags && idea.tags.length > 0 && (
-                    <div className="flex gap-1">
-                      {idea.tags.map((tag, index) => (
-                        <span
-                          key={index}
-                          className={`px-2 py-0.5 rounded-full text-xs ${
-                            idea.completed
-                              ? "bg-green-100 text-green-800"
-                              : "bg-purple-100 text-purple-800"
-                          }`}
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                <h3 className="text-base font-medium text-gray-900 break-words flex-1 leading-snug">
+                  {idea.title}
+                </h3>
+                <button
+                  onClick={() => handleToggleComplete(idea.$id)}
+                  className={`ml-4 w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
+                    idea.completed
+                      ? "bg-green-100 text-green-600 hover:bg-green-200"
+                      : "bg-gray-100 text-gray-400 hover:bg-gray-200"
+                  }`}
+                  title={idea.completed ? "Mark as incomplete" : "Mark as complete"}
+                >
+                  <FontAwesomeIcon
+                    icon={faCircleCheck}
+                    className={`h-5 w-5 transition-transform ${idea.completed ? "scale-100" : "scale-90"}`}
+                  />
+                </button>
               </div>
             ))}
           </div>
@@ -912,6 +900,7 @@ export function Ideas() {
             {filteredAndSortedIdeas.map((idea) => (
               <div
                 key={idea.$id}
+                ref={el => cardRefs.current[idea.$id] = el}
                 className={`relative bg-white rounded-lg shadow-md transform transition-all duration-200 hover:scale-[1.02] ${
                   idea.completed
                     ? "border-2 border-green-500 bg-green-50"
@@ -919,151 +908,128 @@ export function Ideas() {
                 }`}
               >
                 <div
-                  className={`absolute top-0 left-0 w-full h-1 ${
+                  className={`absolute top-0 left-0 w-full h-0.5 ${
                     idea.completed ? "bg-green-500" : "bg-red-500"
                   }`}
                 />
-                {/* <div className="absolute top-4 left-4">
-                  <FontAwesomeIcon
-                    icon={idea.completed ? faCircleCheck : faCircleXmark}
-                    className={`${
-                      idea.completed ? "text-green-500" : "text-red-500"
-                    } h-5 w-5`}
-                  />
-                </div> */}
-                <div className="p-4 pt-8">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="pl-6">
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-lg font-medium text-gray-900 truncate">
-                          {idea.title}
-                        </h3>
-                        <TruncatedDescription text={idea.description} isMinimal={false} maxLength={150} />
-                      </div>
-                      <div className="flex items-center text-xs text-gray-500 mt-1">
-                        <FontAwesomeIcon icon={faUser} className="mr-1" />
-                        <span>
-                          Added by{" "}
-                          {idea.userId === user.current.$id
-                            ? "you"
-                            : idea.userName || "Unknown User"}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="relative isolate" style={{ zIndex: 50 }}>
+                <div className="p-3">
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex items-start justify-between">
+                      <h3 className="text-base font-semibold text-gray-900 break-words flex-1 pr-2 leading-snug">
+                        {idea.title}
+                      </h3>
                       <button
-                        onClick={(e) => handleMenuClick(e, idea.$id)}
-                        className="p-1 hover:bg-gray-100 rounded-full"
+                        onClick={(e) => toggleMenu(idea.$id, e)}
+                        className="p-0.5 hover:bg-gray-100 rounded-full shrink-0"
                       >
                         <FontAwesomeIcon
                           icon={faEllipsisV}
-                          className="h-4 w-4 text-gray-600"
+                          className="h-3.5 w-3.5 text-gray-600"
                         />
                       </button>
-                      {selectedIdea === idea.$id && (
-                        <div 
-                          className="fixed right-4 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg" 
-                          style={{ zIndex: 100 }}
+                    </div>
+                    
+                    {expandedMenus.has(idea.$id) && (
+                      <div className="flex flex-wrap gap-1 mt-1.5 border-t border-gray-100 pt-1.5">
+                        <button
+                          onClick={() => handleToggleComplete(idea.$id)}
+                          className={`px-2 py-0.5 rounded-full text-[10px] flex items-center gap-1 ${
+                            idea.completed
+                              ? "bg-red-50 text-red-700 hover:bg-red-100"
+                              : "bg-green-50 text-green-700 hover:bg-green-100"
+                          }`}
                         >
-                          <div className="flex justify-between items-center px-4 py-2 border-b border-gray-100">
-                            <span className="text-xs font-medium text-gray-500">Actions</span>
+                          <FontAwesomeIcon
+                            icon={idea.completed ? faCircleXmark : faCircleCheck}
+                            className="h-3 w-3"
+                          />
+                          <span>{idea.completed ? "Incomplete" : "Complete"}</span>
+                        </button>
+                        <button
+                          onClick={() => handleOpenEdit(idea)}
+                          className="px-2 py-0.5 rounded-full text-[10px] flex items-center gap-1 bg-blue-50 text-blue-700 hover:bg-blue-100"
+                        >
+                          <FontAwesomeIcon icon={faPencilAlt} className="h-3 w-3" />
+                          <span>Edit</span>
+                        </button>
+                        {!idea.completed && (
+                          <>
                             <button
-                              onClick={() => setSelectedIdea(null)}
-                              className="text-gray-400 hover:text-gray-600"
-                              title="Close menu"
+                              onClick={() => handleQuickDateUpdate(idea.$id, 'today')}
+                              className="px-2 py-0.5 rounded-full text-[10px] flex items-center gap-1 bg-purple-50 text-purple-700 hover:bg-purple-100"
                             >
-                              ×
+                              <FontAwesomeIcon icon={faCalendarDay} className="h-3 w-3" />
+                              <span>Today</span>
                             </button>
-                          </div>
-                          <button
-                            onClick={() => handleToggleComplete(idea.$id)}
-                            className={`block w-full py-2 px-4 text-left hover:bg-gray-100 ${
-                              idea.completed
-                                ? "text-red-600"
-                                : "text-green-600"
-                            }`}
-                          >
-                            <FontAwesomeIcon
-                              icon={
-                                idea.completed ? faCircleXmark : faCircleCheck
-                              }
-                              className="mr-2"
-                            />
-                            {idea.completed
-                              ? "Mark Incomplete"
-                              : "Mark Complete"}
-                          </button>
-                          <button
-                            onClick={() => handleOpenEdit(idea)}
-                            className="block w-full py-2 px-4 text-left text-blue-600 hover:bg-gray-100 border-t border-gray-100"
-                          >
-                            <FontAwesomeIcon
-                              icon={faPencilAlt}
-                              className="mr-2"
-                            />
-                            Edit
-                          </button>
-                          {!idea.completed && (
-                            <div className="border-t border-gray-100">
-                              <div className="px-4 py-1 text-xs text-gray-500">Move to</div>
-                              <div className="flex">
-                                <button
-                                  onClick={() => handleQuickDateUpdate(idea.$id, 'today')}
-                                  className="flex-1 py-2 px-2 text-center text-blue-600 hover:bg-gray-100"
-                                  title="Today"
-                                >
-                                  <FontAwesomeIcon icon={faCalendarDay} />
-                                </button>
-                                <button
-                                  onClick={() => handleQuickDateUpdate(idea.$id, 'tomorrow')}
-                                  className="flex-1 py-2 px-2 text-center text-green-600 hover:bg-gray-100"
-                                  title="Tomorrow"
-                                >
-                                  <FontAwesomeIcon icon={faCalendarPlus} />
-                                </button>
-                                <button
-                                  onClick={() => handleQuickDateUpdate(idea.$id, 'endOfWeek')}
-                                  className="flex-1 py-2 px-2 text-center text-purple-600 hover:bg-gray-100"
-                                  title="End of Week"
-                                >
-                                  <FontAwesomeIcon icon={faCalendarWeek} />
-                                </button>
-                              </div>
-                            </div>
-                          )}
-                          <button
-                            onClick={() => handleRemove(idea.$id)}
-                            className="block w-full py-2 px-4 text-left text-red-600 hover:bg-gray-100 border-t border-gray-100"
-                          >
-                            <FontAwesomeIcon
-                              icon={faTrash}
-                              className="mr-2"
-                            />
-                            Remove
-                          </button>
+                            <button
+                              onClick={() => handleQuickDateUpdate(idea.$id, 'tomorrow')}
+                              className="px-2 py-0.5 rounded-full text-[10px] flex items-center gap-1 bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
+                            >
+                              <FontAwesomeIcon icon={faCalendarPlus} className="h-3 w-3" />
+                              <span>Tomorrow</span>
+                            </button>
+                            <button
+                              onClick={() => handleQuickDateUpdate(idea.$id, 'weekend')}
+                              className="px-2 py-0.5 rounded-full text-[10px] flex items-center gap-1 bg-yellow-50 text-yellow-700 hover:bg-yellow-100"
+                            >
+                              <FontAwesomeIcon icon={faCalendarWeek} className="h-3 w-3" />
+                              <span>This Weekend</span>
+                            </button>
+                          </>
+                        )}
+                        <button
+                          onClick={() => handleRemove(idea.$id)}
+                          className="px-2 py-0.5 rounded-full text-[10px] flex items-center gap-1 bg-red-50 text-red-700 hover:bg-red-100"
+                        >
+                          <FontAwesomeIcon icon={faTrash} className="h-3 w-3" />
+                          <span>Remove</span>
+                        </button>
+                      </div>
+                    )}
+                    
+                    {idea.description && (
+                      <div className="border-t border-gray-100 pt-1.5">
+                        <TruncatedDescription text={idea.description} isMinimal={false} maxLength={150} />
+                      </div>
+                    )}
+                    
+                    <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                      {idea.tags && idea.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {idea.tags.map((tag, index) => (
+                            <span
+                              key={index}
+                              className={`px-1.5 py-0.5 rounded-full text-[10px] ${
+                                idea.completed
+                                  ? "bg-green-50 text-green-800"
+                                  : "bg-purple-50 text-purple-800"
+                              }`}
+                            >
+                              {tag}
+                            </span>
+                          ))}
                         </div>
                       )}
                     </div>
-                  </div>
-
-                  <div className="flex items-center justify-between text-xs text-gray-500 pl-6">
-                    <div className="flex items-center">
-                      <FontAwesomeIcon icon={faClock} className="mr-1" />
-                      {formatDate(idea.entryDate)}
-                    </div>
-                    {idea.dueDate && (
-                      <div
-                        className={`flex items-center ${getDueDateStatus(
-                          idea.dueDate
-                        )}`}
-                      >
-                        <FontAwesomeIcon
-                          icon={faCalendarAlt}
-                          className="mr-1"
-                        />
-                        Due: {formatDate(idea.dueDate)}
+                    
+                    <div className="flex flex-wrap items-center justify-between text-[10px] text-gray-500 border-t border-gray-100 pt-1.5 mt-1">
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center">
+                          <FontAwesomeIcon icon={faClock} className="w-3 h-3" />
+                          <span className="ml-1">{formatDate(idea.entryDate)}</span>
+                        </div>
+                        {idea.dueDate && (
+                          <div className={`flex items-center ${getDueDateStatus(idea.dueDate)}`}>
+                            <FontAwesomeIcon icon={faCalendarAlt} className="w-3 h-3" />
+                            <span className="ml-1">{formatDate(idea.dueDate)}</span>
+                          </div>
+                        )}
                       </div>
-                    )}
+                      <div className="flex items-center">
+                        <FontAwesomeIcon icon={faUser} className="w-3 h-3" />
+                        <span className="ml-1">{idea.userName || "Unknown User"}</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1186,13 +1152,13 @@ export function Ideas() {
                         type="button"
                         onClick={() => {
                           const now = new Date();
-                          const daysUntilSunday = 7 - now.getDay();
-                          setEditDueDate(new Date(now.getFullYear(), now.getMonth(), now.getDate() + daysUntilSunday, 23, 59).toISOString().slice(0, 16));
+                          const daysUntilSaturday = (6 - now.getDay() + 7) % 7;
+                          setEditDueDate(new Date(now.getFullYear(), now.getMonth(), now.getDate() + daysUntilSaturday, 23, 59).toISOString().slice(0, 16));
                         }}
-                        className="flex-1 px-2 py-1 text-sm bg-purple-100 text-purple-700 rounded hover:bg-purple-200"
+                        className="flex-1 px-2 py-1 text-sm bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200"
                       >
                         <FontAwesomeIcon icon={faCalendarWeek} className="mr-1" />
-                        End of Week
+                        This Weekend
                       </button>
                     </div>
                   </div>
@@ -1216,102 +1182,6 @@ export function Ideas() {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
-
-      {selectedIdea && (
-        <div 
-          className="fixed inset-0 z-[100]"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div
-            ref={menuRef}
-            className="fixed w-48 bg-white border border-gray-200 rounded-lg shadow-lg"
-            style={{ 
-              top: `${menuPosition.top}px`, 
-              left: `${menuPosition.left}px`,
-              zIndex: 9999 
-            }}
-          >
-            <div className="flex justify-between items-center px-4 py-2 border-b border-gray-100">
-              <span className="text-xs font-medium text-gray-500">Actions</span>
-              <button
-                onClick={() => setSelectedIdea(null)}
-                className="text-gray-400 hover:text-gray-600"
-                title="Close menu"
-              >
-                ×
-              </button>
-            </div>
-            <button
-              onClick={() => handleToggleComplete(selectedIdea)}
-              className={`block w-full py-2 px-4 text-left hover:bg-gray-100 ${
-                ideas.current.find(i => i.$id === selectedIdea)?.completed
-                  ? "text-red-600"
-                  : "text-green-600"
-              }`}
-            >
-              <FontAwesomeIcon
-                icon={
-                  ideas.current.find(i => i.$id === selectedIdea)?.completed 
-                    ? faCircleXmark 
-                    : faCircleCheck
-                }
-                className="mr-2"
-              />
-              {ideas.current.find(i => i.$id === selectedIdea)?.completed
-                ? "Mark Incomplete"
-                : "Mark Complete"}
-            </button>
-            <button
-              onClick={() => handleOpenEdit(ideas.current.find(i => i.$id === selectedIdea))}
-              className="block w-full py-2 px-4 text-left text-blue-600 hover:bg-gray-100 border-t border-gray-100"
-            >
-              <FontAwesomeIcon
-                icon={faPencilAlt}
-                className="mr-2"
-              />
-              Edit
-            </button>
-            {!ideas.current.find(i => i.$id === selectedIdea)?.completed && (
-              <div className="border-t border-gray-100">
-                <div className="px-4 py-1 text-xs text-gray-500">Move to</div>
-                <div className="flex">
-                  <button
-                    onClick={() => handleQuickDateUpdate(selectedIdea, 'today')}
-                    className="flex-1 py-2 px-2 text-center text-blue-600 hover:bg-gray-100"
-                    title="Today"
-                  >
-                    <FontAwesomeIcon icon={faCalendarDay} />
-                  </button>
-                  <button
-                    onClick={() => handleQuickDateUpdate(selectedIdea, 'tomorrow')}
-                    className="flex-1 py-2 px-2 text-center text-green-600 hover:bg-gray-100"
-                    title="Tomorrow"
-                  >
-                    <FontAwesomeIcon icon={faCalendarPlus} />
-                  </button>
-                  <button
-                    onClick={() => handleQuickDateUpdate(selectedIdea, 'endOfWeek')}
-                    className="flex-1 py-2 px-2 text-center text-purple-600 hover:bg-gray-100"
-                    title="End of Week"
-                  >
-                    <FontAwesomeIcon icon={faCalendarWeek} />
-                  </button>
-                </div>
-              </div>
-            )}
-            <button
-              onClick={() => handleRemove(selectedIdea)}
-              className="block w-full py-2 px-4 text-left text-red-600 hover:bg-gray-100 border-t border-gray-100"
-            >
-              <FontAwesomeIcon
-                icon={faTrash}
-                className="mr-2"
-              />
-              Remove
-            </button>
           </div>
         </div>
       )}
