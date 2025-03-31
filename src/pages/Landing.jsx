@@ -20,7 +20,7 @@ export function Landing() {
                   <div className="space-y-4">
                     <p className="text-sm text-gray-600">You're already logged in!</p>
                     <Link
-                      to="/dashboard"
+                      to="/dashboard/ideas"
                       className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-cyan-600 hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500"
                     >
                       Go to Dashboard
