@@ -94,7 +94,7 @@ export function UserProvider(props) {
     const currentPath = window.location.pathname;
     const publicRoutes = ["/", "/login", "/register"];
     const isPublicRoute = publicRoutes.includes(currentPath);
-    const isDashboardRoute = currentPath.startsWith("/dashboard");
+    const isDashboardRoute = currentPath.startsWith("/dashboard/ideas");
 
     if (user && isPublicRoute && currentPath !== "/") {
       navigate("/dashboard");
