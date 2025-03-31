@@ -151,6 +151,7 @@ export function Ideas() {
   const [bulkTasksInput, setBulkTasksInput] = useState("");
   const [customTagInput, setCustomTagInput] = useState("");
   const [editCustomTagInput, setEditCustomTagInput] = useState("");
+  const [isShoppingList, setIsShoppingList] = useState(false);
 
   useEffect(() => {
     if (!user.current) {
@@ -521,7 +522,9 @@ export function Ideas() {
           const hashtags = task.match(/#\w+/g) || [];
           const title = task.replace(/#\w+/g, '').trim();
           const tags = hashtags.map(tag => tag.substring(1)); // Remove # from tags
-          return { title, tags: [...tags, 'bulk'] };
+          // Add shopping tag if checkbox is checked
+          const finalTags = isShoppingList ? [...tags, 'shopping'] : tags;
+          return { title, tags: [...finalTags, 'bulk'] };
         })
         .filter(task => task.title.length > 0);
 
@@ -548,6 +551,7 @@ export function Ideas() {
         toast.success(`Successfully added ${successCount} tasks!`);
         setIsBulkUploadOpen(false);
         setBulkTasksInput("");
+        setIsShoppingList(false); // Reset the checkbox
       }
     } catch (error) {
       toast.error("Failed to create tasks");
@@ -640,6 +644,18 @@ export function Ideas() {
                   rows="6"
                   placeholder="Enter tasks here..."
                 />
+                <div className="mt-4 flex items-center">
+                  <input
+                    type="checkbox"
+                    id="shoppingList"
+                    checked={isShoppingList}
+                    onChange={(e) => setIsShoppingList(e.target.checked)}
+                    className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="shoppingList" className="ml-2 block text-sm text-gray-700">
+                    Is this a shopping list?
+                  </label>
+                </div>
                 <div className="mt-2 text-sm">
                   {bulkTasksInput && (
                     <div className="space-y-1">
@@ -653,15 +669,18 @@ export function Ideas() {
                               <span className="text-gray-400">{index + 1}.</span>
                               <span className="truncate">{task.title}</span>
                             </div>
-                            {task.tags.length > 0 && (
-                              <div className="ml-6 mt-0.5 flex gap-1 flex-wrap">
-                                {task.tags.map((tag, tagIndex) => (
-                                  <span key={tagIndex} className="px-1.5 py-0.5 bg-purple-50 text-purple-700 rounded-full text-[10px]">
-                                    {tag}
-                                  </span>
-                                ))}
-                              </div>
-                            )}
+                            <div className="ml-6 mt-0.5 flex gap-1 flex-wrap">
+                              {task.tags.map((tag, tagIndex) => (
+                                <span key={tagIndex} className="px-1.5 py-0.5 bg-purple-50 text-purple-700 rounded-full text-[10px]">
+                                  {tag}
+                                </span>
+                              ))}
+                              {isShoppingList && (
+                                <span className="px-1.5 py-0.5 bg-green-50 text-green-700 rounded-full text-[10px]">
+                                  shopping
+                                </span>
+                              )}
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -682,6 +701,7 @@ export function Ideas() {
                   onClick={() => {
                     setIsBulkUploadOpen(false);
                     setBulkTasksInput("");
+                    setIsShoppingList(false);
                   }}
                   className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
                 >
