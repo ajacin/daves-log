@@ -23,6 +23,7 @@ import {
   faChartLine,
   faPencilAlt,
   faCalendarPlus,
+  faShoppingCart,
 } from "@fortawesome/free-solid-svg-icons";
 import { useNavigate } from "react-router-dom";
 import toast from 'react-hot-toast';
@@ -133,7 +134,7 @@ export function Ideas() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [dueDate, setDueDate] = useState("");
   const [showFilters, setShowFilters] = useState(false);
-  const [hideCompleted, setHideCompleted] = useState(false);
+  const [hideCompleted, setHideCompleted] = useState(true);
   const [isMinimalView, setIsMinimalView] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [timeFilter, setTimeFilter] = useState(null);
@@ -326,6 +327,11 @@ export function Ideas() {
           return false;
         }
 
+        // Shopping list filter
+        if (isShoppingList && (!idea.tags || !idea.tags.includes('shopping'))) {
+          return false;
+        }
+
         // User filter (if active)
         if (userFilter && idea.userId !== userFilter) {
           return false;
@@ -365,14 +371,26 @@ export function Ideas() {
         return true;
       })
       .sort((a, b) => {
+        // First sort by completion status
         if (a.completed !== b.completed) {
           return a.completed ? 1 : -1;
         }
+        
+        // Then sort by due date (older due dates first)
+        if (a.dueDate && b.dueDate) {
+          return new Date(a.dueDate) - new Date(b.dueDate);
+        }
+        
+        // If only one has a due date, it comes first
+        if (a.dueDate && !b.dueDate) return -1;
+        if (!a.dueDate && b.dueDate) return 1;
+        
+        // If neither has a due date or they have the same due date, sort by tag
         const aTags = a.tags?.join(",") || "";
         const bTags = b.tags?.join(",") || "";
         return aTags.localeCompare(bTags);
       });
-  }, [ideas, hideCompleted, userFilter, timeFilter, selectedTags]);
+  }, [ideas, hideCompleted, userFilter, timeFilter, selectedTags, isShoppingList]);
 
   // Memoize dashboard stats
   const dashboardStats = useMemo(() => ({
@@ -689,16 +707,15 @@ export function Ideas() {
                   rows="6"
                   placeholder="Enter tasks here..."
                 />
-                <div className="mt-4 flex items-center">
-                  <input
-                    type="checkbox"
-                    id="shoppingList"
-                    checked={isShoppingList}
-                    onChange={(e) => setIsShoppingList(e.target.checked)}
-                    className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
-                  />
-                  <label htmlFor="shoppingList" className="ml-2 block text-sm text-gray-700">
-                    Is this a shopping list?
+                <div className="mt-3">
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={isShoppingList}
+                      onChange={() => setIsShoppingList(!isShoppingList)}
+                      className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                    />
+                    <span>Tag all tasks as shopping items</span>
                   </label>
                 </div>
                 <div className="mt-2 text-sm">
@@ -998,22 +1015,22 @@ export function Ideas() {
                 </span>
               </button>
 
-              <div className="flex items-center gap-4 text-sm border-l border-gray-200 pl-3">
-                <div className="flex items-center gap-2">
-                  <FontAwesomeIcon
-                    icon={faCircleCheck}
-                    className="text-green-500"
-                  />
-                  <span className="hidden sm:inline">Completed</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <FontAwesomeIcon
-                    icon={faCircleXmark}
-                    className="text-red-500"
-                  />
-                  <span className="hidden sm:inline">Pending</span>
-                </div>
-              </div>
+              <button
+                onClick={() => setIsShoppingList(!isShoppingList)}
+                className={`px-3 py-1 rounded-full text-sm flex items-center gap-2 transition-colors duration-200 ${
+                  isShoppingList
+                    ? "bg-orange-500 text-white hover:bg-orange-600"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
+                title={isShoppingList ? "Show all tasks" : "Show shopping list"}
+              >
+                <FontAwesomeIcon icon={faShoppingCart} />
+                <span className="hidden sm:inline">
+                  {isShoppingList ? "All Tasks" : "Shopping"}
+                </span>
+              </button>
+
+             
 
               <button
                 onClick={() => setShowFilters(!showFilters)}
@@ -1147,7 +1164,9 @@ export function Ideas() {
           <div className="grid grid-cols-1 gap-2">
             <div className="text-sm text-gray-500 mb-2">
               {filteredAndSortedIdeas.length} tasks
-              <span className="ml-1 text-xs text-orange-500">(only showing incomplete tasks and those completed today)</span>
+              <span className="ml-1 text-xs text-orange-500">
+                {hideCompleted ? "(completed tasks are hidden)" : "(showing all tasks)"}
+              </span>
             </div>
             
             {filteredAndSortedIdeas.length > 0 ? (
@@ -1161,23 +1180,68 @@ export function Ideas() {
                       : "bg-white border border-gray-200"
                   }`}
                 >
-                  <h3 className="text-base font-medium text-gray-900 break-words flex-1 leading-snug">
-                    {idea.title}
-                  </h3>
-                  <button
-                    onClick={() => handleToggleComplete(idea.$id)}
-                    className={`ml-4 w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
-                      idea.completed
-                        ? "bg-green-100 text-green-600 hover:bg-green-200"
-                        : "bg-gray-100 text-gray-400 hover:bg-gray-200"
-                    }`}
-                    title={idea.completed ? "Mark as incomplete" : "Mark as complete"}
-                  >
-                    <FontAwesomeIcon
-                      icon={faCircleCheck}
-                      className={`h-5 w-5 transition-transform ${idea.completed ? "scale-100" : "scale-90"}`}
-                    />
-                  </button>
+                  <div className="flex-1">
+                    <h3 className="text-base font-medium text-gray-900 break-words leading-snug">
+                      {idea.title}
+                    </h3>
+                  </div>
+                  
+                  <div className="flex items-center gap-1">
+                    {!idea.completed && (
+                      <>
+                        <button
+                          onClick={() => handleQuickDateUpdate(idea.$id, 'today')}
+                          className="p-1.5 rounded text-purple-600 hover:bg-purple-50"
+                          title="Due today"
+                        >
+                          <FontAwesomeIcon icon={faCalendarDay} className="h-3.5 w-3.5" />
+                        </button>
+                        
+                        <button
+                          onClick={() => handleQuickDateUpdate(idea.$id, 'tomorrow')}
+                          className="p-1.5 rounded text-indigo-600 hover:bg-indigo-50"
+                          title="Due tomorrow"
+                        >
+                          <FontAwesomeIcon icon={faCalendarPlus} className="h-3.5 w-3.5" />
+                        </button>
+                      </>
+                    )}
+                    
+                    <button
+                      onClick={(e) => toggleMenu(idea.$id, e)}
+                      className="p-1.5 rounded text-gray-500 hover:bg-gray-50"
+                      title="More options"
+                    >
+                      <FontAwesomeIcon icon={faEllipsisV} className="h-3.5 w-3.5" />
+                    </button>
+                    
+                    <button
+                      onClick={() => handleToggleComplete(idea.$id)}
+                      className={`ml-1 w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
+                        idea.completed
+                          ? "bg-green-100 text-green-600 hover:bg-green-200"
+                          : "bg-gray-100 text-gray-400 hover:bg-gray-200"
+                      }`}
+                      title={idea.completed ? "Mark as incomplete" : "Mark as complete"}
+                    >
+                      <FontAwesomeIcon
+                        icon={faCircleCheck}
+                        className={`h-5 w-5 transition-transform ${idea.completed ? "scale-100" : "scale-90"}`}
+                      />
+                    </button>
+                  </div>
+                  
+                  {expandedMenus.has(idea.$id) && (
+                    <div className="absolute right-0 mt-32 mr-2 bg-white border border-gray-200 rounded-lg shadow-lg z-10 py-1">
+                      <button
+                        onClick={() => handleRemove(idea.$id)}
+                        className="px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 w-full text-left"
+                      >
+                        <FontAwesomeIcon icon={faTrash} className="h-3.5 w-3.5" />
+                        <span>Delete</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))
             ) : (
@@ -1190,7 +1254,9 @@ export function Ideas() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div className="col-span-1 sm:col-span-2 lg:col-span-3 text-sm text-gray-500 mb-2">
               {filteredAndSortedIdeas.length} tasks
-              <span className="ml-1 text-xs text-orange-500">(only showing incomplete tasks and those completed today)</span>
+              <span className="ml-1 text-xs text-orange-500">
+                {hideCompleted ? "(completed tasks are hidden)" : "(showing all tasks)"}
+              </span>
             </div>
             
             {filteredAndSortedIdeas.length > 0 ? (
@@ -1218,6 +1284,7 @@ export function Ideas() {
                         <button
                           onClick={(e) => toggleMenu(idea.$id, e)}
                           className="p-0.5 hover:bg-gray-100 rounded-full shrink-0"
+                          title="Delete task"
                         >
                           <FontAwesomeIcon
                             icon={faEllipsisV}
@@ -1229,57 +1296,11 @@ export function Ideas() {
                       {expandedMenus.has(idea.$id) && (
                         <div className="flex flex-wrap gap-1 mt-1.5 border-t border-gray-100 pt-1.5">
                           <button
-                            onClick={() => handleToggleComplete(idea.$id)}
-                            className={`px-2 py-0.5 rounded-full text-[10px] flex items-center gap-1 ${
-                              idea.completed
-                                ? "bg-red-50 text-red-700 hover:bg-red-100"
-                                : "bg-green-50 text-green-700 hover:bg-green-100"
-                            }`}
-                          >
-                            <FontAwesomeIcon
-                              icon={idea.completed ? faCircleXmark : faCircleCheck}
-                              className="h-3 w-3"
-                            />
-                            <span>{idea.completed ? "Incomplete" : "Complete"}</span>
-                          </button>
-                          <button
-                            onClick={() => handleOpenEdit(idea)}
-                            className="px-2 py-0.5 rounded-full text-[10px] flex items-center gap-1 bg-blue-50 text-blue-700 hover:bg-blue-100"
-                          >
-                            <FontAwesomeIcon icon={faPencilAlt} className="h-3 w-3" />
-                            <span>Edit</span>
-                          </button>
-                          {!idea.completed && (
-                            <>
-                              <button
-                                onClick={() => handleQuickDateUpdate(idea.$id, 'today')}
-                                className="px-2 py-0.5 rounded-full text-[10px] flex items-center gap-1 bg-purple-50 text-purple-700 hover:bg-purple-100"
-                              >
-                                <FontAwesomeIcon icon={faCalendarDay} className="h-3 w-3" />
-                                <span>Today</span>
-                              </button>
-                              <button
-                                onClick={() => handleQuickDateUpdate(idea.$id, 'tomorrow')}
-                                className="px-2 py-0.5 rounded-full text-[10px] flex items-center gap-1 bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
-                              >
-                                <FontAwesomeIcon icon={faCalendarPlus} className="h-3 w-3" />
-                                <span>Tomorrow</span>
-                              </button>
-                              <button
-                                onClick={() => handleQuickDateUpdate(idea.$id, 'weekend')}
-                                className="px-2 py-0.5 rounded-full text-[10px] flex items-center gap-1 bg-yellow-50 text-yellow-700 hover:bg-yellow-100"
-                              >
-                                <FontAwesomeIcon icon={faCalendarWeek} className="h-3 w-3" />
-                                <span>This Weekend</span>
-                              </button>
-                            </>
-                          )}
-                          <button
                             onClick={() => handleRemove(idea.$id)}
                             className="px-2 py-0.5 rounded-full text-[10px] flex items-center gap-1 bg-red-50 text-red-700 hover:bg-red-100"
                           >
                             <FontAwesomeIcon icon={faTrash} className="h-3 w-3" />
-                            <span>Remove</span>
+                            <span>Delete</span>
                           </button>
                         </div>
                       )}
@@ -1306,6 +1327,57 @@ export function Ideas() {
                               </span>
                             ))}
                           </div>
+                        )}
+                      </div>
+                      
+                      {/* Action Buttons Row */}
+                      <div className="flex flex-wrap items-center gap-1 mt-2 border-t border-gray-100 pt-2">
+                        <button
+                          onClick={() => handleToggleComplete(idea.$id)}
+                          className={`px-2 py-1 rounded-full text-xs flex items-center gap-1 ${
+                            idea.completed
+                              ? "bg-red-50 text-red-700 hover:bg-red-100"
+                              : "bg-green-50 text-green-700 hover:bg-green-100"
+                          }`}
+                        >
+                          <FontAwesomeIcon
+                            icon={idea.completed ? faCircleXmark : faCircleCheck}
+                            className="h-3 w-3"
+                          />
+                          <span>{idea.completed ? "Incomplete" : "Done"}</span>
+                        </button>
+                        
+                        <button
+                          onClick={() => handleOpenEdit(idea)}
+                          className="px-2 py-1 rounded-full text-xs flex items-center bg-blue-50 text-blue-700 hover:bg-blue-100"
+                        >
+                          <FontAwesomeIcon icon={faPencilAlt} className="h-3 w-3" />
+                        </button>
+                        
+                        {!idea.completed && (
+                          <>
+                            <button
+                              onClick={() => handleQuickDateUpdate(idea.$id, 'today')}
+                              className="px-2 py-1 rounded-full text-xs flex items-center gap-1 bg-purple-50 text-purple-700 hover:bg-purple-100"
+                            >
+                              <FontAwesomeIcon icon={faCalendarDay} className="h-3 w-3" />
+                              <span>Today</span>
+                            </button>
+                            <button
+                              onClick={() => handleQuickDateUpdate(idea.$id, 'tomorrow')}
+                              className="px-2 py-1 rounded-full text-xs flex items-center gap-1 bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
+                            >
+                              <FontAwesomeIcon icon={faCalendarPlus} className="h-3 w-3" />
+                              <span>Tom</span>
+                            </button>
+                            <button
+                              onClick={() => handleQuickDateUpdate(idea.$id, 'weekend')}
+                              className="px-2 py-1 rounded-full text-xs flex items-center gap-1 bg-yellow-50 text-yellow-700 hover:bg-yellow-100"
+                            >
+                              <FontAwesomeIcon icon={faCalendarWeek} className="h-3 w-3" />
+                              <span>Sat</span>
+                            </button>
+                          </>
                         )}
                       </div>
                       
