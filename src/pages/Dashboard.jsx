@@ -1,4 +1,4 @@
-import { Navigate } from 'react-router-dom';
+import { Navigate, Link } from 'react-router-dom';
 import { useUser } from '../lib/context/user';
 import AppDrawer from '../components/drawer/Drawer';
 import { useEffect, useState } from 'react';
@@ -43,34 +43,34 @@ export function Dashboard() {
         <div className="bg-white p-6 rounded-lg shadow-md">
           <h2 className="text-xl font-semibold mb-4">Tasks</h2>
           <p className="text-gray-600">Manage your tasks and ideas.</p>
-          <a 
-            href="/dashboard/ideas" 
+          <Link 
+            to="/dashboard/ideas" 
             className="mt-4 inline-block px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 transition-colors"
           >
             View Tasks
-          </a>
+          </Link>
         </div>
         
         <div className="bg-white p-6 rounded-lg shadow-md">
           <h2 className="text-xl font-semibold mb-4">Activities</h2>
           <p className="text-gray-600">Track baby activities.</p>
-          <a 
-            href="/dashboard/activities" 
+          <Link 
+            to="/dashboard/activities" 
             className="mt-4 inline-block px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
           >
             Log Activities
-          </a>
+          </Link>
         </div>
         
         <div className="bg-white p-6 rounded-lg shadow-md">
           <h2 className="text-xl font-semibold mb-4">Automations</h2>
           <p className="text-gray-600">Set up automated reminders.</p>
-          <a 
-            href="/dashboard/automations" 
+          <Link 
+            to="/dashboard/automations" 
             className="mt-4 inline-block px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
           >
             View Automations
-          </a>
+          </Link>
         </div>
       </div>
     </div>
