@@ -591,6 +591,19 @@ export function Ideas() {
     }
   };
 
+  // Check if the task count is approaching the limit
+  const isApproachingLimit = useMemo(() => {
+    const totalTasks = ideas.current.length;
+    // Show warning when 90% or more of the limit is reached
+    return totalTasks >= 90;
+  }, [ideas]);
+
+  // Show a more urgent warning when at the limit
+  const isAtLimit = useMemo(() => {
+    const totalTasks = ideas.current.length;
+    return totalTasks >= 100;
+  }, [ideas]);
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-8">
@@ -612,6 +625,38 @@ export function Ideas() {
           </button>
         </div>
       </div>
+
+      {/* Task Limit Warning Banner */}
+      {(isApproachingLimit || isAtLimit) && (
+        <div className={`mb-4 p-4 rounded-lg ${
+          isAtLimit 
+            ? "bg-red-100 border border-red-400 text-red-700" 
+            : "bg-yellow-100 border border-yellow-400 text-yellow-800"
+        }`}>
+          <div className="flex items-start">
+            <FontAwesomeIcon 
+              icon={faExclamationTriangle} 
+              className={`mr-3 mt-1 ${isAtLimit ? "text-red-500" : "text-yellow-500"}`} 
+            />
+            <div>
+              <h3 className="font-bold text-lg">
+                {isAtLimit ? "Task Limit Reached!" : "Warning: Approaching Task Limit"}
+              </h3>
+              <p className="mt-1">
+                {isAtLimit 
+                  ? "You have reached the maximum of 200 tasks. Please archive or delete some older tasks before adding new ones."
+                  : `You currently have ${ideas.current.length} tasks (limit is 200). Consider removing or archiving older completed tasks.`
+                }
+              </p>
+              {user.current?.roles?.includes('admin') && (
+                <p className="mt-2 text-sm font-semibold">
+                  Admin Note: Consider increasing the task limit in the database configuration if needed.
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Add Bulk Upload Modal */}
       {isBulkUploadOpen && (
@@ -1100,175 +1145,197 @@ export function Ideas() {
         {/* Minimal View */}
         {isMinimalView ? (
           <div className="grid grid-cols-1 gap-2">
-            {filteredAndSortedIdeas.map((idea) => (
-              <div
-                key={idea.$id}
-                ref={el => cardRefs.current[idea.$id] = el}
-                className={`flex items-center justify-between p-3 rounded-lg ${
-                  idea.completed
-                    ? "bg-green-50 border border-green-200"
-                    : "bg-white border border-gray-200"
-                }`}
-              >
-                <h3 className="text-base font-medium text-gray-900 break-words flex-1 leading-snug">
-                  {idea.title}
-                </h3>
-                <button
-                  onClick={() => handleToggleComplete(idea.$id)}
-                  className={`ml-4 w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
+            <div className="text-sm text-gray-500 mb-2">
+              {filteredAndSortedIdeas.length} tasks
+              <span className="ml-1 text-xs text-orange-500">(only showing incomplete tasks and those completed today)</span>
+            </div>
+            
+            {filteredAndSortedIdeas.length > 0 ? (
+              filteredAndSortedIdeas.map((idea) => (
+                <div
+                  key={idea.$id}
+                  ref={el => cardRefs.current[idea.$id] = el}
+                  className={`flex items-center justify-between p-3 rounded-lg ${
                     idea.completed
-                      ? "bg-green-100 text-green-600 hover:bg-green-200"
-                      : "bg-gray-100 text-gray-400 hover:bg-gray-200"
+                      ? "bg-green-50 border border-green-200"
+                      : "bg-white border border-gray-200"
                   }`}
-                  title={idea.completed ? "Mark as incomplete" : "Mark as complete"}
                 >
-                  <FontAwesomeIcon
-                    icon={faCircleCheck}
-                    className={`h-5 w-5 transition-transform ${idea.completed ? "scale-100" : "scale-90"}`}
-                  />
-                </button>
+                  <h3 className="text-base font-medium text-gray-900 break-words flex-1 leading-snug">
+                    {idea.title}
+                  </h3>
+                  <button
+                    onClick={() => handleToggleComplete(idea.$id)}
+                    className={`ml-4 w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
+                      idea.completed
+                        ? "bg-green-100 text-green-600 hover:bg-green-200"
+                        : "bg-gray-100 text-gray-400 hover:bg-gray-200"
+                    }`}
+                    title={idea.completed ? "Mark as incomplete" : "Mark as complete"}
+                  >
+                    <FontAwesomeIcon
+                      icon={faCircleCheck}
+                      className={`h-5 w-5 transition-transform ${idea.completed ? "scale-100" : "scale-90"}`}
+                    />
+                  </button>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                No tasks match your current filters
               </div>
-            ))}
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredAndSortedIdeas.map((idea) => (
-              <div
-                key={idea.$id}
-                ref={el => cardRefs.current[idea.$id] = el}
-                className={`relative bg-white rounded-lg shadow-md transform transition-all duration-200 hover:scale-[1.02] ${
-                  idea.completed
-                    ? "border-2 border-green-500 bg-green-50"
-                    : "border-2 border-red-200 bg-white"
-                }`}
-              >
+            <div className="col-span-1 sm:col-span-2 lg:col-span-3 text-sm text-gray-500 mb-2">
+              {filteredAndSortedIdeas.length} tasks
+              <span className="ml-1 text-xs text-orange-500">(only showing incomplete tasks and those completed today)</span>
+            </div>
+            
+            {filteredAndSortedIdeas.length > 0 ? (
+              filteredAndSortedIdeas.map((idea) => (
                 <div
-                  className={`absolute top-0 left-0 w-full h-0.5 ${
-                    idea.completed ? "bg-green-500" : "bg-red-500"
+                  key={idea.$id}
+                  ref={el => cardRefs.current[idea.$id] = el}
+                  className={`relative bg-white rounded-lg shadow-md transform transition-all duration-200 hover:scale-[1.02] ${
+                    idea.completed
+                      ? "border-2 border-green-500 bg-green-50"
+                      : "border-2 border-red-200 bg-white"
                   }`}
-                />
-                <div className="p-3">
-                  <div className="flex flex-col gap-1.5">
-                    <div className="flex items-start justify-between">
-                      <h3 className="text-base font-semibold text-gray-900 break-words flex-1 pr-2 leading-snug">
-                        {idea.title}
-                      </h3>
-                      <button
-                        onClick={(e) => toggleMenu(idea.$id, e)}
-                        className="p-0.5 hover:bg-gray-100 rounded-full shrink-0"
-                      >
-                        <FontAwesomeIcon
-                          icon={faEllipsisV}
-                          className="h-3.5 w-3.5 text-gray-600"
-                        />
-                      </button>
-                    </div>
-                    
-                    {expandedMenus.has(idea.$id) && (
-                      <div className="flex flex-wrap gap-1 mt-1.5 border-t border-gray-100 pt-1.5">
+                >
+                  <div
+                    className={`absolute top-0 left-0 w-full h-0.5 ${
+                      idea.completed ? "bg-green-500" : "bg-red-500"
+                    }`}
+                  />
+                  <div className="p-3">
+                    <div className="flex flex-col gap-1.5">
+                      <div className="flex items-start justify-between">
+                        <h3 className="text-base font-semibold text-gray-900 break-words flex-1 pr-2 leading-snug">
+                          {idea.title}
+                        </h3>
                         <button
-                          onClick={() => handleToggleComplete(idea.$id)}
-                          className={`px-2 py-0.5 rounded-full text-[10px] flex items-center gap-1 ${
-                            idea.completed
-                              ? "bg-red-50 text-red-700 hover:bg-red-100"
-                              : "bg-green-50 text-green-700 hover:bg-green-100"
-                          }`}
+                          onClick={(e) => toggleMenu(idea.$id, e)}
+                          className="p-0.5 hover:bg-gray-100 rounded-full shrink-0"
                         >
                           <FontAwesomeIcon
-                            icon={idea.completed ? faCircleXmark : faCircleCheck}
-                            className="h-3 w-3"
+                            icon={faEllipsisV}
+                            className="h-3.5 w-3.5 text-gray-600"
                           />
-                          <span>{idea.completed ? "Incomplete" : "Complete"}</span>
-                        </button>
-                        <button
-                          onClick={() => handleOpenEdit(idea)}
-                          className="px-2 py-0.5 rounded-full text-[10px] flex items-center gap-1 bg-blue-50 text-blue-700 hover:bg-blue-100"
-                        >
-                          <FontAwesomeIcon icon={faPencilAlt} className="h-3 w-3" />
-                          <span>Edit</span>
-                        </button>
-                        {!idea.completed && (
-                          <>
-                            <button
-                              onClick={() => handleQuickDateUpdate(idea.$id, 'today')}
-                              className="px-2 py-0.5 rounded-full text-[10px] flex items-center gap-1 bg-purple-50 text-purple-700 hover:bg-purple-100"
-                            >
-                              <FontAwesomeIcon icon={faCalendarDay} className="h-3 w-3" />
-                              <span>Today</span>
-                            </button>
-                            <button
-                              onClick={() => handleQuickDateUpdate(idea.$id, 'tomorrow')}
-                              className="px-2 py-0.5 rounded-full text-[10px] flex items-center gap-1 bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
-                            >
-                              <FontAwesomeIcon icon={faCalendarPlus} className="h-3 w-3" />
-                              <span>Tomorrow</span>
-                            </button>
-                            <button
-                              onClick={() => handleQuickDateUpdate(idea.$id, 'weekend')}
-                              className="px-2 py-0.5 rounded-full text-[10px] flex items-center gap-1 bg-yellow-50 text-yellow-700 hover:bg-yellow-100"
-                            >
-                              <FontAwesomeIcon icon={faCalendarWeek} className="h-3 w-3" />
-                              <span>This Weekend</span>
-                            </button>
-                          </>
-                        )}
-                        <button
-                          onClick={() => handleRemove(idea.$id)}
-                          className="px-2 py-0.5 rounded-full text-[10px] flex items-center gap-1 bg-red-50 text-red-700 hover:bg-red-100"
-                        >
-                          <FontAwesomeIcon icon={faTrash} className="h-3 w-3" />
-                          <span>Remove</span>
                         </button>
                       </div>
-                    )}
-                    
-                    {idea.description && (
-                      <div className="border-t border-gray-100 pt-1.5">
-                        <TruncatedDescription text={idea.description} isMinimal={false} maxLength={150} />
-                      </div>
-                    )}
-                    
-                    <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                      {idea.tags && idea.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1">
-                          {idea.tags.map((tag, index) => (
-                            <span
-                              key={index}
-                              className={`px-1.5 py-0.5 rounded-full text-[10px] ${
-                                idea.completed
-                                  ? "bg-green-50 text-green-800"
-                                  : "bg-purple-50 text-purple-800"
-                              }`}
-                            >
-                              {tag}
-                            </span>
-                          ))}
+                      
+                      {expandedMenus.has(idea.$id) && (
+                        <div className="flex flex-wrap gap-1 mt-1.5 border-t border-gray-100 pt-1.5">
+                          <button
+                            onClick={() => handleToggleComplete(idea.$id)}
+                            className={`px-2 py-0.5 rounded-full text-[10px] flex items-center gap-1 ${
+                              idea.completed
+                                ? "bg-red-50 text-red-700 hover:bg-red-100"
+                                : "bg-green-50 text-green-700 hover:bg-green-100"
+                            }`}
+                          >
+                            <FontAwesomeIcon
+                              icon={idea.completed ? faCircleXmark : faCircleCheck}
+                              className="h-3 w-3"
+                            />
+                            <span>{idea.completed ? "Incomplete" : "Complete"}</span>
+                          </button>
+                          <button
+                            onClick={() => handleOpenEdit(idea)}
+                            className="px-2 py-0.5 rounded-full text-[10px] flex items-center gap-1 bg-blue-50 text-blue-700 hover:bg-blue-100"
+                          >
+                            <FontAwesomeIcon icon={faPencilAlt} className="h-3 w-3" />
+                            <span>Edit</span>
+                          </button>
+                          {!idea.completed && (
+                            <>
+                              <button
+                                onClick={() => handleQuickDateUpdate(idea.$id, 'today')}
+                                className="px-2 py-0.5 rounded-full text-[10px] flex items-center gap-1 bg-purple-50 text-purple-700 hover:bg-purple-100"
+                              >
+                                <FontAwesomeIcon icon={faCalendarDay} className="h-3 w-3" />
+                                <span>Today</span>
+                              </button>
+                              <button
+                                onClick={() => handleQuickDateUpdate(idea.$id, 'tomorrow')}
+                                className="px-2 py-0.5 rounded-full text-[10px] flex items-center gap-1 bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
+                              >
+                                <FontAwesomeIcon icon={faCalendarPlus} className="h-3 w-3" />
+                                <span>Tomorrow</span>
+                              </button>
+                              <button
+                                onClick={() => handleQuickDateUpdate(idea.$id, 'weekend')}
+                                className="px-2 py-0.5 rounded-full text-[10px] flex items-center gap-1 bg-yellow-50 text-yellow-700 hover:bg-yellow-100"
+                              >
+                                <FontAwesomeIcon icon={faCalendarWeek} className="h-3 w-3" />
+                                <span>This Weekend</span>
+                              </button>
+                            </>
+                          )}
+                          <button
+                            onClick={() => handleRemove(idea.$id)}
+                            className="px-2 py-0.5 rounded-full text-[10px] flex items-center gap-1 bg-red-50 text-red-700 hover:bg-red-100"
+                          >
+                            <FontAwesomeIcon icon={faTrash} className="h-3 w-3" />
+                            <span>Remove</span>
+                          </button>
                         </div>
                       )}
-                    </div>
-                    
-                    <div className="flex flex-wrap items-center justify-between text-[10px] text-gray-500 border-t border-gray-100 pt-1.5 mt-1">
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center">
-                          <FontAwesomeIcon icon={faClock} className="w-3 h-3" />
-                          <span className="ml-1">{formatDate(idea.entryDate)}</span>
+                      
+                      {idea.description && (
+                        <div className="border-t border-gray-100 pt-1.5">
+                          <TruncatedDescription text={idea.description} isMinimal={false} maxLength={150} />
                         </div>
-                        {idea.dueDate && (
-                          <div className={`flex items-center ${getDueDateStatus(idea.dueDate)}`}>
-                            <FontAwesomeIcon icon={faCalendarAlt} className="w-3 h-3" />
-                            <span className="ml-1">{formatDate(idea.dueDate)}</span>
+                      )}
+                      
+                      <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                        {idea.tags && idea.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {idea.tags.map((tag, index) => (
+                              <span
+                                key={index}
+                                className={`px-1.5 py-0.5 rounded-full text-[10px] ${
+                                  idea.completed
+                                    ? "bg-green-50 text-green-800"
+                                    : "bg-purple-50 text-purple-800"
+                                }`}
+                              >
+                                {tag}
+                              </span>
+                            ))}
                           </div>
                         )}
                       </div>
-                      <div className="flex items-center">
-                        <FontAwesomeIcon icon={faUser} className="w-3 h-3" />
-                        <span className="ml-1">{idea.userName || "Unknown User"}</span>
+                      
+                      <div className="flex flex-wrap items-center justify-between text-[10px] text-gray-500 border-t border-gray-100 pt-1.5 mt-1">
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center">
+                            <FontAwesomeIcon icon={faClock} className="w-3 h-3" />
+                            <span className="ml-1">{formatDate(idea.entryDate)}</span>
+                          </div>
+                          {idea.dueDate && (
+                            <div className={`flex items-center ${getDueDateStatus(idea.dueDate)}`}>
+                              <FontAwesomeIcon icon={faCalendarAlt} className="w-3 h-3" />
+                              <span className="ml-1">{formatDate(idea.dueDate)}</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex items-center">
+                          <FontAwesomeIcon icon={faUser} className="w-3 h-3" />
+                          <span className="ml-1">{idea.userName || "Unknown User"}</span>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
+              ))
+            ) : (
+              <div className="col-span-1 sm:col-span-2 lg:col-span-3 text-center py-8 text-gray-500">
+                No tasks match your current filters
               </div>
-            ))}
+            )}
           </div>
         )}
       </section>

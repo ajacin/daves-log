@@ -44,13 +44,45 @@ export function IdeasProvider(props) {
     try {
       setIsLoading(true);
       setError(null);
+      
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      // Use a large limit to fetch all tasks at once
+      // Instead of filtering by completedAt which might not exist in schema,
+      // fetch all tasks and filter in memory
       const response = await databases.listDocuments(DATABASE_ID, COLLECTION_ID, [
         Query.orderDesc("$createdAt"),
+        Query.limit(100),
       ]);
-
+      
       setHasPermission(true);
+      
       if (response?.documents) {
-        setIdeas(response.documents);
+        // Client-side filtering for tasks:
+        // 1. All incomplete tasks
+        // 2. Only completed tasks from today
+        const allTasks = response.documents;
+        
+        const filteredTasks = allTasks.filter(task => {
+          // Include all incomplete tasks
+          if (!task.completed) return true;
+          
+          // For completed tasks, check if they were completed today
+          // First check if completedAt exists, if not use $updatedAt as fallback
+          const completionDate = task.completedAt 
+            ? new Date(task.completedAt) 
+            : new Date(task.$updatedAt);
+          
+          return completionDate >= today;
+        });
+        
+        // Sort the filtered tasks by creation date
+        const sortedTasks = filteredTasks.sort(
+          (a, b) => new Date(b.$createdAt) - new Date(a.$createdAt)
+        );
+        
+        setIdeas(sortedTasks);
       } else {
         setIdeas([]);
       }
@@ -127,7 +159,12 @@ export function IdeasProvider(props) {
     try {
       const idea = ideas.find((i) => i.$id === id);
       if (idea) {
-        return await update(id, { completed: !idea.completed });
+        // Only update the completed status without trying to set completedAt
+        // which might not exist in the schema
+        const updates = {
+          completed: !idea.completed
+        };
+        return await update(id, updates);
       }
       return false;
     } catch (error) {
