@@ -28,6 +28,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import toast from 'react-hot-toast';
 import React from "react";
+import confetti from 'canvas-confetti';
 
 const PREDEFINED_TAGS = [
   // Shopping & Errands
@@ -225,15 +226,52 @@ export function Ideas() {
       return;
     }
 
+    const newCompletedState = !idea.completed;
+    
     const success = await ideas.toggleComplete(ideaId, {
-      completed: !idea.completed
+      completed: newCompletedState
     });
     
     if (success) {
-      toast.success("Task status updated successfully!");
+      toast.success(newCompletedState ? "🎉 Task completed!" : "Task marked as incomplete");
+      
+      // Only show celebration animation when marking as complete
+      if (newCompletedState) {
+        triggerCelebration();
+      }
     } else {
       toast.error("Failed to update task. Please try again.");
     }
+  };
+
+  // Function to trigger celebration animation
+  const triggerCelebration = () => {
+    // First burst
+    confetti({
+      particleCount: 100,
+      spread: 70,
+      origin: { y: 0.6 },
+      colors: ['#553C9A', '#805AD5', '#B794F4'] // Purple theme
+    });
+    
+    // Second burst after a small delay
+    setTimeout(() => {
+      confetti({
+        particleCount: 50,
+        angle: 60,
+        spread: 55,
+        origin: { x: 0, y: 0.6 },
+        colors: ['#38B2AC', '#4FD1C5', '#81E6D9'] // Teal accent
+      });
+      
+      confetti({
+        particleCount: 50,
+        angle: 120,
+        spread: 55,
+        origin: { x: 1, y: 0.6 },
+        colors: ['#ED8936', '#F6AD55', '#FBD38D'] // Orange accent
+      });
+    }, 150);
   };
 
   const handleTagToggle = (tag) => {
