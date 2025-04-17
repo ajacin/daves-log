@@ -153,6 +153,7 @@ export function Ideas() {
   const [customTagInput, setCustomTagInput] = useState("");
   const [editCustomTagInput, setEditCustomTagInput] = useState("");
   const [isShoppingList, setIsShoppingList] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     if (!user.current) {
@@ -327,6 +328,18 @@ export function Ideas() {
           return false;
         }
 
+        // Search filter
+        if (searchQuery) {
+          const query = searchQuery.toLowerCase();
+          const titleMatch = idea.title?.toLowerCase().includes(query);
+          const descriptionMatch = idea.description?.toLowerCase().includes(query);
+          const tagMatch = idea.tags?.some(tag => tag.toLowerCase().includes(query));
+          
+          if (!(titleMatch || descriptionMatch || tagMatch)) {
+            return false;
+          }
+        }
+
         // Shopping list filter
         if (isShoppingList && (!idea.tags || !idea.tags.includes('shopping'))) {
           return false;
@@ -390,7 +403,7 @@ export function Ideas() {
         const bTags = b.tags?.join(",") || "";
         return aTags.localeCompare(bTags);
       });
-  }, [ideas, hideCompleted, userFilter, timeFilter, selectedTags, isShoppingList]);
+  }, [ideas, hideCompleted, userFilter, timeFilter, selectedTags, isShoppingList, searchQuery]);
 
   // Memoize dashboard stats
   const dashboardStats = useMemo(() => ({
@@ -978,9 +991,9 @@ export function Ideas() {
 
       <section className="mt-8">
         <div className="flex flex-col space-y-4 mb-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-y-3">
             <h2 className="text-2xl font-bold">Task List</h2>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
               <button
                 onClick={() => setHideCompleted(!hideCompleted)}
                 className={`px-3 py-1 rounded-full text-sm flex items-center gap-2 transition-colors duration-200 ${
@@ -1029,9 +1042,7 @@ export function Ideas() {
                   {isShoppingList ? "All Tasks" : "Shopping"}
                 </span>
               </button>
-
-             
-
+              
               <button
                 onClick={() => setShowFilters(!showFilters)}
                 className={`px-3 py-1 rounded-full text-sm flex items-center gap-2 ${
@@ -1049,6 +1060,32 @@ export function Ideas() {
             </div>
           </div>
 
+          {/* Search bar */}
+          <div className="w-full flex">
+            <div className="relative w-full max-w-xl">
+              <input
+                type="text"
+                placeholder="Search tasks by title, description, or tags..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full p-2 pl-10 pr-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              />
+              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                <FontAwesomeIcon icon={faFilter} />
+              </span>
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  title="Clear search"
+                >
+                  <FontAwesomeIcon icon={faCircleXmark} />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Filter section */}
           {showFilters && (
             <div className="bg-white p-4 rounded-lg shadow-sm space-y-4">
               <div>
@@ -1165,7 +1202,9 @@ export function Ideas() {
             <div className="text-sm text-gray-500 mb-2">
               {filteredAndSortedIdeas.length} tasks
               <span className="ml-1 text-xs text-orange-500">
-                {hideCompleted ? "(completed tasks are hidden)" : "(showing all tasks)"}
+                {hideCompleted && "(completed tasks are hidden)"}
+                {searchQuery && ` (search: "${searchQuery}")`}
+                {isShoppingList && " (shopping list)"}
               </span>
             </div>
             
@@ -1255,7 +1294,9 @@ export function Ideas() {
             <div className="col-span-1 sm:col-span-2 lg:col-span-3 text-sm text-gray-500 mb-2">
               {filteredAndSortedIdeas.length} tasks
               <span className="ml-1 text-xs text-orange-500">
-                {hideCompleted ? "(completed tasks are hidden)" : "(showing all tasks)"}
+                {hideCompleted && "(completed tasks are hidden)"}
+                {searchQuery && ` (search: "${searchQuery}")`}
+                {isShoppingList && " (shopping list)"}
               </span>
             </div>
             
