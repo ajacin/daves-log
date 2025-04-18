@@ -24,6 +24,7 @@ import {
   faPencilAlt,
   faCalendarPlus,
   faShoppingCart,
+  faSync,
 } from "@fortawesome/free-solid-svg-icons";
 import { useNavigate } from "react-router-dom";
 import toast from 'react-hot-toast';
@@ -123,6 +124,19 @@ function TruncatedDescription({ text, maxLength = 150, isMinimal = false }) {
   );
 }
 
+// Helper function to get the recurrence letter indicator
+const getRecurrenceIndicator = (recurrence) => {
+  switch(recurrence) {
+    case 'daily': return 'D';
+    case 'weekly': return 'W';
+    case 'biweekly': return 'B';
+    case 'monthly': return 'M';
+    case 'quarterly': return 'Q';
+    case 'yearly': return 'Y';
+    default: return '';
+  }
+};
+
 export function Ideas() {
   const user = useUser();
   const ideas = useIdeas();
@@ -134,6 +148,7 @@ export function Ideas() {
   const [selectedTags, setSelectedTags] = useState([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [dueDate, setDueDate] = useState("");
+  const [recurrence, setRecurrence] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
   const [hideCompleted, setHideCompleted] = useState(true);
   const [isMinimalView, setIsMinimalView] = useState(false);
@@ -146,6 +161,7 @@ export function Ideas() {
   const [editDescription, setEditDescription] = useState("");
   const [editTags, setEditTags] = useState([]);
   const [editDueDate, setEditDueDate] = useState("");
+  const [editRecurrence, setEditRecurrence] = useState(null);
   const [expandedMenus, setExpandedMenus] = useState(new Set());
   const cardRefs = useRef({});
   const initRef = useRef(false);
@@ -295,6 +311,7 @@ export function Ideas() {
     setDescription("");
     setTags([]);
     setDueDate("");
+    setRecurrence(null);
     setIsFormOpen(false);
   };
 
@@ -328,9 +345,10 @@ export function Ideas() {
       title,
       description: description || "",
       entryDate,
-      tags,
+      tags: recurrence ? [...tags, 'recurring'] : tags,
       dueDate: dueDate || null,
       completed: false,
+      recurrence: recurrence,
     });
 
     if (success) {
@@ -339,6 +357,7 @@ export function Ideas() {
       setDescription("");
       setTags([]);
       setDueDate("");
+      setRecurrence(null);
       toast.success("Task added successfully!");
     } else {
       toast.error("Failed to add task. Please try again.");
@@ -504,6 +523,7 @@ export function Ideas() {
     setEditDescription(idea.description || "");
     setEditTags(idea.tags || []);
     setEditDueDate(idea.dueDate || "");
+    setEditRecurrence(idea.recurrence || null);
     setIsEditModalOpen(true);
   };
 
@@ -554,8 +574,11 @@ export function Ideas() {
     const success = await ideas.update(editingIdea.$id, {
       title: editTitle,
       description: editDescription,
-      tags: editTags,
+      tags: editRecurrence ? 
+        (editTags.includes('recurring') ? editTags : [...editTags, 'recurring']) : 
+        editTags.filter(tag => tag !== 'recurring'),
       dueDate: editDueDate || null,
+      recurrence: editRecurrence,
     });
 
     if (success) {
@@ -994,14 +1017,38 @@ export function Ideas() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700">
-                      Due Date
+                      Task Due Date
                     </label>
                     <input
                       type="datetime-local"
                       value={dueDate}
-                      onChange={(e) => setDueDate(e.target.value)}
+                      onChange={(event) => setDueDate(event.target.value)}
                       className="mt-1 w-full p-2 border rounded focus:ring-2 focus:ring-purple-500"
                     />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Recurrence
+                    </label>
+                    <select
+                      value={recurrence || ""}
+                      onChange={(e) => setRecurrence(e.target.value === "" ? null : e.target.value)}
+                      className="mt-1 w-full p-2 border rounded focus:ring-2 focus:ring-purple-500"
+                    >
+                      <option value="">No recurrence</option>
+                      <option value="daily">Daily</option>
+                      <option value="weekly">Weekly</option>
+                      <option value="biweekly">Bi-weekly</option>
+                      <option value="monthly">Monthly</option>
+                      <option value="quarterly">Quarterly</option>
+                      <option value="yearly">Yearly</option>
+                    </select>
+                    {recurrence && (
+                      <p className="mt-1 text-xs text-gray-500">
+                        This task will automatically recreate itself with the same settings when completed.
+                      </p>
+                    )}
                   </div>
 
                   <div className="flex gap-2 pt-4">
@@ -1258,9 +1305,20 @@ export function Ideas() {
                   }`}
                 >
                   <div className="flex-1">
-                    <h3 className="text-base font-medium text-gray-900 break-words leading-snug">
-                      {idea.title}
-                    </h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold leading-snug text-gray-800">
+                        {idea.title}
+                      </h3>
+                      {idea.recurrence && (
+                        <span 
+                          className="text-purple-600 flex items-center gap-0.5" 
+                          title={`Recurring task (${idea.recurrence})`}
+                        >
+                          <FontAwesomeIcon icon={faSync} className="h-3 w-3" />
+                          <span className="text-xs font-medium">{getRecurrenceIndicator(idea.recurrence)}</span>
+                        </span>
+                      )}
+                    </div>
                   </div>
                   
                   <div className="flex items-center gap-1">
@@ -1357,9 +1415,20 @@ export function Ideas() {
                   <div className="p-3">
                     <div className="flex flex-col gap-1.5">
                       <div className="flex items-start justify-between">
-                        <h3 className="text-base font-semibold text-gray-900 break-words flex-1 pr-2 leading-snug">
-                          {idea.title}
-                        </h3>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-semibold leading-snug text-gray-800">
+                            {idea.title}
+                          </h3>
+                          {idea.recurrence && (
+                            <span 
+                              className="text-purple-600 flex items-center gap-0.5" 
+                              title={`Recurring task (${idea.recurrence})`}
+                            >
+                              <FontAwesomeIcon icon={faSync} className="h-3 w-3" />
+                              <span className="text-xs font-medium">{getRecurrenceIndicator(idea.recurrence)}</span>
+                            </span>
+                          )}
+                        </div>
                         <button
                           onClick={(e) => toggleMenu(idea.$id, e)}
                           className="p-0.5 hover:bg-gray-100 rounded-full shrink-0"
@@ -1641,6 +1710,30 @@ export function Ideas() {
                       </button>
                     </div>
                   </div>
+                )}
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Recurrence
+                </label>
+                <select
+                  value={editRecurrence || ""}
+                  onChange={(e) => setEditRecurrence(e.target.value === "" ? null : e.target.value)}
+                  className="mt-1 w-full p-2 border rounded focus:ring-2 focus:ring-purple-500"
+                >
+                  <option value="">No recurrence</option>
+                  <option value="daily">Daily</option>
+                  <option value="weekly">Weekly</option>
+                  <option value="biweekly">Bi-weekly</option>
+                  <option value="monthly">Monthly</option>
+                  <option value="quarterly">Quarterly</option>
+                  <option value="yearly">Yearly</option>
+                </select>
+                {editRecurrence && (
+                  <p className="mt-1 text-xs text-gray-500">
+                    This task will automatically recreate itself with the same settings when completed.
+                  </p>
                 )}
               </div>
 

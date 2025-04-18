@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useCallback } from "react";
+import { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 import { databases } from "../appwrite";
 import { ID, Query } from "appwrite";
 import { useUser } from "./user";
@@ -18,6 +18,9 @@ export function IdeasProvider(props) {
   const [error, setError] = useState(null);
   const [hasPermission, setHasPermission] = useState(true);
   const { current: user } = useUser();
+
+  // To avoid circular dependencies, declare this function first but define it later
+  const createNextRecurringTaskRef = useRef(null);
 
   const handleError = useCallback((error) => {
     console.error("Operation error:", error);
@@ -102,7 +105,8 @@ export function IdeasProvider(props) {
         ...idea,
         tags: idea.tags || [],
         completed: idea.completed || false,
-        dueDate: idea.dueDate || null
+        dueDate: idea.dueDate || null,
+        recurrence: idea.recurrence || null
       };
 
       const response = await databases.createDocument(
@@ -154,17 +158,86 @@ export function IdeasProvider(props) {
     }
   }, [hasPermission, handleError]);
 
+  // Define the createNextRecurringTask function
+  createNextRecurringTaskRef.current = async (completedTask, completionDate) => {
+    try {
+      const completionDateTime = new Date(completionDate);
+      let nextDueDate = null;
+      
+      // Calculate the next due date based on recurrence pattern
+      switch (completedTask.recurrence) {
+        case 'daily':
+          nextDueDate = new Date(completionDateTime);
+          nextDueDate.setDate(nextDueDate.getDate() + 1);
+          break;
+        case 'weekly':
+          nextDueDate = new Date(completionDateTime);
+          nextDueDate.setDate(nextDueDate.getDate() + 7);
+          break;
+        case 'biweekly':
+          nextDueDate = new Date(completionDateTime);
+          nextDueDate.setDate(nextDueDate.getDate() + 14);
+          break;
+        case 'monthly':
+          nextDueDate = new Date(completionDateTime);
+          nextDueDate.setMonth(nextDueDate.getMonth() + 1);
+          break;
+        case 'quarterly':
+          nextDueDate = new Date(completionDateTime);
+          nextDueDate.setMonth(nextDueDate.getMonth() + 3);
+          break;
+        case 'yearly':
+          nextDueDate = new Date(completionDateTime);
+          nextDueDate.setFullYear(nextDueDate.getFullYear() + 1);
+          break;
+        default:
+          return; // No valid recurrence pattern
+      }
+      
+      // Create a new task with the same details but a new due date
+      const newTask = {
+        userId: completedTask.userId,
+        userName: completedTask.userName,
+        title: completedTask.title,
+        description: completedTask.description || "",
+        entryDate: new Date().toISOString(),
+        tags: [...(completedTask.tags || []), 'recurring'],
+        dueDate: nextDueDate.toISOString(),
+        completed: false,
+        recurrence: completedTask.recurrence,
+        parentTaskId: completedTask.$id // Reference to the original task
+      };
+      
+      await add(newTask);
+      
+    } catch (error) {
+      console.error("Error creating recurring task:", error);
+    }
+  };
+
   const toggleComplete = useCallback(async (id) => {
     if (!hasPermission) return false;
     try {
       const idea = ideas.find((i) => i.$id === id);
       if (idea) {
-        // Only update the completed status without trying to set completedAt
-        // which might not exist in the schema
+        // Store completion date to use for recurring task
+        const now = new Date();
+        const completedAt = now.toISOString();
+        
+        // Update the completed status and completedAt timestamp
         const updates = {
-          completed: !idea.completed
+          completed: !idea.completed,
+          completedAt: !idea.completed ? completedAt : null
         };
-        return await update(id, updates);
+        
+        const success = await update(id, updates);
+        
+        // If task was marked as complete and has recurrence pattern, create the next instance
+        if (success && !idea.completed && idea.recurrence && createNextRecurringTaskRef.current) {
+          await createNextRecurringTaskRef.current(idea, completedAt);
+        }
+        
+        return success;
       }
       return false;
     } catch (error) {
