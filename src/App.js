@@ -6,8 +6,6 @@ import { Dashboard } from './pages/Dashboard';
 import { ViewActivities } from "./pages/ViewActivities";
 import { Activities } from "./pages/Activities";
 import { Ideas } from "./pages/Ideas";
-import { Resources } from "./pages/Resources";
-import { DueDates } from "./pages/DueDates";
 import { Automations } from "./pages/Automations";
 import { useUser } from "./lib/context/user";
 import { ProtectedLayout } from "./components/ProtectedLayout";
@@ -26,8 +24,6 @@ function ProtectedRoutes() {
         <Route path="activities" element={<Activities />} />
         <Route path="view-activities" element={<ViewActivities />} />
         <Route path="ideas" element={<Ideas />} />
-        <Route path="resources" element={<Resources />} />
-        <Route path="due-dates" element={<DueDates />} />
         <Route path="automations" element={<Automations />} />
       </Routes>
     </ProtectedLayout>

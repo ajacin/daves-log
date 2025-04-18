@@ -40,15 +40,6 @@ export function Navbar({ setIsDrawerOpen }) {
               <Link
                 onClick={closeDrawer}
                 className="px-3 py-2 flex items-center text-xs uppercase font-bold leading-snug  hover:opacity-75"
-                to="/dashboard/resources"
-              >
-                <div className="text-lg">Resources</div>
-              </Link>
-            </li>
-            <li className="nav-item">
-              <Link
-                onClick={closeDrawer}
-                className="px-3 py-2 flex items-center text-xs uppercase font-bold leading-snug  hover:opacity-75"
                 to="/dashboard/activities"
               >
                 <div className="text-lg">Log Activities</div>
@@ -61,15 +52,6 @@ export function Navbar({ setIsDrawerOpen }) {
                 to="/dashboard/view-activities"
               >
                 <div className="text-lg">View Activities</div>
-              </Link>
-            </li>
-            <li className="nav-item">
-              <Link
-                onClick={closeDrawer}
-                className="px-3 py-2 flex items-center text-xs uppercase font-bold leading-snug  hover:opacity-75"
-                to="/dashboard/due-dates"
-              >
-                <div className="text-lg">Due Dates</div>
               </Link>
             </li>
             <li className="nav-item">
