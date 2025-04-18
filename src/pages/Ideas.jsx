@@ -20,7 +20,6 @@ import {
   faCalendarDay,
   faExclamationTriangle,
   faCalendarWeek,
-  faChartLine,
   faPencilAlt,
   faCalendarPlus,
   faShoppingCart,
@@ -463,37 +462,6 @@ export function Ideas() {
       });
   }, [ideas, hideCompleted, userFilter, timeFilter, selectedTags, isShoppingList, searchQuery]);
 
-  // Memoize dashboard stats
-  const dashboardStats = useMemo(() => ({
-    totalTasks: ideas.current.length,
-    completedTasks: ideas.current.filter(idea => idea.completed).length,
-    completedToday: ideas.current.filter(idea => {
-      if (!idea.completed) return false;
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const completedDate = new Date(idea.completedAt || idea.entryDate);
-      return completedDate >= today;
-    }).length,
-    completedByMe: ideas.current.filter(idea => 
-      idea.completed && idea.userId === user.current.$id
-    ).length,
-    pendingTasks: ideas.current.filter(idea => !idea.completed).length,
-    overdueTasks: ideas.current.filter(idea => {
-      if (!idea.dueDate || idea.completed) return false;
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const dueDate = new Date(idea.dueDate);
-      return dueDate < today;
-    }).length,
-    tasksDueToday: ideas.current.filter(idea => {
-      if (!idea.dueDate || idea.completed) return false;
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const dueDate = new Date(idea.dueDate);
-      return dueDate.getTime() === today.getTime();
-    }).length,
-  }), [ideas, user]);
-
   // Memoize unique users
   const uniqueUsers = useMemo(() => {
     return ideas.current.reduce((acc, idea) => {
@@ -903,46 +871,6 @@ export function Ideas() {
 
       {user.current && (
         <section className="mt-8 relative z-10">
-          {/* Add dashboard stats section */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
-            <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">Total Tasks</p>
-                  <h3 className="text-2xl font-bold text-gray-900">{dashboardStats.totalTasks}</h3>
-                </div>
-                <FontAwesomeIcon icon={faChartLine} className="text-purple-500 h-6 w-6" />
-              </div>
-            </div>
-            <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">Completed</p>
-                  <h3 className="text-2xl font-bold text-green-600">{dashboardStats.completedTasks}</h3>
-                </div>
-                <FontAwesomeIcon icon={faCircleCheck} className="text-green-500 h-6 w-6" />
-              </div>
-            </div>
-            <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">Pending</p>
-                  <h3 className="text-2xl font-bold text-blue-600">{dashboardStats.pendingTasks}</h3>
-                </div>
-                <FontAwesomeIcon icon={faClock} className="text-blue-500 h-6 w-6" />
-              </div>
-            </div>
-            <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">Overdue</p>
-                  <h3 className="text-2xl font-bold text-red-600">{dashboardStats.overdueTasks}</h3>
-                </div>
-                <FontAwesomeIcon icon={faExclamationTriangle} className="text-red-500 h-6 w-6" />
-              </div>
-            </div>
-          </div>
-
           {isLoading && (
             <div className="flex justify-center items-center py-4">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
