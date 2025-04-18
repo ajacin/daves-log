@@ -25,6 +25,7 @@ import {
   faCalendarPlus,
   faShoppingCart,
   faSync,
+  faCheck,
 } from "@fortawesome/free-solid-svg-icons";
 import { useNavigate } from "react-router-dom";
 import toast from 'react-hot-toast';
@@ -695,6 +696,57 @@ export function Ideas() {
     const totalTasks = ideas.current.length;
     return totalTasks >= 100;
   }, [ideas]);
+
+  // Update the formatRelativeDate function to be more precise with dates
+  const formatRelativeDate = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    
+    // Format date as day and month for better clarity
+    const formatDateShort = (date) => {
+      const options = { month: 'short', day: 'numeric' };
+      return date.toLocaleDateString(undefined, options);
+    };
+    
+    // For today/tomorrow/yesterday
+    if (date.getDate() === now.getDate() && 
+        date.getMonth() === now.getMonth() && 
+        date.getFullYear() === now.getFullYear()) {
+      return "Today";
+    }
+    
+    // Tomorrow
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    if (date.getDate() === tomorrow.getDate() && 
+        date.getMonth() === tomorrow.getMonth() && 
+        date.getFullYear() === tomorrow.getFullYear()) {
+      return "Tomorrow";
+    }
+    
+    // Yesterday
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    if (date.getDate() === yesterday.getDate() && 
+        date.getMonth() === yesterday.getMonth() && 
+        date.getFullYear() === yesterday.getFullYear()) {
+      return "Yesterday";
+    }
+    
+    // If it's within 7 days in the future
+    if (date > now && (date - now) < 7 * 24 * 60 * 60 * 1000) {
+      const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      return days[date.getDay()];
+    }
+    
+    // If it's within the current month
+    if (date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear()) {
+      return formatDateShort(date);
+    }
+    
+    // Otherwise, show the date with month
+    return formatDateShort(date);
+  };
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -1401,152 +1453,172 @@ export function Ideas() {
                 <div
                   key={idea.$id}
                   ref={el => cardRefs.current[idea.$id] = el}
-                  className={`relative bg-white rounded-lg shadow-md transform transition-all duration-200 hover:scale-[1.02] ${
+                  className={`relative overflow-hidden rounded-lg shadow-md transition-all duration-200 hover:shadow-lg ${
                     idea.completed
-                      ? "border-2 border-green-500 bg-green-50"
-                      : "border-2 border-red-200 bg-white"
+                      ? "bg-gradient-to-r from-green-50 to-green-100 border border-green-200"
+                      : idea.dueDate && new Date(idea.dueDate) < new Date()
+                        ? "bg-gradient-to-r from-red-50 to-red-100 border border-red-200"
+                        : "bg-gradient-to-r from-white to-gray-50 border border-gray-200"
                   }`}
                 >
+                  {/* Status indicator bar */}
                   <div
-                    className={`absolute top-0 left-0 w-full h-0.5 ${
-                      idea.completed ? "bg-green-500" : "bg-red-500"
+                    className={`absolute top-0 left-0 h-1 w-full ${
+                      idea.completed 
+                        ? "bg-green-500" 
+                        : idea.dueDate && new Date(idea.dueDate) < new Date()
+                          ? "bg-red-500"
+                          : "bg-purple-500"
                     }`}
                   />
-                  <div className="p-3">
-                    <div className="flex flex-col gap-1.5">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-semibold leading-snug text-gray-800">
-                            {idea.title}
-                          </h3>
-                          {idea.recurrence && (
-                            <span 
-                              className="text-purple-600 flex items-center gap-0.5" 
-                              title={`Recurring task (${idea.recurrence})`}
-                            >
-                              <FontAwesomeIcon icon={faSync} className="h-3 w-3" />
-                              <span className="text-xs font-medium">{getRecurrenceIndicator(idea.recurrence)}</span>
-                            </span>
-                          )}
-                        </div>
+                  
+                  <div className="p-4">
+                    {/* Header section with title and actions */}
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-2 pr-2">
+                        <h3 className="font-semibold text-lg leading-tight text-gray-800 break-words">
+                          {idea.title}
+                        </h3>
+                        {idea.recurrence && (
+                          <span 
+                            className="text-purple-600 flex items-center gap-0.5 bg-purple-50 rounded-full px-1.5 py-0.5" 
+                            title={`Recurring task (${idea.recurrence})`}
+                          >
+                            <FontAwesomeIcon icon={faSync} className="h-2.5 w-2.5" />
+                            <span className="text-xs font-medium">{getRecurrenceIndicator(idea.recurrence)}</span>
+                          </span>
+                        )}
+                      </div>
+                      
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => handleOpenEdit(idea)}
+                          className="p-1.5 rounded text-blue-600 hover:bg-blue-50"
+                          title="Edit task"
+                        >
+                          <FontAwesomeIcon icon={faPencilAlt} className="h-3.5 w-3.5" />
+                        </button>
                         <button
                           onClick={(e) => toggleMenu(idea.$id, e)}
-                          className="p-0.5 hover:bg-gray-100 rounded-full shrink-0"
-                          title="Delete task"
+                          className="p-1.5 rounded text-gray-500 hover:bg-gray-50"
+                          title="More options"
                         >
-                          <FontAwesomeIcon
-                            icon={faEllipsisV}
-                            className="h-3.5 w-3.5 text-gray-600"
-                          />
+                          <FontAwesomeIcon icon={faEllipsisV} className="h-3.5 w-3.5" />
                         </button>
                       </div>
                       
                       {expandedMenus.has(idea.$id) && (
-                        <div className="flex flex-wrap gap-1 mt-1.5 border-t border-gray-100 pt-1.5">
+                        <div className="absolute right-2 top-12 bg-white border border-gray-200 rounded-lg shadow-lg z-10 py-1">
                           <button
                             onClick={() => handleRemove(idea.$id)}
-                            className="px-2 py-0.5 rounded-full text-[10px] flex items-center gap-1 bg-red-50 text-red-700 hover:bg-red-100"
+                            className="px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 w-full text-left"
                           >
-                            <FontAwesomeIcon icon={faTrash} className="h-3 w-3" />
+                            <FontAwesomeIcon icon={faTrash} className="h-3.5 w-3.5" />
                             <span>Delete</span>
                           </button>
                         </div>
                       )}
+                    </div>
+                    
+                    {/* Description section - expandable if too long */}
+                    {idea.description && (
+                      <div className="mb-3">
+                        <TruncatedDescription text={idea.description} maxLength={150} isMinimal={false} />
+                      </div>
+                    )}
+                    
+                    {/* Tags section */}
+                    {idea.tags && idea.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mb-3">
+                        {idea.tags.map((tag, index) => (
+                          <span
+                            key={index}
+                            className={`px-2 py-0.5 rounded-full text-xs ${
+                              idea.completed
+                                ? "bg-green-100 text-green-800"
+                                : "bg-purple-100 text-purple-800"
+                            }`}
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    
+                    {/* Timeline info */}
+                    <div className="grid grid-cols-2 gap-2 mb-3 text-xs">
+                      <div className="flex items-center text-gray-600">
+                        <FontAwesomeIcon icon={faClock} className="h-3 w-3 mr-1" />
+                        <span title={formatDate(idea.entryDate)}>Created {formatRelativeDate(idea.entryDate)}</span>
+                      </div>
                       
-                      {idea.description && (
-                        <div className="border-t border-gray-100 pt-1.5">
-                          <TruncatedDescription text={idea.description} isMinimal={false} maxLength={150} />
+                      {idea.dueDate && (
+                        <div className={`flex items-center ${getDueDateStatus(idea.dueDate)}`}>
+                          <FontAwesomeIcon icon={faCalendarAlt} className="h-3 w-3 mr-1" />
+                          <span title={formatDate(idea.dueDate)}>Due {formatRelativeDate(idea.dueDate)}</span>
                         </div>
                       )}
                       
-                      <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                        {idea.tags && idea.tags.length > 0 && (
-                          <div className="flex flex-wrap gap-1">
-                            {idea.tags.map((tag, index) => (
-                              <span
-                                key={index}
-                                className={`px-1.5 py-0.5 rounded-full text-[10px] ${
-                                  idea.completed
-                                    ? "bg-green-50 text-green-800"
-                                    : "bg-purple-50 text-purple-800"
-                                }`}
-                              >
-                                {tag}
-                              </span>
-                            ))}
-                          </div>
-                        )}
+                      <div className="flex items-center text-gray-600">
+                        <FontAwesomeIcon icon={faUser} className="h-3 w-3 mr-1" />
+                        <span>{idea.userName || "Unknown User"}</span>
                       </div>
                       
-                      {/* Action Buttons Row */}
-                      <div className="flex flex-wrap items-center gap-1 mt-2 border-t border-gray-100 pt-2">
+                      {idea.completed && idea.completedAt && (
+                        <div className="flex items-center text-green-600">
+                          <FontAwesomeIcon icon={faCheck} className="h-3 w-3 mr-1" />
+                          <span title={formatDate(idea.completedAt)}>Done {formatRelativeDate(idea.completedAt)}</span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Action buttons row - more compact */}
+                    <div className="flex flex-wrap items-center gap-1 pt-2 border-t border-gray-200">
+                      <div className="flex-1 flex">
                         <button
                           onClick={() => handleToggleComplete(idea.$id)}
-                          className={`px-2 py-1 rounded-full text-xs flex items-center gap-1 ${
+                          className={`px-2 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1 mr-1 flex-grow-0 ${
                             idea.completed
-                              ? "bg-red-50 text-red-700 hover:bg-red-100"
-                              : "bg-green-50 text-green-700 hover:bg-green-100"
+                              ? "bg-red-100 text-red-700 hover:bg-red-200"
+                              : "bg-green-100 text-green-700 hover:bg-green-200"
                           }`}
                         >
                           <FontAwesomeIcon
                             icon={idea.completed ? faCircleXmark : faCircleCheck}
-                            className="h-3 w-3"
+                            className="h-3.5 w-3.5"
                           />
-                          <span>{idea.completed ? "Incomplete" : "Done"}</span>
+                          <span>{idea.completed ? "Undo" : "Done"}</span>
                         </button>
-                        
-                        <button
-                          onClick={() => handleOpenEdit(idea)}
-                          className="px-2 py-1 rounded-full text-xs flex items-center bg-blue-50 text-blue-700 hover:bg-blue-100"
-                        >
-                          <FontAwesomeIcon icon={faPencilAlt} className="h-3 w-3" />
-                        </button>
-                        
-                        {!idea.completed && (
-                          <>
+                      </div>
+                      
+                      {!idea.completed && (
+                        <div className="flex gap-1 items-center">
+                          <span className="text-xs text-gray-400 mr-0.5">Due:</span>
+                          <div className="flex bg-gray-100 rounded-lg overflow-hidden">
                             <button
                               onClick={() => handleQuickDateUpdate(idea.$id, 'today')}
-                              className="px-2 py-1 rounded-full text-xs flex items-center gap-1 bg-purple-50 text-purple-700 hover:bg-purple-100"
+                              className="px-2 py-1 text-xs font-medium bg-purple-100 text-purple-700 hover:bg-purple-200 border-r border-white"
+                              title="Set due today"
                             >
-                              <FontAwesomeIcon icon={faCalendarDay} className="h-3 w-3" />
-                              <span>Today</span>
+                              Today
                             </button>
                             <button
                               onClick={() => handleQuickDateUpdate(idea.$id, 'tomorrow')}
-                              className="px-2 py-1 rounded-full text-xs flex items-center gap-1 bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
+                              className="px-2 py-1 text-xs font-medium bg-indigo-100 text-indigo-700 hover:bg-indigo-200 border-r border-white"
+                              title="Set due tomorrow"
                             >
-                              <FontAwesomeIcon icon={faCalendarPlus} className="h-3 w-3" />
-                              <span>Tom</span>
+                              Tom
                             </button>
                             <button
                               onClick={() => handleQuickDateUpdate(idea.$id, 'weekend')}
-                              className="px-2 py-1 rounded-full text-xs flex items-center gap-1 bg-yellow-50 text-yellow-700 hover:bg-yellow-100"
+                              className="px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-700 hover:bg-yellow-200"
+                              title="Set due this weekend"
                             >
-                              <FontAwesomeIcon icon={faCalendarWeek} className="h-3 w-3" />
-                              <span>Sat</span>
+                              Sat
                             </button>
-                          </>
-                        )}
-                      </div>
-                      
-                      <div className="flex flex-wrap items-center justify-between text-[10px] text-gray-500 border-t border-gray-100 pt-1.5 mt-1">
-                        <div className="flex items-center gap-3">
-                          <div className="flex items-center">
-                            <FontAwesomeIcon icon={faClock} className="w-3 h-3" />
-                            <span className="ml-1">{formatDate(idea.entryDate)}</span>
                           </div>
-                          {idea.dueDate && (
-                            <div className={`flex items-center ${getDueDateStatus(idea.dueDate)}`}>
-                              <FontAwesomeIcon icon={faCalendarAlt} className="w-3 h-3" />
-                              <span className="ml-1">{formatDate(idea.dueDate)}</span>
-                            </div>
-                          )}
                         </div>
-                        <div className="flex items-center">
-                          <FontAwesomeIcon icon={faUser} className="w-3 h-3" />
-                          <span className="ml-1">{idea.userName || "Unknown User"}</span>
-                        </div>
-                      </div>
+                      )}
                     </div>
                   </div>
                 </div>
