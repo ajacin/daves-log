@@ -1,4 +1,4 @@
-import { Client, Databases, Account } from "appwrite";
+import { Client, Databases, Account, ID, Query } from "appwrite";
 
 // Create a client with retry logic
 const createClientWithRetry = () => {
@@ -45,6 +45,7 @@ const client = createClientWithRetry();
 
 export const account = new Account(client);
 export const databases = new Databases(client);
+export { ID, Query };
 
 // Export helper to check connection
 export const checkConnection = async () => {

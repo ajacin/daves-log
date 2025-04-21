@@ -7,12 +7,14 @@ import { ViewActivities } from "./pages/ViewActivities";
 import { Activities } from "./pages/Activities";
 import { Ideas } from "./pages/Ideas";
 import { Automations } from "./pages/Automations";
+import { Invitees } from "./pages/Invitees";
 import { useUser } from "./lib/context/user";
 import { ProtectedLayout } from "./components/ProtectedLayout";
 import { UserProvider } from "./lib/context/user";
 import { IdeasProvider } from "./lib/context/ideas";
 import { BabyActivitiesProvider } from "./lib/context/activities";
 import { AutomationsProvider } from "./lib/context/automations";
+import { InviteesProvider } from "./lib/context/invitees";
 import { Toaster } from "react-hot-toast";
 
 // Protected routes component
@@ -25,36 +27,41 @@ function ProtectedRoutes() {
         <Route path="view-activities" element={<ViewActivities />} />
         <Route path="ideas" element={<Ideas />} />
         <Route path="automations" element={<Automations />} />
+        <Route path="invitees" element={<Invitees />} />
       </Routes>
     </ProtectedLayout>
   );
 }
 
-// Root route component to handle authentication state
-function RootRoute() {
-  const { current: user } = useUser();
-  return user ? <Navigate to="/dashboard" replace /> : <Landing />;
-}
-
 function App() {
-  const { current: user } = useUser();
-
   return (
     <UserProvider>
-      <IdeasProvider>
-        <BabyActivitiesProvider>
-          <AutomationsProvider>
+      {/* Root route component to handle authentication state */}
+      <AppRoutes />
+    </UserProvider>
+  );
+}
+
+// Moving inside UserProvider to avoid circular dependency
+function AppRoutes() {
+  const { current: user } = useUser();
+  
+  return (
+    <IdeasProvider>
+      <BabyActivitiesProvider>
+        <AutomationsProvider>
+          <InviteesProvider>
             <Routes>
-              <Route path="/" element={<RootRoute />} />
+              <Route path="/" element={user ? <Navigate to="/dashboard" replace /> : <Landing />} />
               <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <Login />} />
               <Route path="/register" element={user ? <Navigate to="/dashboard" replace /> : <Register />} />
               <Route path="/dashboard/*" element={<ProtectedRoutes />} />
             </Routes>
             <Toaster position="top-right" />
-          </AutomationsProvider>
-        </BabyActivitiesProvider>
-      </IdeasProvider>
-    </UserProvider>
+          </InviteesProvider>
+        </AutomationsProvider>
+      </BabyActivitiesProvider>
+    </IdeasProvider>
   );
 }
 
