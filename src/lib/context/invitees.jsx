@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { useUser } from './user';
-import { databases, ID } from '../appwrite';
+import { databases, ID, Query } from '../appwrite';
 import toast from 'react-hot-toast';
 
 // Constants for database and collection IDs
@@ -31,16 +31,29 @@ export function InviteesProvider({ children }) {
   const [invitees, setInvitees] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Initialize and fetch invitees
+  // Initialize and fetch all invitees
   const init = useCallback(async () => {
     setIsLoading(true);
     try {
-      // Fetch all invitees without filtering by userId
+      // Fetch all invitees with a high limit
       const response = await databases.listDocuments(
         DATABASE_ID,
-        COLLECTION_ID
+        COLLECTION_ID,
+        [Query.limit(1000)], // Set a high limit to get all records
+        undefined, // offset
+        undefined, // cursor
+        undefined, // cursorDirection
+        ['name'] // orderBy
       );
-      setInvitees(response.documents);
+      
+      console.log('Total invitees fetched:', response.documents.length);
+      console.log('First few invitees:', response.documents.slice(0, 5));
+      
+      // Sort invitees by name
+      const sortedInvitees = response.documents.sort((a, b) => a.name.localeCompare(b.name));
+      console.log('Sorted invitees count:', sortedInvitees.length);
+      
+      setInvitees(sortedInvitees);
     } catch (error) {
       console.error('Error fetching invitees:', error);
       toast.error('Failed to load invitees');
@@ -52,7 +65,6 @@ export function InviteesProvider({ children }) {
   // Add a new invitee
   const add = async (data) => {
     try {
-      // Ensure required fields have defaults
       const inviteeData = {
         name: data.name,
         group: data.group || 'friends',
@@ -68,7 +80,7 @@ export function InviteesProvider({ children }) {
         ID.unique(),
         inviteeData
       );
-      setInvitees((prev) => [...prev, newInvitee]);
+      setInvitees(prev => [...prev, newInvitee].sort((a, b) => a.name.localeCompare(b.name)));
       return true;
     } catch (error) {
       console.error('Error adding invitee:', error);
@@ -86,8 +98,9 @@ export function InviteesProvider({ children }) {
         inviteeId,
         data
       );
-      setInvitees((prev) =>
-        prev.map((item) => (item.$id === inviteeId ? updatedInvitee : item))
+      setInvitees(prev => 
+        prev.map(item => item.$id === inviteeId ? updatedInvitee : item)
+          .sort((a, b) => a.name.localeCompare(b.name))
       );
       return true;
     } catch (error) {
@@ -110,7 +123,7 @@ export function InviteesProvider({ children }) {
         COLLECTION_ID,
         inviteeId
       );
-      setInvitees((prev) => prev.filter((item) => item.$id !== inviteeId));
+      setInvitees(prev => prev.filter(item => item.$id !== inviteeId));
       return true;
     } catch (error) {
       console.error('Error removing invitee:', error);

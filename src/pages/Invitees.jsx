@@ -9,7 +9,6 @@ import {
   faTimes,
   faSpinner,
   faUsers,
-  faEllipsisVertical,
   faFileImport
 } from "@fortawesome/free-solid-svg-icons";
 import { toast } from 'react-hot-toast';
@@ -19,13 +18,13 @@ const GROUP_OPTIONS = ['friends', 'sangham', 'school', 'plus two', 'other'];
 
 export function Invitees() {
   const { invitees, isLoading, init, add, update, updateStatus, remove } = useInvitees();
+  const [activeGroup, setActiveGroup] = useState('all');
   const [showModal, setShowModal] = useState(false);
   const [showBulkModal, setShowBulkModal] = useState(false);
   const [bulkData, setBulkData] = useState('');
   const [isBulkLoading, setIsBulkLoading] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [currentInvitee, setCurrentInvitee] = useState(null);
-  const [activeGroup, setActiveGroup] = useState('all');
   const [formData, setFormData] = useState({
     name: '',
     group: 'friends',
@@ -34,6 +33,7 @@ export function Invitees() {
     status: 'pending'
   });
 
+  // Initialize invitees
   useEffect(() => {
     init();
   }, [init]);
@@ -55,6 +55,12 @@ export function Invitees() {
     return counts;
   }, [invitees]);
 
+  // Handle group change
+  const handleGroupChange = (group) => {
+    setActiveGroup(group);
+  };
+
+  // Handle modal operations
   const handleOpenModal = (invitee = null) => {
     if (invitee) {
       setFormData({
@@ -84,6 +90,7 @@ export function Invitees() {
     setShowModal(false);
   };
 
+  // Handle bulk import
   const handleOpenBulkModal = () => {
     setBulkData('');
     setShowBulkModal(true);
@@ -93,16 +100,17 @@ export function Invitees() {
     setShowBulkModal(false);
   };
 
+  const handleBulkDataChange = (e) => {
+    setBulkData(e.target.value);
+  };
+
+  // Handle form operations
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData({
       ...formData,
       [name]: type === 'checkbox' ? checked : value
     });
-  };
-
-  const handleBulkDataChange = (e) => {
-    setBulkData(e.target.value);
   };
 
   const handleSubmit = async (e) => {
@@ -134,17 +142,10 @@ export function Invitees() {
     setIsBulkLoading(true);
     
     try {
-      // Split by lines and process each line
       const lines = bulkData.split('\n').filter(line => line.trim());
-      
-      // Assume format is "Name, Group"
-      const results = {
-        success: 0,
-        failed: 0
-      };
-      
-      // Get the selected group from the form
       const selectedGroup = document.getElementById('bulkGroup').value;
+      
+      const results = { success: 0, failed: 0 };
       
       for (const line of lines) {
         try {
@@ -173,7 +174,7 @@ export function Invitees() {
       }
       
       handleCloseBulkModal();
-      init(); // Refresh the list
+      init();
     } catch (error) {
       toast.error('Failed to process bulk import');
       console.error('Error importing invitees:', error);
@@ -182,6 +183,7 @@ export function Invitees() {
     }
   };
 
+  // Handle status and reminder operations
   const handleStatusChange = async (inviteeId, newStatus) => {
     try {
       await updateStatus(inviteeId, newStatus);
@@ -189,18 +191,6 @@ export function Invitees() {
     } catch (error) {
       toast.error('Failed to update status');
       console.error('Error updating status:', error);
-    }
-  };
-
-  const handleDelete = async (inviteeId) => {
-    if (window.confirm('Are you sure you want to delete this invitee?')) {
-      try {
-        await remove(inviteeId);
-        toast.success('Invitee removed successfully');
-      } catch (error) {
-        toast.error('Failed to remove invitee');
-        console.error('Error removing invitee:', error);
-      }
     }
   };
 
@@ -219,6 +209,19 @@ export function Invitees() {
     }
   };
 
+  const handleDelete = async (inviteeId) => {
+    if (window.confirm('Are you sure you want to delete this invitee?')) {
+      try {
+        await remove(inviteeId);
+        toast.success('Invitee removed successfully');
+      } catch (error) {
+        toast.error('Failed to remove invitee');
+        console.error('Error removing invitee:', error);
+      }
+    }
+  };
+
+  // Helper functions for UI
   const getStatusBadge = (status) => {
     switch (status) {
       case 'confirmed':
@@ -249,7 +252,8 @@ export function Invitees() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-6">
+    <div className="container mx-auto px-4 py-8">
+      {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Event Invitees</h1>
         <div className="flex space-x-2">
@@ -268,12 +272,12 @@ export function Invitees() {
         </div>
       </div>
 
-      {/* Group filter tabs - scrollable for mobile */}
-      <div className="mb-6 border-b border-gray-200 overflow-x-auto pb-1">
-        <ul className="flex whitespace-nowrap">
+      {/* Group filter tabs */}
+      <div className="mb-6 border-b border-gray-200">
+        <ul className="flex">
           <li className="mr-2">
             <button
-              onClick={() => setActiveGroup('all')}
+              onClick={() => handleGroupChange('all')}
               className={`inline-flex items-center px-4 py-2 border-b-2 rounded-t-lg ${
                 activeGroup === 'all'
                   ? 'border-purple-600 text-purple-600'
@@ -289,7 +293,7 @@ export function Invitees() {
           {GROUP_OPTIONS.map(group => (
             <li className="mr-2" key={group}>
               <button
-                onClick={() => setActiveGroup(group)}
+                onClick={() => handleGroupChange(group)}
                 className={`inline-flex items-center px-4 py-2 border-b-2 rounded-t-lg ${
                   activeGroup === group
                     ? 'border-purple-600 text-purple-600'
@@ -306,6 +310,7 @@ export function Invitees() {
         </ul>
       </div>
 
+      {/* Loading state */}
       {isLoading ? (
         <div className="flex justify-center my-10">
           <FontAwesomeIcon icon={faSpinner} spin className="text-3xl text-purple-600" />
@@ -320,8 +325,7 @@ export function Invitees() {
         </div>
       ) : (
         <div className="bg-white rounded-lg shadow-md overflow-x-auto">
-          {/* Table for larger screens */}
-          <table className="min-w-full divide-y divide-gray-200 hidden md:table">
+          <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -424,90 +428,6 @@ export function Invitees() {
               ))}
             </tbody>
           </table>
-          
-          {/* Cards for mobile view */}
-          <div className="md:hidden">
-            {filteredInvitees.map((invitee) => (
-              <div key={invitee.$id} className="border-b border-gray-200 p-4">
-                <div className="flex justify-between items-start mb-2">
-                  <div className="font-medium text-gray-900">{invitee.name}</div>
-                  <div className="dropdown relative">
-                    <button className="p-1 text-gray-500 hover:text-gray-700">
-                      <FontAwesomeIcon icon={faEllipsisVertical} />
-                    </button>
-                  </div>
-                </div>
-                
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {getGroupBadge(invitee.group)}
-                  {getStatusBadge(invitee.status)}
-                </div>
-                
-                <div className="mt-3 space-y-2">
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={invitee.reminder1 || false}
-                      onChange={() => handleToggleReminder(invitee, 'reminder1')}
-                      className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded cursor-pointer"
-                    />
-                    <label className="ml-2 text-sm text-gray-700">
-                      Reminder 1: {invitee.reminder1 ? 'Sent' : 'Not sent'}
-                    </label>
-                  </div>
-                  
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={invitee.reminder2 || false}
-                      onChange={() => handleToggleReminder(invitee, 'reminder2')}
-                      className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded cursor-pointer"
-                    />
-                    <label className="ml-2 text-sm text-gray-700">
-                      Reminder 2: {invitee.reminder2 ? 'Sent' : 'Not sent'}
-                    </label>
-                  </div>
-                </div>
-                
-                <div className="flex flex-wrap gap-2 mt-3">
-                  <button 
-                    className={`px-2 py-1 rounded text-xs border flex items-center ${
-                      invitee.status === 'confirmed' 
-                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-300'
-                        : 'bg-white text-green-600 hover:bg-green-50 border-green-300'
-                    }`}
-                    onClick={() => handleStatusChange(invitee.$id, 'confirmed')}
-                    disabled={invitee.status === 'confirmed'}
-                  >
-                    <FontAwesomeIcon icon={faCheck} className="mr-1" /> Confirm
-                  </button>
-                  <button 
-                    className={`px-2 py-1 rounded text-xs border flex items-center ${
-                      invitee.status === 'declined' 
-                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-300'
-                        : 'bg-white text-red-600 hover:bg-red-50 border-red-300'
-                    }`}
-                    onClick={() => handleStatusChange(invitee.$id, 'declined')}
-                    disabled={invitee.status === 'declined'}
-                  >
-                    <FontAwesomeIcon icon={faTimes} className="mr-1" /> Decline
-                  </button>
-                  <button 
-                    className="px-2 py-1 rounded text-xs bg-white text-gray-600 hover:bg-gray-50 border border-gray-300 flex items-center"
-                    onClick={() => handleOpenModal(invitee)}
-                  >
-                    <FontAwesomeIcon icon={faPencilAlt} className="mr-1" /> Edit
-                  </button>
-                  <button 
-                    className="px-2 py-1 rounded text-xs bg-white text-red-600 hover:bg-red-50 border border-red-300 flex items-center"
-                    onClick={() => handleDelete(invitee.$id)}
-                  >
-                    <FontAwesomeIcon icon={faTrash} className="mr-1" /> Delete
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
       )}
 
