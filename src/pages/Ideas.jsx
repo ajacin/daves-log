@@ -1062,7 +1062,7 @@ export function Ideas() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 py-4">
+        <div className="max-w-7xl mx-auto px-2 py-2 sm:px-4 sm:py-4">
           <div className="flex items-center justify-between mb-4">
             <h1 className="text-2xl font-bold text-gray-900">Tasks ({filteredTasks.length})</h1>
             
@@ -1116,7 +1116,7 @@ export function Ideas() {
           </div>
 
           {/* Search and Filter Controls */}
-          <div className="flex flex-col lg:flex-row gap-4">
+                      <div className="flex flex-col lg:flex-row gap-2 sm:gap-4">
             {/* Search */}
             <div className="flex-1">
               <div className="relative">
@@ -1191,7 +1191,7 @@ export function Ideas() {
           
           {/* Advanced Filters Panel */}
           {showFilters && (
-            <div className="mt-4 p-4 bg-gray-50 rounded-lg space-y-4">
+            <div className="mt-2 p-2 sm:mt-4 sm:p-4 bg-gray-50 rounded-lg space-y-2 sm:space-y-4">
               {/* Time Filters */}
               <div>
                 <h3 className="text-sm font-medium text-gray-700 mb-2">Filter by Time</h3>
@@ -1301,16 +1301,16 @@ export function Ideas() {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-full mx-auto px-4 py-6">
+      <div className="max-w-full mx-auto px-2 py-3 sm:px-4 sm:py-6">
         {/* Task Layout - Timeline, Tags, or List */}
         {viewMode === 'timeline' || viewMode === 'tags' ? (
-          <div className="space-y-6">
+          <div className="space-y-3 sm:space-y-6">
             {/* Mobile Navigation - Single Column View */}
             <div className="block lg:hidden">
               {currentColumns.length > 0 && (
-                <div className="space-y-4">
+                <div className="space-y-2 sm:space-y-4">
                   {/* Mobile Navigation Header */}
-                  <div className="flex items-center justify-between bg-white rounded-lg border border-gray-200 p-3 shadow-sm">
+                  <div className="flex items-center justify-between bg-white rounded-lg border border-gray-200 p-2 sm:p-3 shadow-sm">
                     <button
                       onClick={() => navigateColumn(-1)}
                       disabled={currentColumnIndex === 0}
@@ -1382,7 +1382,7 @@ export function Ideas() {
 
             {/* Desktop/Tablet Layout - All Columns */}
             <div className="hidden lg:block">
-              <div className="flex gap-4 overflow-x-auto pb-4">
+              <div className="flex gap-2 sm:gap-4 overflow-x-auto pb-2 sm:pb-4">
                 {currentColumns.map((column) => {
                   const getAddTaskHandler = () => {
                     if (column.isTag && column.tagName) {
