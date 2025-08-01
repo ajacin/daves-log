@@ -13,6 +13,8 @@ import {
   faEllipsisV,
   faCalendarDay,
   faCalendarWeek,
+  faCalendar,
+  faCalendarPlus,
   faExclamationTriangle,
   faShoppingCart,
   faUser,
@@ -113,11 +115,17 @@ function QuickAddTask({ onAdd, placeholder = "Add a task..." }) {
     e.preventDefault();
     if (!title.trim()) return;
 
+    // Auto-assign today's date to recurring tasks if no due date is set
+    let finalDueDate = dueDate || null;
+    if (!finalDueDate && recurrence) {
+      finalDueDate = new Date().toISOString().split('T')[0]; // Today's date in YYYY-MM-DD format
+    }
+
     const taskData = {
       title: title.trim(),
       description: description.trim(),
       tags,
-      dueDate: dueDate || null,
+      dueDate: finalDueDate,
       recurrence: recurrence || null,
     };
 
@@ -232,6 +240,13 @@ function QuickAddTask({ onAdd, placeholder = "Add a task..." }) {
                   <option value="monthly">Monthly</option>
                 </select>
               </div>
+
+              {/* Recurring task notice */}
+              {recurrence && !dueDate && (
+                <div className="text-[9px] text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                  💡 This recurring task will be scheduled for today
+                </div>
+              )}
 
               {/* Actions */}
               <div className="flex justify-between items-center">
@@ -350,7 +365,7 @@ function TaskItem({ task, onToggleComplete, onEdit, onDelete, onQuickDateUpdate 
             
             {/* Quick Actions */}
             {!task.completed && (
-              <div className="flex gap-1 mt-1">
+              <div className="flex gap-1 mt-1 flex-wrap">
                 <button
                   onClick={() => onQuickDateUpdate(task.$id, 'today')}
                   className="text-[9px] px-1.5 py-0.5 bg-blue-100 text-blue-600 rounded hover:bg-blue-200"
@@ -362,6 +377,18 @@ function TaskItem({ task, onToggleComplete, onEdit, onDelete, onQuickDateUpdate 
                   className="text-[9px] px-1.5 py-0.5 bg-green-100 text-green-600 rounded hover:bg-green-200"
                 >
                   Tomorrow
+                </button>
+                <button
+                  onClick={() => onQuickDateUpdate(task.$id, 'week')}
+                  className="text-[9px] px-1.5 py-0.5 bg-purple-100 text-purple-600 rounded hover:bg-purple-200"
+                >
+                  In a Week
+                </button>
+                <button
+                  onClick={() => onQuickDateUpdate(task.$id, 'month')}
+                  className="text-[9px] px-1.5 py-0.5 bg-orange-100 text-orange-600 rounded hover:bg-orange-200"
+                >
+                  In a Month
                 </button>
               </div>
             )}
@@ -498,9 +525,10 @@ export function Ideas() {
   const [showFilters, setShowFilters] = useState(false);
   const [hideCompleted, setHideCompleted] = useState(true);
   const [selectedTags, setSelectedTags] = useState([]);
-  const [timeFilter, setTimeFilter] = useState(null); // 'today', 'overdue', 'week'
+  const [timeFilter, setTimeFilter] = useState(null); // 'today', 'tomorrow', 'overdue', 'week', 'next_week', 'next_month'
   const [userFilter, setUserFilter] = useState(null);
   const [isShoppingList, setIsShoppingList] = useState(false);
+  const [commonTag, setCommonTag] = useState("");
   const [viewMode, setViewMode] = useState('timeline'); // 'timeline', 'tags', or 'list'
   const [currentColumnIndex, setCurrentColumnIndex] = useState(0);
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
@@ -653,8 +681,16 @@ export function Ideas() {
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
+      const dayAfterTomorrow = new Date(today);
+      dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2);
       const weekEnd = new Date(today);
       weekEnd.setDate(weekEnd.getDate() + 7);
+      const nextWeekStart = new Date(today);
+      nextWeekStart.setDate(nextWeekStart.getDate() + 7);
+      const nextWeekEnd = new Date(today);
+      nextWeekEnd.setDate(nextWeekEnd.getDate() + 14);
+      const nextMonthStart = new Date(today);
+      nextMonthStart.setMonth(nextMonthStart.getMonth() + 1);
 
       filtered = filtered.filter(task => {
         const taskDate = new Date(task.dueDate || task.entryDate);
@@ -662,10 +698,16 @@ export function Ideas() {
         switch (timeFilter) {
           case 'today':
             return taskDate >= today && taskDate < tomorrow;
+          case 'tomorrow':
+            return taskDate >= tomorrow && taskDate < dayAfterTomorrow;
           case 'overdue':
             return taskDate < today && !task.completed && task.dueDate;
           case 'week':
             return taskDate >= today && taskDate <= weekEnd;
+          case 'next_week':
+            return taskDate >= nextWeekStart && taskDate < nextWeekEnd;
+          case 'next_month':
+            return taskDate >= nextMonthStart;
           default:
             return true;
         }
@@ -747,15 +789,15 @@ export function Ideas() {
       return tagGroups;
     } else {
       // Original time-based organization
-      const { today, yesterday, tomorrow, dayAfterTomorrow, remainingWeekDays } = dateInfo;
+      const { today, tomorrow, dayAfterTomorrow, remainingWeekDays } = dateInfo;
       
       const periods = {
         overdue: [],
-        yesterday: [],
         today: [],
         tomorrow: [],
         dayAfterTomorrow: [],
         remainingWeek: [],
+        future: [],
         unscheduled: []
       };
 
@@ -768,13 +810,9 @@ export function Ideas() {
         const dueDate = new Date(task.dueDate);
         dueDate.setHours(0, 0, 0, 0);
 
-        // Overdue tasks (past due and not completed)
-        if (dueDate < today && !task.completed) {
+        // Overdue tasks (all past due tasks including yesterday)
+        if (dueDate < today) {
           periods.overdue.push(task);
-        }
-        // Yesterday
-        else if (dueDate.getTime() === yesterday.getTime()) {
-          periods.yesterday.push(task);
         }
         // Today
         else if (dueDate.getTime() === today.getTime()) {
@@ -792,9 +830,9 @@ export function Ideas() {
         else if (remainingWeekDays.some(day => day.getTime() === dueDate.getTime())) {
           periods.remainingWeek.push(task);
         }
-        // Future tasks beyond this week go to unscheduled for now
+        // Future tasks beyond this week (have due dates but are in the future)
         else {
-          periods.unscheduled.push(task);
+          periods.future.push(task);
         }
       });
 
@@ -806,8 +844,7 @@ export function Ideas() {
   const currentColumns = useMemo(() => {
     if (viewMode === 'timeline') {
       const columns = [
-        { key: 'overdue', title: 'OVERDUE', subtitle: 'Past due tasks', tasks: organizedTasks.overdue, isOverdue: true },
-        { key: 'yesterday', title: formatColumnHeader(dateInfo.yesterday, 'yesterday').title, subtitle: formatColumnHeader(dateInfo.yesterday, 'yesterday').subtitle, tasks: organizedTasks.yesterday, targetDate: dateInfo.yesterday },
+        { key: 'overdue', title: 'OVERDUE', subtitle: 'Past tasks', tasks: organizedTasks.overdue, isOverdue: true },
         { key: 'today', title: formatColumnHeader(dateInfo.today, 'today').title, subtitle: formatColumnHeader(dateInfo.today, 'today').subtitle, tasks: organizedTasks.today, targetDate: dateInfo.today, isToday: true },
         { key: 'tomorrow', title: formatColumnHeader(dateInfo.tomorrow, 'tomorrow').title, subtitle: formatColumnHeader(dateInfo.tomorrow, 'tomorrow').subtitle, tasks: organizedTasks.tomorrow, targetDate: dateInfo.tomorrow },
         { key: 'dayAfterTomorrow', title: formatColumnHeader(dateInfo.dayAfterTomorrow, 'dayAfterTomorrow').title, subtitle: formatColumnHeader(dateInfo.dayAfterTomorrow, 'dayAfterTomorrow').subtitle, tasks: organizedTasks.dayAfterTomorrow, targetDate: dateInfo.dayAfterTomorrow }
@@ -815,6 +852,10 @@ export function Ideas() {
       
       if (dateInfo.remainingWeekDays.length > 0) {
         columns.push({ key: 'remainingWeek', title: 'THIS WEEK', subtitle: `${dateInfo.remainingWeekDays.length} days remaining`, tasks: organizedTasks.remainingWeek });
+      }
+      
+      if (organizedTasks.future.length > 0) {
+        columns.push({ key: 'future', title: 'FUTURE', subtitle: 'Scheduled later', tasks: organizedTasks.future });
       }
       
       columns.push({ key: 'unscheduled', title: 'UNSCHEDULED', subtitle: 'No due date', tasks: organizedTasks.unscheduled });
@@ -927,11 +968,17 @@ export function Ideas() {
   const handleSaveEdit = async () => {
     if (!editingTask || !editTitle.trim()) return;
 
+    // Auto-assign today's date to recurring tasks if no due date is set
+    let finalEditDueDate = editDueDate || null;
+    if (!finalEditDueDate && editRecurrence) {
+      finalEditDueDate = new Date().toISOString().split('T')[0]; // Today's date in YYYY-MM-DD format
+    }
+
     const success = await ideas.update(editingTask.$id, {
       title: editTitle.trim(),
       description: editDescription.trim(),
       tags: editTags,
-      dueDate: editDueDate || null,
+      dueDate: finalEditDueDate,
       recurrence: editRecurrence || null,
     });
 
@@ -965,6 +1012,12 @@ export function Ideas() {
     } else if (dateType === 'tomorrow') {
       dueDate.setDate(dueDate.getDate() + 1);
       dueDate.setHours(23, 59, 0, 0);
+    } else if (dateType === 'week') {
+      dueDate.setDate(dueDate.getDate() + 7);
+      dueDate.setHours(23, 59, 0, 0);
+    } else if (dateType === 'month') {
+      dueDate.setMonth(dueDate.getMonth() + 1);
+      dueDate.setHours(23, 59, 0, 0);
     } else if (dateType === 'weekend') {
       const daysUntilSaturday = (6 - dueDate.getDay() + 7) % 7;
       dueDate.setDate(dueDate.getDate() + daysUntilSaturday);
@@ -976,7 +1029,14 @@ export function Ideas() {
     });
 
     if (success) {
-      toast.success(`Due date updated to ${dateType}`);
+      const messageMap = {
+        'today': 'today',
+        'tomorrow': 'tomorrow', 
+        'week': 'in a week',
+        'month': 'in a month',
+        'weekend': 'this weekend'
+      };
+      toast.success(`Due date updated to ${messageMap[dateType] || dateType}`);
     } else {
       toast.error("Failed to update due date");
     }
@@ -1015,10 +1075,24 @@ export function Ideas() {
 
   const handleBulkUpload = async () => {
     try {
-      const tasksArray = getTaskPreview(bulkTasksInput).map(task => ({
-        ...task,
-        tags: isShoppingList ? [...task.tags, 'shopping'] : task.tags
-      }));
+      const tasksArray = getTaskPreview(bulkTasksInput).map(task => {
+        let tags = [...task.tags];
+        
+        // Shopping has priority - add it first if checked
+        if (isShoppingList) {
+          tags.push('shopping');
+        }
+        
+        // Add common tag if provided
+        if (commonTag.trim()) {
+          const cleanTag = commonTag.trim().toLowerCase().replace(/\s+/g, '');
+          if (!tags.includes(cleanTag)) {
+            tags.push(cleanTag);
+          }
+        }
+        
+        return { ...task, tags };
+      });
 
       if (tasksArray.length === 0) {
         toast.error("Please enter at least one task");
@@ -1044,6 +1118,7 @@ export function Ideas() {
         setIsBulkUploadOpen(false);
         setBulkTasksInput("");
         setIsShoppingList(false);
+        setCommonTag("");
       }
     } catch (error) {
       toast.error("Failed to create tasks");
@@ -1198,8 +1273,11 @@ export function Ideas() {
                 <div className="flex flex-wrap gap-2">
                   {[
                     { key: 'today', label: 'Today', icon: faCalendarDay },
+                    { key: 'tomorrow', label: 'Tomorrow', icon: faCalendarPlus },
                     { key: 'overdue', label: 'Overdue', icon: faExclamationTriangle },
                     { key: 'week', label: 'This Week', icon: faCalendarWeek },
+                    { key: 'next_week', label: 'Next Week', icon: faCalendarWeek },
+                    { key: 'next_month', label: 'Next Month', icon: faCalendar },
                   ].map(({ key, label, icon }) => (
                     <button
                       key={key}
@@ -1469,7 +1547,12 @@ export function Ideas() {
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-semibold">Bulk Upload Tasks</h3>
                 <button
-                  onClick={() => setIsBulkUploadOpen(false)}
+                  onClick={() => {
+                    setIsBulkUploadOpen(false);
+                    setBulkTasksInput("");
+                    setIsShoppingList(false);
+                    setCommonTag("");
+                  }}
                   className="text-gray-400 hover:text-gray-600"
                 >
                   <FontAwesomeIcon icon={faTimes} className="h-5 w-5" />
@@ -1503,8 +1586,25 @@ export function Ideas() {
                         onChange={() => setIsShoppingList(!isShoppingList)}
                         className="rounded border-gray-300 text-green-600 focus:ring-green-500"
                       />
-                      <span>Tag all tasks as shopping items</span>
+                      <span className="font-medium text-green-700">Tag all tasks as shopping items</span>
                     </label>
+                  </div>
+                  
+                  <div className="mt-3">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Common Tag (optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={commonTag}
+                      onChange={(e) => setCommonTag(e.target.value)}
+                      className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-sm"
+                      placeholder="e.g., movieday, vacation, workout"
+                      maxLength="20"
+                    />
+                    <p className="mt-1 text-xs text-gray-500">
+                      Add a tag that will be applied to all tasks in this upload
+                    </p>
                   </div>
                   
                   {bulkTasksInput && (
@@ -1526,8 +1626,13 @@ export function Ideas() {
                                 </span>
                               ))}
                               {isShoppingList && (
-                                <span className="px-1.5 py-0.5 bg-green-50 text-green-700 rounded-full text-[10px]">
+                                <span className="px-1.5 py-0.5 bg-green-50 text-green-700 rounded-full text-[10px] font-medium">
                                   shopping
+                                </span>
+                              )}
+                              {commonTag.trim() && (
+                                <span className="px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded-full text-[10px]">
+                                  {commonTag.trim().toLowerCase().replace(/\s+/g, '')}
                                 </span>
                               )}
                             </div>
@@ -1551,6 +1656,7 @@ export function Ideas() {
                       setIsBulkUploadOpen(false);
                       setBulkTasksInput("");
                       setIsShoppingList(false);
+                      setCommonTag("");
                     }}
                     className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-300"
                   >
@@ -1656,6 +1762,13 @@ export function Ideas() {
                       <option value="quarterly">Quarterly</option>
                       <option value="yearly">Yearly</option>
                     </select>
+
+                    {/* Recurring task notice */}
+                    {editRecurrence && !editDueDate && (
+                      <div className="text-xs text-blue-600 bg-blue-50 px-3 py-2 rounded-lg mt-2">
+                        💡 This recurring task will be scheduled for today
+                      </div>
+                    )}
                   </div>
                 </div>
                 
