@@ -195,13 +195,18 @@ export function IdeasProvider(props) {
       }
       
       // Create a new task with the same details but a new due date
+      const existingTags = completedTask.tags || [];
+      const tagsWithRecurring = existingTags.includes('recurring') 
+        ? existingTags 
+        : [...existingTags, 'recurring'];
+        
       const newTask = {
         userId: completedTask.userId,
         userName: completedTask.userName,
         title: completedTask.title,
         description: completedTask.description || "",
         entryDate: new Date().toISOString(),
-        tags: [...(completedTask.tags || []), 'recurring'],
+        tags: tagsWithRecurring,
         dueDate: nextDueDate.toISOString(),
         completed: false,
         recurrence: completedTask.recurrence,

@@ -54,7 +54,7 @@ export function Tasks() {
                       {task.title}
                     </h3>
                     <p className="text-sm text-gray-500">
-                      Due: {new Date(task.dueDate).toLocaleDateString()}
+                      Due: {new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                     </p>
                   </div>
                 </div>

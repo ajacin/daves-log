@@ -12,28 +12,19 @@ export function Navbar({ setIsDrawerOpen }) {
             <li className="nav-item">
               <Link
                 onClick={closeDrawer}
-                className="px-3 py-2 flex items-center text-xs uppercase font-bold leading-snug  hover:opacity-75"
+                className="px-3 py-2 flex items-center text-xs uppercase font-bold leading-snug text-blue-600 hover:text-blue-800"
                 to="/dashboard"
               >
-                <div className="text-lg">Home</div>
+                <div className="text-lg">Tasks</div>
               </Link>
             </li>
-            {/* <li className="nav-item">
-              <Link
-                onClick={closeDrawer}
-                className="px-3 py-2 flex items-center text-xs uppercase font-bold leading-snug  hover:opacity-75"
-                to="/login"
-              >
-                Login
-              </Link>
-            </li> */}
             <li className="nav-item">
               <Link
                 onClick={closeDrawer}
                 className="px-3 py-2 flex items-center text-xs uppercase font-bold leading-snug  hover:opacity-75"
-                to="/dashboard/ideas"
+                to="/dashboard/dashboard"
               >
-                <div className="text-lg">Tasks</div>
+                <div className="text-lg">Dashboard</div>
               </Link>
             </li>
             <li className="nav-item">

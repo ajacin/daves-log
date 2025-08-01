@@ -22,7 +22,8 @@ function ProtectedRoutes() {
   return (
     <ProtectedLayout>
       <Routes>
-        <Route index element={<Dashboard />} />
+        <Route index element={<Ideas />} />
+        <Route path="dashboard" element={<Dashboard />} />
         <Route path="activities" element={<Activities />} />
         <Route path="view-activities" element={<ViewActivities />} />
         <Route path="ideas" element={<Ideas />} />
