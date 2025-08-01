@@ -1,7 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
-import { Landing } from './pages/Landing';
+
 import { Dashboard } from './pages/Dashboard';
 import { ViewActivities } from "./pages/ViewActivities";
 import { Activities } from "./pages/Activities";
@@ -53,7 +53,7 @@ function AppRoutes() {
         <AutomationsProvider>
           <InviteesProvider>
             <Routes>
-              <Route path="/" element={user ? <Navigate to="/dashboard" replace /> : <Landing />} />
+              <Route path="/" element={user ? <Navigate to="/dashboard" replace /> : <Login />} />
               <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <Login />} />
               <Route path="/register" element={user ? <Navigate to="/dashboard" replace /> : <Register />} />
               <Route path="/dashboard/*" element={<ProtectedRoutes />} />
