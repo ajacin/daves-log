@@ -24,7 +24,8 @@ import {
   faUpload,
   faUserClock,
   faChevronLeft,
-  faChevronRight
+  faChevronRight,
+  faInfoCircle
 } from "@fortawesome/free-solid-svg-icons";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import toast from 'react-hot-toast';
@@ -541,6 +542,7 @@ export function Ideas() {
   const [editDueDate, setEditDueDate] = useState("");
   const [editRecurrence, setEditRecurrence] = useState("");
   const [editCustomTagInput, setEditCustomTagInput] = useState("");
+  const [showRecurringInfo, setShowRecurringInfo] = useState(false);
 
   const initRef = useRef(false);
 
@@ -1331,7 +1333,16 @@ export function Ideas() {
 
               {/* Tag Filters */}
               <div>
-                <h3 className="text-sm font-medium text-gray-700 mb-2">Filter by Tags</h3>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-medium text-gray-700">Filter by Tags</h3>
+                  <button
+                    onClick={() => setShowRecurringInfo(true)}
+                    className="text-blue-500 hover:text-blue-600 p-1 rounded"
+                    title="Learn about special recurring task tags"
+                  >
+                    <FontAwesomeIcon icon={faInfoCircle} className="h-4 w-4" />
+                  </button>
+                </div>
                 <div className="flex flex-wrap gap-2">
                   {availableTags.slice(0, 15).map((tag) => (
                     <button
@@ -1786,6 +1797,127 @@ export function Ideas() {
                     Cancel
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Recurring Task Info Modal */}
+      {showRecurringInfo && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <FontAwesomeIcon icon={faInfoCircle} className="text-blue-500" />
+                  Recurring Task Scheduling Guide
+                </h3>
+                <button
+                  onClick={() => setShowRecurringInfo(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <FontAwesomeIcon icon={faTimes} className="h-5 w-5" />
+                </button>
+              </div>
+              
+              <div className="space-y-6">
+                {/* Date-Sensitive Tasks */}
+                <div>
+                  <h4 className="font-medium text-gray-800 mb-3 flex items-center gap-2">
+                    🎂 Date-Sensitive Tasks (Use Original Date)
+                  </h4>
+                  <div className="bg-blue-50 p-4 rounded-lg space-y-3">
+                    <p className="text-sm text-gray-700">
+                      These tasks always reschedule to the same date, regardless of when you complete them:
+                    </p>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <h5 className="font-medium text-blue-800 mb-2">Special Tags:</h5>
+                        <div className="space-y-1">
+                          {['birthday', 'anniversary', 'bills', 'rent', 'mortgage'].map(tag => (
+                            <div key={tag} className="flex items-center gap-2">
+                              <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs">
+                                {tag}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <h5 className="font-medium text-blue-800 mb-2">Title Keywords:</h5>
+                        <div className="space-y-1 text-sm text-gray-600">
+                          <div>• "birthday" or "anniversary"</div>
+                          <div>• "rent", "mortgage", or "bill"</div>
+                          <div>• "payment" or "due"</div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-white p-3 rounded border-l-4 border-blue-400">
+                      <p className="text-sm text-gray-600">
+                        <strong>Example:</strong> "Mom's Birthday" due Jan 15th → Always reschedules to Jan 15th next year, 
+                        even if completed late.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Regular Tasks */}
+                <div>
+                  <h4 className="font-medium text-gray-800 mb-3 flex items-center gap-2">
+                    📅 Regular Tasks (Use Completion Date)
+                  </h4>
+                  <div className="bg-green-50 p-4 rounded-lg space-y-3">
+                    <p className="text-sm text-gray-700">
+                      These tasks reschedule based on when you complete them, allowing flexible timing:
+                    </p>
+                    
+                    <div className="bg-white p-3 rounded border-l-4 border-green-400">
+                      <p className="text-sm text-gray-600">
+                        <strong>Example:</strong> "Clean garage" (weekly) completed on Wednesday → 
+                        Next occurrence scheduled for next Wednesday.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Recurrence Patterns */}
+                <div>
+                  <h4 className="font-medium text-gray-800 mb-3">📊 Recurrence Patterns</h4>
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                      <div><strong>Daily:</strong> Every day</div>
+                      <div><strong>Weekly:</strong> Every 7 days</div>
+                      <div><strong>Biweekly:</strong> Every 14 days</div>
+                      <div><strong>Monthly:</strong> Same date next month</div>
+                      <div><strong>Quarterly:</strong> Every 3 months</div>
+                      <div><strong>Yearly:</strong> Same date next year</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Tips */}
+                <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                  <h4 className="font-medium text-yellow-800 mb-2">💡 Pro Tips</h4>
+                  <ul className="space-y-1 text-sm text-yellow-700">
+                    <li>• Use #birthday or #anniversary tags for special dates</li>
+                    <li>• Use #bills for payments that must stay on specific dates</li>
+                    <li>• Regular tasks without special tags are flexible with timing</li>
+                    <li>• Yearly tasks handle leap years automatically (Feb 29 → Feb 28)</li>
+                  </ul>
+                </div>
+              </div>
+              
+              <div className="mt-6 flex justify-end">
+                <button
+                  onClick={() => setShowRecurringInfo(false)}
+                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                >
+                  Got it!
+                </button>
               </div>
             </div>
           </div>
