@@ -32,6 +32,27 @@ import toast from 'react-hot-toast';
 import React from "react";
 import confetti from 'canvas-confetti';
 
+// Toast configuration to prevent duplicate notifications
+const toastConfig = {
+  success: {
+    duration: 4000,
+    style: {
+      background: '#10B981',
+      color: 'white',
+      fontWeight: 'bold',
+      fontSize: '14px',
+    },
+  },
+  error: {
+    duration: 3000,
+    style: {
+      background: '#EF4444',
+      color: 'white',
+      fontWeight: 'bold',
+    },
+  },
+};
+
 const PREDEFINED_TAGS = [
   "walmart", "costco", "dollarama", "shopping", "foodco", "groceries", "pharmacy", "errands",
   "home", "kids", "school", "work", "health", "fitness", "finance", "personal", "urgent",
@@ -283,7 +304,7 @@ function QuickAddTask({ onAdd, placeholder = "Add a task..." }) {
 }
 
 // Task Item Component
-function TaskItem({ task, onToggleComplete, onEdit, onDelete, onQuickDateUpdate }) {
+function TaskItem({ task, onToggleComplete, onEdit, onDelete, onQuickDateUpdate, isProcessing }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef(null);
 
@@ -310,23 +331,26 @@ function TaskItem({ task, onToggleComplete, onEdit, onDelete, onQuickDateUpdate 
         <div className="flex items-start gap-2">
           <button
             onClick={() => onToggleComplete(task.$id)}
+            disabled={isProcessing}
             className={`mt-0.5 w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${
-              task.completed 
-                ? 'bg-green-500 border-green-500 text-white' 
-                : 'border-gray-300 hover:border-green-500'
+              isProcessing 
+                ? 'opacity-50 cursor-not-allowed border-gray-300' 
+                : task.completed 
+                  ? 'bg-green-500 border-green-500 text-white' 
+                  : 'border-gray-300 hover:border-green-500'
             }`}
           >
             {task.completed && <FontAwesomeIcon icon={faCheck} className="h-2.5 w-2.5" />}
           </button>
           
           <div className="flex-1 min-w-0">
-            <div className={`font-medium text-xs ${task.completed ? 'line-through text-gray-500' : 'text-gray-900'}`}>
+            <div className={`font-medium text-sm sm:text-xs ${task.completed ? 'line-through text-gray-500' : 'text-gray-900'}`}>
               {task.title}
             </div>
             
             {task.description && (
               <div className="mt-1">
-                <div className="text-gray-600 text-[10px] break-words leading-relaxed line-clamp-2">
+                <div className="text-gray-600 text-xs sm:text-[10px] break-words leading-relaxed line-clamp-2">
                   {renderTextWithLinks(task.description)}
                 </div>
               </div>
@@ -336,12 +360,12 @@ function TaskItem({ task, onToggleComplete, onEdit, onDelete, onQuickDateUpdate 
             {task.tags && task.tags.length > 0 && (
               <div className="flex flex-wrap gap-0.5 mt-1">
                 {task.tags.slice(0, 3).map((tag) => (
-                  <span key={tag} className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-medium bg-gray-100 text-gray-700">
+                  <span key={tag} className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs sm:text-[9px] font-medium bg-gray-100 text-gray-700">
                     {tag}
                   </span>
                 ))}
                 {task.tags.length > 3 && (
-                  <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-medium bg-gray-100 text-gray-500">
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs sm:text-[9px] font-medium bg-gray-100 text-gray-500">
                     +{task.tags.length - 3}
                   </span>
                 )}
@@ -350,7 +374,7 @@ function TaskItem({ task, onToggleComplete, onEdit, onDelete, onQuickDateUpdate 
             
             {/* Due Date */}
             {task.dueDate && (
-              <div className={`text-[10px] mt-1 flex items-center gap-1 ${
+              <div className={`text-xs sm:text-[10px] mt-1 flex items-center gap-1 ${
                 isOverdue ? 'text-red-600' : isDueToday ? 'text-yellow-600' : 'text-gray-500'
               }`}>
                 <FontAwesomeIcon icon={faClock} className="h-2.5 w-2.5" />
@@ -369,25 +393,25 @@ function TaskItem({ task, onToggleComplete, onEdit, onDelete, onQuickDateUpdate 
               <div className="flex gap-1 mt-1 flex-wrap">
                 <button
                   onClick={() => onQuickDateUpdate(task.$id, 'today')}
-                  className="text-[9px] px-1.5 py-0.5 bg-blue-100 text-blue-600 rounded hover:bg-blue-200"
+                  className="text-xs sm:text-[9px] px-1.5 py-0.5 bg-blue-100 text-blue-600 rounded hover:bg-blue-200"
                 >
                   Today
                 </button>
                 <button
                   onClick={() => onQuickDateUpdate(task.$id, 'tomorrow')}
-                  className="text-[9px] px-1.5 py-0.5 bg-green-100 text-green-600 rounded hover:bg-green-200"
+                  className="text-xs sm:text-[9px] px-1.5 py-0.5 bg-green-100 text-green-600 rounded hover:bg-green-200"
                 >
                   Tomorrow
                 </button>
                 <button
                   onClick={() => onQuickDateUpdate(task.$id, 'week')}
-                  className="text-[9px] px-1.5 py-0.5 bg-purple-100 text-purple-600 rounded hover:bg-purple-200"
+                  className="text-xs sm:text-[9px] px-1.5 py-0.5 bg-purple-100 text-purple-600 rounded hover:bg-purple-200"
                 >
                   In a Week
                 </button>
                 <button
                   onClick={() => onQuickDateUpdate(task.$id, 'month')}
-                  className="text-[9px] px-1.5 py-0.5 bg-orange-100 text-orange-600 rounded hover:bg-orange-200"
+                  className="text-xs sm:text-[9px] px-1.5 py-0.5 bg-orange-100 text-orange-600 rounded hover:bg-orange-200"
                 >
                   In a Month
                 </button>
@@ -410,7 +434,7 @@ function TaskItem({ task, onToggleComplete, onEdit, onDelete, onQuickDateUpdate 
                     onEdit(task);
                     setIsMenuOpen(false);
                   }}
-                  className="w-full text-left px-2 py-1 text-xs text-gray-700 hover:bg-gray-100 flex items-center gap-1"
+                  className="w-full text-left px-2 py-1 text-sm sm:text-xs text-gray-700 hover:bg-gray-100 flex items-center gap-1"
                 >
                   <FontAwesomeIcon icon={faEdit} className="h-2.5 w-2.5" />
                   Edit
@@ -420,7 +444,7 @@ function TaskItem({ task, onToggleComplete, onEdit, onDelete, onQuickDateUpdate 
                     onDelete(task.$id);
                     setIsMenuOpen(false);
                   }}
-                  className="w-full text-left px-2 py-1 text-xs text-red-600 hover:bg-red-50 flex items-center gap-1"
+                  className="w-full text-left px-2 py-1 text-sm sm:text-xs text-red-600 hover:bg-red-50 flex items-center gap-1"
                 >
                   <FontAwesomeIcon icon={faTrash} className="h-2.5 w-2.5" />
                   Delete
@@ -435,7 +459,7 @@ function TaskItem({ task, onToggleComplete, onEdit, onDelete, onQuickDateUpdate 
 }
 
 // Timeline Column Component
-function TimelineColumn({ title, subtitle, tasks, onAddTask, type, targetDate, isToday = false, isOverdue = false, ...taskActions }) {
+function TimelineColumn({ title, subtitle, tasks, onAddTask, type, targetDate, isToday = false, isOverdue = false, processingTasks, ...taskActions }) {
   const handleAddTask = async (taskData) => {
     if (type === 'unscheduled') {
       return await onAddTask(taskData);
@@ -473,15 +497,15 @@ function TimelineColumn({ title, subtitle, tasks, onAddTask, type, targetDate, i
       {/* Column Header */}
       <div className={`p-3 border-b ${getHeaderStyle()}`}>
         <div className="text-center">
-          <div className={`text-xs font-bold ${getTitleStyle()}`}>
+          <div className={`text-sm sm:text-xs font-bold ${getTitleStyle()}`}>
             {title}
           </div>
           {subtitle && (
-            <div className={`text-[10px] font-medium ${getSubtitleStyle()}`}>
+            <div className={`text-xs sm:text-[10px] font-medium ${getSubtitleStyle()}`}>
               {subtitle}
             </div>
           )}
-          <div className="text-[10px] text-gray-500 mt-0.5">
+          <div className="text-xs sm:text-[10px] text-gray-500 mt-0.5">
             ({tasks.length} task{tasks.length !== 1 ? 's' : ''})
           </div>
         </div>
@@ -500,6 +524,7 @@ function TimelineColumn({ title, subtitle, tasks, onAddTask, type, targetDate, i
           <TaskItem
             key={task.$id}
             task={task}
+            isProcessing={processingTasks?.has(task.$id)}
             {...taskActions}
           />
         ))}
@@ -543,6 +568,12 @@ export function Ideas() {
   const [editRecurrence, setEditRecurrence] = useState("");
   const [editCustomTagInput, setEditCustomTagInput] = useState("");
   const [showRecurringInfo, setShowRecurringInfo] = useState(false);
+  
+  // Debounce mechanism to prevent rapid-fire clicks
+  const [processingTasks, setProcessingTasks] = useState(new Set());
+  
+  // Track recent completions to prevent duplicate notifications
+  const recentCompletions = useRef(new Map());
 
   const initRef = useRef(false);
 
@@ -940,19 +971,149 @@ export function Ideas() {
     const task = ideas.current.find(t => t.$id === taskId);
     if (!task) return;
 
+    // Prevent duplicate calls using state-based debouncing
+    if (processingTasks.has(taskId)) return;
+    
     const newCompletedState = !task.completed;
-    const success = await ideas.toggleComplete(taskId, {
-      completed: newCompletedState,
-      completedAt: newCompletedState ? new Date().toISOString() : null
-    });
+    
+    // Mark task as processing to prevent duplicates
+    setProcessingTasks(prev => new Set([...prev, taskId]));
+    
+    try {
+      const success = await ideas.toggleComplete(taskId);
 
-    if (success) {
-      toast.success(newCompletedState ? "🎉 Task completed!" : "Task reopened");
-      if (newCompletedState) {
-        triggerCelebration();
+      if (success) {
+        if (newCompletedState) {
+          // Check if we recently showed a notification for this task
+          const now = Date.now();
+          const lastNotification = recentCompletions.current.get(taskId);
+          
+          // If we showed a notification for this task within the last 2 seconds, skip it
+          if (lastNotification && (now - lastNotification) < 2000) {
+            // Still need to cleanup processing state
+            setProcessingTasks(prev => {
+              const newSet = new Set(prev);
+              newSet.delete(taskId);
+              return newSet;
+            });
+            return;
+          }
+          
+          // Record this notification time
+          recentCompletions.current.set(taskId, now);
+          
+          // Clean up old entries (older than 10 seconds)
+          for (const [id, time] of recentCompletions.current.entries()) {
+            if (now - time > 10000) {
+              recentCompletions.current.delete(id);
+            }
+          }
+          
+          // Enhanced notification for task completion
+          let message = "🎉 Task completed!";
+          
+          // Add recurring task information if applicable
+          if (task.recurrence) {
+            const isBirthdayTask = task.tags?.includes('birthday') || 
+                                 task.title?.toLowerCase().includes('birthday') ||
+                                 task.tags?.includes('anniversary') ||
+                                 task.title?.toLowerCase().includes('anniversary');
+            
+            const isDateSensitiveTask = isBirthdayTask || 
+                                      task.tags?.includes('bills') ||
+                                      task.tags?.includes('rent') ||
+                                      task.tags?.includes('mortgage') ||
+                                      task.title?.toLowerCase().includes('rent') ||
+                                      task.title?.toLowerCase().includes('mortgage') ||
+                                      task.title?.toLowerCase().includes('bill') ||
+                                      task.title?.toLowerCase().includes('payment') ||
+                                      task.title?.toLowerCase().includes('due');
+            
+            if (isDateSensitiveTask && task.dueDate) {
+              const dueDate = new Date(task.dueDate);
+              let nextDate;
+              
+              // Calculate next date based on recurrence pattern
+              switch (task.recurrence) {
+                case 'monthly':
+                  nextDate = new Date(dueDate);
+                  nextDate.setMonth(nextDate.getMonth() + 1);
+                  break;
+                case 'quarterly':
+                  nextDate = new Date(dueDate);
+                  nextDate.setMonth(nextDate.getMonth() + 3);
+                  break;
+                case 'yearly':
+                default:
+                  nextDate = new Date(dueDate);
+                  nextDate.setFullYear(nextDate.getFullYear() + 1);
+                  break;
+              }
+              
+              const nextDateStr = nextDate.toLocaleDateString('en-US', { 
+                month: 'short', 
+                day: 'numeric', 
+                year: 'numeric' 
+              });
+              
+              if (isBirthdayTask) {
+                message = `🎂 ${task.title} completed! Next reminder: ${nextDateStr}`;
+              } else {
+                message = `💳 ${task.title} completed! Next due: ${nextDateStr}`;
+              }
+            } else {
+              // Regular recurring task
+              const recurrenceMap = {
+                'daily': 'tomorrow',
+                'weekly': 'next week',
+                'biweekly': 'in 2 weeks',
+                'monthly': 'next month',
+                'quarterly': 'in 3 months',
+                'yearly': 'next year'
+              };
+              const nextTime = recurrenceMap[task.recurrence] || `next ${task.recurrence}`;
+              message = `🔄 Task completed! Next occurrence: ${nextTime}`;
+            }
+          }
+          
+          // Dismiss any existing notifications for this task pattern
+          toast.dismiss(`task-complete-${taskId}`);
+          toast.dismiss(`task-error-${taskId}`);
+          toast.dismiss(`task-reopen-${taskId}`);
+          
+          // Add slight delay to ensure cleanup
+          setTimeout(() => {
+            toast.success(message, {
+              id: `task-complete-${taskId}`,
+              ...toastConfig.success,
+            });
+          }, 50);
+          triggerCelebration();
+        } else {
+          toast.success("Task reopened", {
+            id: `task-reopen-${taskId}`,
+            duration: 2000,
+          });
+        }
+      } else {
+        toast.error("Failed to update task", {
+          id: `task-error-${taskId}`,
+          ...toastConfig.error,
+        });
       }
-    } else {
-      toast.error("Failed to update task");
+    } catch (error) {
+      console.error('Error toggling task completion:', error);
+      toast.error("Failed to update task", {
+        id: `task-error-${taskId}`,
+        ...toastConfig.error,
+      });
+    } finally {
+      // Always remove task from processing set
+      setProcessingTasks(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(taskId);
+        return newSet;
+      });
     }
   };
 
@@ -1116,7 +1277,10 @@ export function Ideas() {
       }
 
       if (successCount > 0) {
-        toast.success(`Successfully added ${successCount} tasks!`);
+        toast.success(`Successfully added ${successCount} tasks!`, {
+          id: `bulk-upload-success`,
+          ...toastConfig.success,
+        });
         setIsBulkUploadOpen(false);
         setBulkTasksInput("");
         setIsShoppingList(false);
@@ -1457,6 +1621,7 @@ export function Ideas() {
                           targetDate={column.targetDate}
                           isToday={column.isToday}
                           isOverdue={column.isOverdue}
+                          processingTasks={processingTasks}
                           onToggleComplete={handleToggleComplete}
                           onEdit={handleEditTask}
                           onDelete={handleDeleteTask}
@@ -1496,6 +1661,7 @@ export function Ideas() {
                       targetDate={column.targetDate}
                       isToday={column.isToday}
                       isOverdue={column.isOverdue}
+                      processingTasks={processingTasks}
                       onToggleComplete={handleToggleComplete}
                       onEdit={handleEditTask}
                       onDelete={handleDeleteTask}
@@ -1534,6 +1700,7 @@ export function Ideas() {
                     <TaskItem
                       key={task.$id}
                       task={task}
+                      isProcessing={processingTasks.has(task.$id)}
                       onToggleComplete={handleToggleComplete}
                       onEdit={handleEditTask}
                       onDelete={handleDeleteTask}

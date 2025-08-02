@@ -187,10 +187,7 @@ export function IdeasProvider(props) {
         ? new Date(completedTask.dueDate) 
         : completionDateTime;
       
-      if (isDateSensitiveTask && completedTask.dueDate) {
-        const taskType = isBirthdayTask ? '🎂 Birthday/Anniversary' : '📅 Date-sensitive';
-        console.log(`${taskType} task detected: "${completedTask.title}" - using original date for next occurrence`);
-      }
+      // Note: Date-sensitive tasks use original due date for precise recurring dates
       
       // Calculate the next due date based on recurrence pattern
       switch (completedTask.recurrence) {
