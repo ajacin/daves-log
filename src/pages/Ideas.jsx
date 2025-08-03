@@ -459,7 +459,7 @@ function TaskItem({ task, onToggleComplete, onEdit, onDelete, onQuickDateUpdate,
 }
 
 // Timeline Column Component
-function TimelineColumn({ title, subtitle, tasks, onAddTask, type, targetDate, isToday = false, isOverdue = false, processingTasks, ...taskActions }) {
+function TimelineColumn({ title, subtitle, tasks, onAddTask, type, targetDate, isToday = false, isOverdue = false, processingTasks, hideMobileHeader = false, ...taskActions }) {
   const handleAddTask = async (taskData) => {
     if (type === 'unscheduled') {
       return await onAddTask(taskData);
@@ -493,26 +493,28 @@ function TimelineColumn({ title, subtitle, tasks, onAddTask, type, targetDate, i
   };
 
   return (
-    <div className={`flex-1 min-w-[280px] lg:min-w-[280px] w-full rounded-lg border shadow-sm ${getColumnStyle()}`}>
-      {/* Column Header */}
-      <div className={`p-3 border-b ${getHeaderStyle()}`}>
-        <div className="text-center">
-          <div className={`text-sm sm:text-xs font-bold ${getTitleStyle()}`}>
-            {title}
-          </div>
-          {subtitle && (
-            <div className={`text-xs sm:text-[10px] font-medium ${getSubtitleStyle()}`}>
-              {subtitle}
+    <div className={`flex-1 min-w-[280px] lg:min-w-[280px] w-full rounded-lg ${hideMobileHeader ? 'border-0 shadow-none' : 'border shadow-sm'} ${getColumnStyle()}`}>
+      {/* Column Header - Hidden in mobile navigation mode */}
+      {!hideMobileHeader && (
+        <div className={`p-3 border-b ${getHeaderStyle()}`}>
+          <div className="text-center">
+            <div className={`text-sm sm:text-xs font-bold ${getTitleStyle()}`}>
+              {title}
             </div>
-          )}
-          <div className="text-xs sm:text-[10px] text-gray-500 mt-0.5">
-            ({tasks.length} task{tasks.length !== 1 ? 's' : ''})
+            {subtitle && (
+              <div className={`text-xs sm:text-[10px] font-medium ${getSubtitleStyle()}`}>
+                {subtitle}
+              </div>
+            )}
+            <div className="text-xs sm:text-[10px] text-gray-500 mt-0.5">
+              ({tasks.length} task{tasks.length !== 1 ? 's' : ''})
+            </div>
           </div>
         </div>
-      </div>
+      )}
       
       {/* Tasks */}
-      <div className="p-2 space-y-1.5 min-h-[400px] max-h-[600px] overflow-y-auto">
+      <div className={`p-2 space-y-1.5 min-h-[400px] max-h-[600px] overflow-y-auto ${hideMobileHeader ? 'pt-4' : ''}`}>
         {/* Quick Add */}
         <QuickAddTask 
           onAdd={handleAddTask} 
@@ -1580,7 +1582,7 @@ export function Ideas() {
                         {currentColumns[currentColumnIndex]?.subtitle}
                       </div>
                       <div className="text-xs text-gray-400 mt-1">
-                        {currentColumnIndex + 1} of {currentColumns.length}
+                        ({currentColumns[currentColumnIndex]?.tasks?.length || 0} task{currentColumns[currentColumnIndex]?.tasks?.length !== 1 ? 's' : ''}) • {currentColumnIndex + 1} of {currentColumns.length}
                       </div>
                     </div>
                     
@@ -1622,6 +1624,7 @@ export function Ideas() {
                           isToday={column.isToday}
                           isOverdue={column.isOverdue}
                           processingTasks={processingTasks}
+                          hideMobileHeader={true}
                           onToggleComplete={handleToggleComplete}
                           onEdit={handleEditTask}
                           onDelete={handleDeleteTask}
