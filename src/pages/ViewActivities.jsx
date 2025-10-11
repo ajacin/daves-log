@@ -142,175 +142,187 @@ export function ViewActivities() {
   }
 
   return (
-    <div className="container mx-auto p-4 sm:px-6 lg:px-8">
-      {error && (
-        <div className="mb-4">
-          <div
-            className={`border-l-4 p-4 ${
-              isOffline
-                ? "bg-blue-50 border-blue-400"
-                : "bg-red-50 border-red-400"
-            }`}
-          >
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <FontAwesomeIcon
-                  icon={isOffline ? faWifi : faExclamationTriangle}
-                  className={`h-5 w-5 ${
-                    isOffline ? "text-blue-400" : "text-red-400"
-                  }`}
-                />
-              </div>
-              <div className="ml-3">
-                <p
-                  className={`text-sm ${
-                    isOffline ? "text-blue-700" : "text-red-700"
-                  }`}
-                >
-                  {error}
-                  {isOffline && (
-                    <button
-                      onClick={retry}
-                      className="ml-2 underline hover:text-blue-900"
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100">
+      {/* Header */}
+      <div className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 py-6">
+          <h1 className="text-2xl lg:text-3xl font-bold text-slate-800">Activity History</h1>
+          <p className="text-sm lg:text-base text-slate-600 mt-1">View all your baby's logged activities</p>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        <div className="max-w-4xl mx-auto">
+          {error && (
+            <div className="mb-6">
+              <div
+                className={`border-l-4 p-4 rounded-r-xl ${
+                  isOffline
+                    ? "bg-blue-50 border-blue-400"
+                    : "bg-red-50 border-red-400"
+                }`}
+              >
+                <div className="flex">
+                  <div className="flex-shrink-0">
+                    <FontAwesomeIcon
+                      icon={isOffline ? faWifi : faExclamationTriangle}
+                      className={`h-5 w-5 ${
+                        isOffline ? "text-blue-400" : "text-red-400"
+                      }`}
+                    />
+                  </div>
+                  <div className="ml-3">
+                    <p
+                      className={`text-sm ${
+                        isOffline ? "text-blue-700" : "text-red-700"
+                      }`}
                     >
-                      Retry
-                    </button>
-                  )}
-                </p>
+                      {error}
+                      {isOffline && (
+                        <button
+                          onClick={retry}
+                          className="ml-2 underline hover:text-blue-900 transition-colors duration-200"
+                        >
+                          Retry
+                        </button>
+                      )}
+                    </p>
+                  </div>
+                </div>
               </div>
+            </div>
+          )}
+
+          <div className="bg-white rounded-2xl shadow-sm">
+            <div className="p-6 border-b border-slate-200">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-slate-800">All Activities</h2>
+                <div className="flex items-center space-x-2">
+                  <FontAwesomeIcon icon={faList} className="text-slate-500" />
+                  <span className="bg-slate-100 text-slate-600 text-xs font-medium px-2 py-1 rounded-full">
+                    {activities.length}
+                  </span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="p-6">
+              {isLoading ? (
+                <div className="text-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500 mx-auto"></div>
+                </div>
+              ) : activities.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <FontAwesomeIcon icon={faList} className="text-slate-400 text-xl" />
+                  </div>
+                  <h3 className="text-lg font-medium text-slate-800 mb-1">No activities yet</h3>
+                  <p className="text-slate-500">Start logging activities to see them here.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {activities
+                    .sort(
+                      (a, b) => new Date(b.activityTime) - new Date(a.activityTime)
+                    )
+                    .map((activity) => (
+                      <div
+                        key={activity.$id}
+                        className="relative bg-slate-50 rounded-xl p-4 hover:bg-slate-100 transition-colors duration-200"
+                      >
+                        <div className="absolute top-3 right-3">
+                          <div className="relative">
+                            <button
+                              onClick={() => toggleMenu(activity.$id)}
+                              className="p-1 hover:bg-slate-200 rounded-full transition-colors duration-200"
+                            >
+                              <FontAwesomeIcon
+                                icon={faEllipsisV}
+                                className="h-4 w-4 text-slate-600"
+                              />
+                            </button>
+                            {selectedActivity === activity.$id && (
+                              <div className="absolute right-0 mt-2 w-32 bg-white border border-slate-200 rounded-lg shadow-lg z-10">
+                                <button
+                                  onClick={() => deleteActivity(activity.$id)}
+                                  className="block w-full py-2 px-4 text-left text-red-600 hover:bg-red-50 transition-colors duration-200"
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex items-start space-x-4">
+                          <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm">
+                            <ActivityIcon activityName={activity.activityName} />
+                          </div>
+                          
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center space-x-2 mb-2">
+                              <h3 className="font-semibold text-slate-800 text-lg">
+                                {activity.activityName}
+                              </h3>
+                              {renderActivityTime(
+                                activity.activityName,
+                                activity.activityTime,
+                                true
+                              )}
+                            </div>
+
+                            <div className="space-y-2">
+                              {activity.value && (
+                                <div className="flex items-center space-x-2 text-slate-600">
+                                  {getUnitIcon(activity.unit) && (
+                                    <FontAwesomeIcon
+                                      icon={getUnitIcon(activity.unit)}
+                                      className="h-4 w-4"
+                                    />
+                                  )}
+                                  <span className="font-medium">
+                                    {activity.value} {activity.unit}
+                                  </span>
+                                </div>
+                              )}
+
+                              {activity.remarks && (
+                                <div className="flex items-start space-x-2 text-slate-600">
+                                  <FontAwesomeIcon
+                                    icon={faListCheck}
+                                    className="h-4 w-4 mt-1"
+                                  />
+                                  <p className="text-sm">{activity.remarks}</p>
+                                </div>
+                              )}
+
+                              <div className="flex items-center justify-between text-sm text-slate-500">
+                                <span>
+                                  {new Date(activity.activityTime).toLocaleDateString(
+                                    undefined,
+                                    {
+                                      weekday: "short",
+                                      month: "short",
+                                      day: "numeric",
+                                    }
+                                  )}
+                                </span>
+                                <ActivityTime
+                                  activityName={activity.activityName}
+                                  activityTime={activity.activityTime}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
-      )}
-
-      <section className="mt-12">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-800">Last 24 hours</h2>
-          {/* <Clock></Clock> */}
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {isLoading ? (
-            <div className="p-8 text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-            </div>
-          ) : activities.length === 0 ? (
-            <div className="p-8 text-center">
-              <FontAwesomeIcon
-                icon={faList}
-                className="h-12 w-12 text-gray-400 mb-4"
-              />
-              <h3 className="text-lg font-medium text-gray-900 mb-1">
-                No activities found
-              </h3>
-              <p className="text-gray-500">
-                Activities from the last 24 hours will appear here.
-              </p>
-            </div>
-          ) : (
-            activities
-              .sort(
-                (a, b) => new Date(b.activityTime) - new Date(a.activityTime)
-              )
-              .map((activity) => (
-                <div
-                  key={activity.$id}
-                  className={`relative flex flex-col bg-gradient-to-br shadow-lg rounded-xl overflow-hidden border-l-4 ${getActivityCardColor(
-                    activity.activityName
-                  )}`}
-                >
-                  <div className="absolute top-3 right-3">
-                    <div className="relative">
-                      <button
-                        onClick={() => toggleMenu(activity.$id)}
-                        className="p-1 hover:bg-black/5 rounded-full transition-colors duration-200"
-                      >
-                        <FontAwesomeIcon
-                          icon={faEllipsisV}
-                          className="h-4 w-4 text-gray-600"
-                        />
-                      </button>
-                      {selectedActivity === activity.$id && (
-                        <div className="absolute right-0 mt-2 w-32 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
-                          <button
-                            onClick={() => deleteActivity(activity.$id)}
-                            className="block w-full py-2 px-4 text-left text-red-600 hover:bg-red-50 transition-colors duration-200"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="p-5">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center space-x-3">
-                        <div className="p-2 bg-white rounded-lg shadow-sm">
-                          <ActivityIcon activityName={activity.activityName} />
-                        </div>
-                        <h3 className="font-semibold text-lg text-gray-800">
-                          {activity.activityName}
-                        </h3>
-                      </div>
-                    </div>
-
-                    <div className="space-y-4">
-                      {activity.value && (
-                        <div className="flex items-center space-x-2 text-gray-600">
-                          {getUnitIcon(activity.unit) && (
-                            <FontAwesomeIcon
-                              icon={getUnitIcon(activity.unit)}
-                              className="h-4 w-4"
-                            />
-                          )}
-                          <span className="font-medium">
-                            {activity.value} {activity.unit}
-                          </span>
-                        </div>
-                      )}
-
-                      {activity.remarks && (
-                        <div className="flex items-start space-x-2 text-gray-600">
-                          <FontAwesomeIcon
-                            icon={faListCheck}
-                            className="h-4 w-4 mt-1"
-                          />
-                          <p className="text-sm">{activity.remarks}</p>
-                        </div>
-                      )}
-
-                      <div className="flex flex-col space-y-2 pt-2">
-                        <div className="flex items-center justify-between">
-                          <div className="text-sm text-gray-500">
-                            {new Date(activity.activityTime).toLocaleTimeString(
-                              undefined,
-                              {
-                                weekday: "short",
-                                month: "short",
-                                day: "numeric",
-                              }
-                            )}
-                          </div>
-                          {renderActivityTime(
-                            activity.activityName,
-                            activity.activityTime,
-                            true
-                          )}
-                        </div>
-                        <div className="text-sm">
-                          <ActivityTime
-                            activityName={activity.activityName}
-                            activityTime={activity.activityTime}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))
-          )}
-        </div>
-      </section>
+      </div>
     </div>
   );
 }

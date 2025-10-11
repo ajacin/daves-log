@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import { useUser } from "../lib/context/user";
 import { useIdeas } from "../lib/context/ideas";
+import { ConfirmationModal } from "../components/ConfirmationModal";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faClock,
@@ -562,6 +563,8 @@ export function Ideas() {
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
   const [bulkTasksInput, setBulkTasksInput] = useState("");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteId, setDeleteId] = useState(null);
   const [editingTask, setEditingTask] = useState(null);
   const [editTitle, setEditTitle] = useState("");
   const [editDescription, setEditDescription] = useState("");
@@ -1156,14 +1159,21 @@ export function Ideas() {
   };
 
   const handleDeleteTask = async (taskId) => {
-    if (!window.confirm("Are you sure you want to delete this task?")) return;
+    setDeleteModalOpen(true);
+    setDeleteId(taskId);
+  };
 
-    const success = await ideas.remove(taskId);
-    if (success) {
-      toast.success("Task deleted successfully!");
-    } else {
-      toast.error("Failed to delete task");
+  const handleDeleteConfirm = async () => {
+    if (deleteId) {
+      const success = await ideas.remove(deleteId);
+      if (success) {
+        toast.success("Task deleted successfully!");
+      } else {
+        toast.error("Failed to delete task");
+      }
     }
+    setDeleteModalOpen(false);
+    setDeleteId(null);
   };
 
   const handleQuickDateUpdate = async (taskId, dateType) => {
@@ -2093,6 +2103,18 @@ export function Ideas() {
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Task"
+        message="Are you sure you want to delete this task? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        type="danger"
+      />
     </div>
   );
 }

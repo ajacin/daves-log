@@ -91,117 +91,132 @@ export function Dashboard() {
   }), [ideas]);
 
   return (
-    <div className="container mx-auto">
-      <div className="flex flex-col space-y-4">
-        <h1 className="text-3xl font-bold">{greeting}, {user?.name || 'User'}</h1>
-        
-        {/* Task Statistics - Compact Row */}
-        <div className="bg-white rounded-lg shadow-sm p-4">
-          <div className="grid grid-cols-4 lg:grid-cols-8 gap-3">
-            <Link 
-              to="/dashboard/ideas"
-              className="bg-purple-50 rounded-lg p-3 flex flex-col items-center justify-center cursor-pointer hover:shadow-md transition-all"
-            >
-              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-purple-100 mb-1">
-                <FontAwesomeIcon icon={faChartLine} className="text-purple-600 h-4 w-4" />
-              </div>
-              <span className="text-xs text-gray-500">Total</span>
-              <span className="text-xl font-bold text-gray-900">{dashboardStats.totalTasks}</span>
-            </Link>
-            
-            <Link 
-              to="/dashboard/ideas"
-              className="bg-green-50 rounded-lg p-3 flex flex-col items-center justify-center cursor-pointer hover:shadow-md transition-all"
-            >
-              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-green-100 mb-1">
-                <FontAwesomeIcon icon={faCircleCheck} className="text-green-600 h-4 w-4" />
-              </div>
-              <span className="text-xs text-gray-500">Done</span>
-              <span className="text-xl font-bold text-green-600">{dashboardStats.completedTasks}</span>
-            </Link>
-            
-            <Link 
-              to="/dashboard/ideas"
-              className="bg-blue-50 rounded-lg p-3 flex flex-col items-center justify-center cursor-pointer hover:shadow-md transition-all"
-            >
-              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 mb-1">
-                <FontAwesomeIcon icon={faClock} className="text-blue-600 h-4 w-4" />
-              </div>
-              <span className="text-xs text-gray-500">Pending</span>
-              <span className="text-xl font-bold text-blue-600">{dashboardStats.pendingTasks}</span>
-            </Link>
-            
-            <Link 
-              to="/dashboard/ideas"
-              className="bg-red-50 rounded-lg p-3 flex flex-col items-center justify-center cursor-pointer hover:shadow-md transition-all"
-            >
-              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-red-100 mb-1">
-                <FontAwesomeIcon icon={faExclamationTriangle} className="text-red-600 h-4 w-4" />
-              </div>
-              <span className="text-xs text-gray-500">Overdue</span>
-              <span className="text-xl font-bold text-red-600">{dashboardStats.overdueTasks}</span>
-            </Link>
-            
-            <Link 
-              to="/dashboard/ideas"
-              className="bg-yellow-50 rounded-lg p-3 flex flex-col items-center justify-center cursor-pointer hover:shadow-md transition-all"
-            >
-              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-yellow-100 mb-1">
-                <FontAwesomeIcon icon={faCalendarDay} className="text-yellow-600 h-4 w-4" />
-              </div>
-              <span className="text-xs text-gray-500">Today</span>
-              <span className="text-xl font-bold text-yellow-600">{dashboardStats.tasksDueToday}</span>
-            </Link>
-            
-            <Link 
-              to="/dashboard/ideas"
-              className="bg-green-50 rounded-lg p-3 flex flex-col items-center justify-center cursor-pointer hover:shadow-md transition-all"
-            >
-              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-green-100 mb-1">
-                <FontAwesomeIcon icon={faShoppingCart} className="text-green-600 h-4 w-4" />
-              </div>
-              <span className="text-xs text-gray-500">Shopping</span>
-              <span className="text-xl font-bold text-green-600">{dashboardStats.shoppingItems}</span>
-            </Link>
-            
-            <Link 
-              to="/dashboard/ideas"
-              className="bg-red-50 rounded-lg p-3 flex flex-col items-center justify-center cursor-pointer hover:shadow-md transition-all"
-            >
-              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-red-100 mb-1">
-                <FontAwesomeIcon icon={faLayerGroup} className="text-red-600 h-4 w-4" />
-              </div>
-              <span className="text-xs text-gray-500">Urgent</span>
-              <span className="text-xl font-bold text-red-600">{dashboardStats.urgentTasks}</span>
-            </Link>
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100">
+      {/* Header */}
+      <div className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 py-6">
+          <h1 className="text-2xl lg:text-3xl font-bold text-slate-800">{greeting}, {user?.name || 'User'}</h1>
+          <p className="text-sm lg:text-base text-slate-600 mt-1">Here's your dashboard overview</p>
         </div>
+      </div>
 
-        {/* Due Today Notice - if tasks are due today */}
-        {dashboardStats.tasksDueToday > 0 && (
-          <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded flex items-center gap-2">
-            <FontAwesomeIcon icon={faCalendarDay} className="h-5 w-5 text-yellow-500" />
-            <div>
-              <p className="text-sm text-yellow-700">
-                You have <span className="font-medium">{dashboardStats.tasksDueToday} task{dashboardStats.tasksDueToday !== 1 ? 's' : ''}</span> due today.
-                <Link 
-                  to="/dashboard/ideas" 
-                  className="ml-2 text-yellow-800 underline"
-                >View all tasks</Link>
-              </p>
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        <div className="max-w-6xl mx-auto">
+          {/* Task Statistics */}
+          <div className="bg-white rounded-2xl shadow-sm p-6 mb-6">
+            <h2 className="text-lg font-semibold text-slate-800 mb-4">Task Overview</h2>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <Link 
+                to="/dashboard/ideas"
+                className="bg-slate-50 rounded-xl p-4 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-100 transition-all duration-200"
+              >
+                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-slate-100 mb-2">
+                  <FontAwesomeIcon icon={faChartLine} className="text-slate-600 h-5 w-5" />
+                </div>
+                <span className="text-xs text-slate-500">Total</span>
+                <span className="text-xl font-bold text-slate-800">{dashboardStats.totalTasks}</span>
+              </Link>
+              
+              <Link 
+                to="/dashboard/ideas"
+                className="bg-emerald-50 rounded-xl p-4 flex flex-col items-center justify-center cursor-pointer hover:bg-emerald-100 transition-all duration-200"
+              >
+                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-emerald-100 mb-2">
+                  <FontAwesomeIcon icon={faCircleCheck} className="text-emerald-600 h-5 w-5" />
+                </div>
+                <span className="text-xs text-slate-500">Done</span>
+                <span className="text-xl font-bold text-emerald-600">{dashboardStats.completedTasks}</span>
+              </Link>
+              
+              <Link 
+                to="/dashboard/ideas"
+                className="bg-blue-50 rounded-xl p-4 flex flex-col items-center justify-center cursor-pointer hover:bg-blue-100 transition-all duration-200"
+              >
+                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-100 mb-2">
+                  <FontAwesomeIcon icon={faClock} className="text-blue-600 h-5 w-5" />
+                </div>
+                <span className="text-xs text-slate-500">Pending</span>
+                <span className="text-xl font-bold text-blue-600">{dashboardStats.pendingTasks}</span>
+              </Link>
+              
+              <Link 
+                to="/dashboard/ideas"
+                className="bg-red-50 rounded-xl p-4 flex flex-col items-center justify-center cursor-pointer hover:bg-red-100 transition-all duration-200"
+              >
+                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-red-100 mb-2">
+                  <FontAwesomeIcon icon={faExclamationTriangle} className="text-red-600 h-5 w-5" />
+                </div>
+                <span className="text-xs text-slate-500">Overdue</span>
+                <span className="text-xl font-bold text-red-600">{dashboardStats.overdueTasks}</span>
+              </Link>
             </div>
           </div>
-        )}
 
-        {/* Quick Add Buttons */}
-        <div className="fixed bottom-6 right-6 flex gap-2">
-          <Link 
-            to="/dashboard/ideas?new=true"
-            className="bg-blue-500 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-lg hover:bg-blue-600"
-            title="Add New Task"
-          >
-            <FontAwesomeIcon icon={faPlus} className="h-5 w-5" />
-          </Link>
+          {/* Additional Stats */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+            <div className="bg-white rounded-2xl shadow-sm p-6">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center">
+                  <FontAwesomeIcon icon={faCalendarDay} className="text-amber-600 h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-sm text-slate-500">Due Today</p>
+                  <p className="text-2xl font-bold text-slate-800">{dashboardStats.tasksDueToday}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-sm p-6">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center">
+                  <FontAwesomeIcon icon={faShoppingCart} className="text-emerald-600 h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-sm text-slate-500">Shopping Items</p>
+                  <p className="text-2xl font-bold text-slate-800">{dashboardStats.shoppingItems}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-sm p-6">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                  <FontAwesomeIcon icon={faLayerGroup} className="text-red-600 h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-sm text-slate-500">Urgent Tasks</p>
+                  <p className="text-2xl font-bold text-slate-800">{dashboardStats.urgentTasks}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Due Today Notice */}
+          {dashboardStats.tasksDueToday > 0 && (
+            <div className="bg-amber-50 border-l-4 border-amber-400 p-4 rounded-xl flex items-center gap-3 mb-6">
+              <FontAwesomeIcon icon={faCalendarDay} className="h-5 w-5 text-amber-500" />
+              <div>
+                <p className="text-sm text-amber-700">
+                  You have <span className="font-medium">{dashboardStats.tasksDueToday} task{dashboardStats.tasksDueToday !== 1 ? 's' : ''}</span> due today.
+                  <Link 
+                    to="/dashboard/ideas" 
+                    className="ml-2 text-amber-800 underline hover:text-amber-900"
+                  >View all tasks</Link>
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Quick Add Button */}
+          <div className="fixed bottom-6 right-6">
+            <Link 
+              to="/dashboard/ideas?new=true"
+              className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white w-14 h-14 rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
+              title="Add New Task"
+            >
+              <FontAwesomeIcon icon={faPlus} className="h-6 w-6" />
+            </Link>
+          </div>
         </div>
       </div>
     </div>

@@ -8,9 +8,12 @@ const SelectBox = ({ onChange, value, options }) => {
         <div
           key={option}
           onClick={() => onChange({ target: { value: option } })}
-          className={`cursor-pointer border p-2 rounded-lg min-w-16 justify-center items-center flex flex-col ${
-            value === option ? "text-purple-700 bg-purple-300" : "text-gray-500"
+          className={`cursor-pointer border-2 p-2 rounded-lg min-w-16 justify-center items-center flex flex-col ${
+            value === option
+              ? "text-white bg-purple-600 border-purple-700"
+              : "text-gray-500 border-gray-300"
           }`}
+
         >
           <ActivityIcon activityName={option}></ActivityIcon>
           <span>{option}</span>

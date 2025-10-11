@@ -1,389 +1,133 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { ActivityForm } from "../components/activities/ActivityForm";
+import { QuickAdd } from "../components/activities/QuickAdd";
 import { useBabyActivities } from "../lib/context/activities";
-import SelectBox from "../components/SelectBox";
-import { useUser } from "../lib/context/user";
-import { useNavigate } from "react-router-dom";
-import toast from "react-hot-toast";
-import LastActivity from "../components/LastActivity";
-import { ColorRing } from "react-loader-spinner";
+import { ActivityIcon } from "../components/ActivityIcon";
+import TimeAgo from "../components/TImeAgo";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCheck, faPlus, faMinus } from "@fortawesome/free-solid-svg-icons"; // Import plus and minus icons
+import { faPlus, faHistory, faChevronDown, faChevronUp } from "@fortawesome/free-solid-svg-icons";
 
 export function Activities() {
   const babyActivities = useBabyActivities();
-  const user = useUser();
-  const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(false);
-  const [existingActivities, setExistingActivities] = useState([]);
-  const [activityName, setActivityName] = useState("Feed");
-  const [activityTime, setActivityTime] = useState(getLocalDateTime());
-  const [value, setValue] = useState("120"); // Default value changed to 120
-  const [unit, setUnit] = useState("mL");
-  const [remarks, setRemarks] = useState("");
-  const [selectedTimeDiff, setSelectedTimeDiff] = useState(null);
-
-  useEffect(() => {
-    const fetchExistingActivities = async () => {
-      try {
-        // Fetch activities from the past one hour
-        const activities = await babyActivities.getNActivitiesLastXHours(
-          activityName
-        );
-
-        setExistingActivities(activities);
-      } catch (error) {
-        console.error("Error fetching existing activities:", error);
-      }
-    };
-
-    // Fetch existing activities when component mounts
-    fetchExistingActivities();
-  }, [babyActivities, activityName]);
-
-  const onSuccessAdd = (activityName) => {
-    setIsLoading(false);
-    toast(
-      <div className="  text-green-600">
-        <h3>{`${activityName} saved`}</h3>
-      </div>,
-      {
-        icon: (
-          <FontAwesomeIcon
-            color={"green"}
-            icon={faCheck}
-            className="h-6 w-6 mr-2"
-          />
-        ),
-        position: "top-center",
-        id: "saveActivitySuccessToast",
-        duration: 6000,
-      }
-    );
-  };
-
-  function pad(num) {
-    let norm = Math.floor(Math.abs(num));
-    return (norm < 10 ? "0" : "") + norm;
-  }
-
-  function getLocalDateTime() {
-    const now = new Date();
-    return (
-      now.getFullYear() +
-      "-" +
-      pad(now.getMonth() + 1) +
-      "-" +
-      pad(now.getDate()) +
-      "T" +
-      pad(now.getHours()) +
-      ":" +
-      pad(now.getMinutes())
-    );
-  }
-
-  const activityNames = ["Feed", "Diaper", "Vitamin D", "Medicine"];
-  const unitOptions = ["mL", "drops", "unit"];
-  const timeDifferences = [5, 10, 15, 30, 60];
-
-  const onActivityNameChange = (event) => {
-    const selectedActivity = event.target.value;
-    setActivityName(selectedActivity);
-
-    if (selectedActivity === "Feed") {
-      setValue("120"); // Default value changed to 120
-      setUnit("mL");
-    } else if (selectedActivity === "Diaper") {
-      setValue("1");
-      setUnit("unit");
-    } else if (selectedActivity === "Vitamin D") {
-      setValue("1");
-      setUnit("drops");
-    } else {
-      setUnit("unit");
-    }
-  };
-
-  const onUnitChange = (event) => {
-    setUnit(event.target.value);
-  };
-
-  const getButtonLabel = () => {
-    let label = "";
-
-    if (activityName === "Feed") {
-      label = `Log ${value}${unit} Feed`;
-    } else if (activityName === "Diaper") {
-      label = "Log Diaper Change";
-    } else if (activityName === "Vitamin D") {
-      label = "Log Vitamin D";
-    } else {
-      label = "Log Activity";
-    }
-
-    if (selectedTimeDiff) {
-      label += ` (${
-        selectedTimeDiff === "NOW" ? "NOW" : `${selectedTimeDiff} mins ago`
-      })`;
-    }
-
-    return label;
-  };
-
-  const handleClickSave = async () => {
-    const now = new Date();
-    let activityDate = new Date(activityTime);
-
-    if (activityDate > now) {
-      activityDate = now;
-      alert(
-        "Future dates are not allowed. The activity time has been reset to the current date and time."
-      );
-      return;
-    }
-
-    if (activityName === "Medicine" && !remarks.trim()) {
-      alert("Please enter the medicine name in the Remarks field");
-      return;
-    }
-
-    // Check if the same activity exists within the past one hour
-    const isDuplicate = existingActivities.some((activity) => {
-      const timeDifference = now - new Date(activity.activityTime);
-      return (
-        activity.activityName === activityName &&
-        timeDifference <= 60 * 60 * 1000 // Within the past one hour
-      );
-    });
-
-    if (isDuplicate) {
-      const result = window.confirm(
-        `You have logged ${existingActivities[0].activityName} within the last one hour. Sure you want to proceed?`
-      );
-      if (!result) {
-        return;
-      }
-    }
-
-    toast.loading(`Saving ${activityName}`, {
-      id: "saveActivitySuccessToast",
-      position: "center",
-    });
-    setIsLoading(true);
-
-    const success = await babyActivities.add(
-      {
-        activityName,
-        activityTime: activityDate,
-        value: value.toString(),
-        unit,
-        remarks,
-      },
-      onSuccessAdd
-    );
-
-    if (!success) {
-      toast.error(`Failed to save ${activityName}`, {
-        id: "saveActivitySuccessToast",
-        position: "center",
-      });
-      setIsLoading(false);
-      return;
-    }
-
-    // Reset form
-    setActivityName("Feed");
-    setActivityTime(getLocalDateTime());
-    setValue("120");
-    setUnit("mL");
-    setRemarks("");
-    setSelectedTimeDiff(null);
-  };
-  useEffect(() => {
-    if (!user.current) {
-      navigate("/login");
-    }
-  }, [user, navigate]);
-
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center h-screen">
-        <ColorRing
-          visible={true}
-          height="80"
-          width="80"
-          ariaLabel="color-ring-loading"
-          wrapperStyle={{}}
-          wrapperClass="color-ring-wrapper"
-          colors={["#e15b64", "#f47e60", "#f8b26a", "#abbd81", "#849b87"]}
-        />
-      </div>
-    );
-  }
+  const [showForm, setShowForm] = useState(false);
+  const [showRecent, setShowRecent] = useState(true);
 
   return (
-    <section className="flex flex-col items-center justify-center p-4">
-      <h1 className="mb-6 text-3xl font-bold text-gray-700">Activities Log</h1>
-      <form className="w-full max-w-xl">
-        <div className="mb-4">
-          <label
-            htmlFor="activityName"
-            className="block text-gray-700 text-sm font-bold mb-2"
-          >
-            Activity Name
-          </label>
-          <SelectBox
-            id="activityName"
-            onChange={onActivityNameChange}
-            value={activityName}
-            options={activityNames}
-          />
-          <LastActivity isOnlyTime name={activityName} />
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100">
+      {/* Header */}
+      <div className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 py-6">
+          <div className="max-w-md mx-auto lg:max-w-none">
+            <h1 className="text-2xl lg:text-3xl font-bold text-slate-800 text-center">Activities</h1>
+            <p className="text-sm lg:text-base text-slate-600 text-center mt-1">Track your baby's daily activities</p>
+          </div>
         </div>
-        <div className="mb-4">
-          <label
-            htmlFor="activityTime"
-            className="block text-gray-700 text-sm font-bold mb-2"
-          >
-            Activity Time
-          </label>
-          <input
-            id="activityTime"
-            type="datetime-local"
-            value={activityTime}
-            onChange={(event) => {
-              setActivityTime(event.target.value);
-              setSelectedTimeDiff(null); // reset selected time difference
-            }}
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          />
-          <div className="mt-2  whitespace-nowrap group overflow-x-scroll">
-            <button
-              type="button"
-              onClick={() => {
-                setActivityTime(getLocalDateTime());
-                setSelectedTimeDiff("NOW");
-              }}
-              className={`mr-2  hover:bg-blue-500 text-gray-800 font-bold py-1 px-2 rounded inline-flex items-center ${
-                selectedTimeDiff === "NOW" ? "bg-blue-500" : "bg-gray-200"
-              }`}
-            >
-              NOW
-            </button>
-            {timeDifferences.map((timeDiff) => (
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        <div className="max-w-md mx-auto lg:max-w-none lg:grid lg:grid-cols-12 lg:gap-8">
+          {/* Left Column - Recent Activities */}
+          <div className="lg:col-span-5">
+            <div className="bg-white rounded-2xl shadow-sm">
               <button
-                key={timeDiff}
-                type="button"
-                onClick={() => {
-                  const time = new Date(Date.now() - timeDiff * 60000);
-                  setActivityTime(
-                    [
-                      time.getFullYear(),
-                      pad(time.getMonth() + 1),
-                      pad(time.getDate()),
-                    ].join("-") +
-                      "T" +
-                      [pad(time.getHours()), pad(time.getMinutes())].join(":")
-                  );
-                  setSelectedTimeDiff(timeDiff);
-                }}
-                className={`mr-2 hover:bg-blue-500 text-gray-800 font-bold py-1 px-2 rounded inline-flex items-center ${
-                  selectedTimeDiff === timeDiff ? "bg-blue-500" : "bg-gray-200"
-                }`}
+                onClick={() => setShowRecent(!showRecent)}
+                className="w-full p-6 flex items-center justify-between hover:bg-slate-50 transition-colors duration-200"
               >
-                {timeDiff < 60
-                  ? `${timeDiff} mins ago`
-                  : `${timeDiff / 60} hr ago`}
+                <div className="flex items-center space-x-3">
+                  <FontAwesomeIcon icon={faHistory} className="text-slate-500" />
+                  <h2 className="text-lg font-semibold text-slate-800">Recent Activities</h2>
+                  <span className="bg-emerald-100 text-emerald-600 text-xs font-medium px-2 py-1 rounded-full">
+                    {babyActivities.current.length}
+                  </span>
+                </div>
+                <FontAwesomeIcon 
+                  icon={showRecent ? faChevronUp : faChevronDown} 
+                  className="text-slate-400" 
+                />
               </button>
-            ))}
+              
+              {showRecent && (
+                <div className="px-6 pb-6 animate-in slide-in-from-top-2 duration-300">
+                  {babyActivities.current.length === 0 ? (
+                    <div className="text-center py-8">
+                      <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <FontAwesomeIcon icon={faHistory} className="text-slate-400 text-xl" />
+                      </div>
+                      <p className="text-slate-500 text-sm">No activities logged yet</p>
+                      <p className="text-slate-400 text-xs mt-1">Start by adding your first activity</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {babyActivities.current.slice(0, 5).map((activity, index) => (
+                        <div 
+                          key={activity.$id} 
+                          className="flex items-center justify-between p-4 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors duration-200"
+                        >
+                          <div className="flex items-center space-x-3">
+                            <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm">
+                              <ActivityIcon activityName={activity.activityName} />
+                            </div>
+                            <div>
+                              <p className="font-medium text-slate-800 text-sm">{activity.activityName}</p>
+                              <p className="text-xs text-slate-500">
+                                {activity.value} {activity.unit}
+                                {activity.remarks && ` • ${activity.remarks}`}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <TimeAgo date={new Date(activity.activityTime)} />
+                            {index === 0 && (
+                              <span className="block text-xs text-emerald-600 font-medium mt-1">Latest</span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Right Column - Quick Actions & Add Activity */}
+          <div className="lg:col-span-7 space-y-6">
+            {/* Quick Actions */}
+            <div className="bg-white rounded-2xl shadow-sm p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-slate-800">Quick Actions</h2>
+                <div className="flex items-center space-x-2">
+                  <FontAwesomeIcon icon={faPlus} className="text-emerald-500" />
+                </div>
+              </div>
+              <QuickAdd />
+            </div>
+
+            {/* Add New Activity - Primary Action */}
+            <div className="bg-white rounded-2xl shadow-sm p-6">
+              <div className="text-center mb-6">
+                <h2 className="text-xl font-semibold text-slate-800 mb-2">Add New Activity</h2>
+                <p className="text-slate-600 text-sm">Log a new activity for your baby</p>
+              </div>
+              
+              <button
+                onClick={() => setShowForm(!showForm)}
+                className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-semibold py-4 px-6 rounded-xl transition-all duration-200 flex items-center justify-center space-x-2 transform hover:scale-105 hover:shadow-lg"
+              >
+                <FontAwesomeIcon icon={faPlus} />
+                <span>{showForm ? 'Hide Form' : 'Add New Activity'}</span>
+              </button>
+            </div>
+
+            {/* Activity Form */}
+            {showForm && (
+              <div className="bg-white rounded-2xl shadow-sm p-6 animate-in slide-in-from-top-2 duration-300">
+                <ActivityForm onClose={() => setShowForm(false)} />
+              </div>
+            )}
           </div>
         </div>
-        <div className="mb-4">
-          <label
-            htmlFor="value"
-            className="block text-gray-700 text-sm font-bold mb-2"
-          >
-            Value
-          </label>
-          <input
-            id="value"
-            type="text"
-            value={value}
-            disabled={activityName === "Vitamin D" || activityName === "Diaper"}
-            onChange={(event) => {
-              setValue(event.target.value);
-            }}
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          />
-          <div className="mt-2 flex justify-center items-center">
-            <button
-              type="button"
-              onClick={() =>
-                setValue((prev) =>
-                  prev === "1"
-                    ? "10"
-                    : String(Math.max(parseInt(prev, 10) + 10, 1))
-                )
-              } // Increment by 10 until 10, then set to 1
-              className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold rounded-full h-10 w-10 flex items-center justify-center"
-            >
-              <FontAwesomeIcon icon={faPlus} />
-            </button>
-            <span className="mx-4 text-gray-700 font-bold">{value}</span>
-            <button
-              type="button"
-              onClick={() =>
-                setValue((prev) =>
-                  prev === "10"
-                    ? "1"
-                    : String(Math.max(parseInt(prev, 10) - 10, 1))
-                )
-              } // Decrement by 10 until 1, then set to 10
-              className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold rounded-full h-10 w-10 flex items-center justify-center"
-            >
-              <FontAwesomeIcon icon={faMinus} />
-            </button>
-          </div>
-        </div>
-        <div className="mb-4">
-          <label
-            htmlFor="unit"
-            className="block text-gray-700 text-sm font-bold mb-2"
-          >
-            Unit
-          </label>
-          <SelectBox
-            id="unit"
-            onChange={onUnitChange}
-            value={unit}
-            options={unitOptions}
-          />
-        </div>
-        <div className="mb-6">
-          <label
-            htmlFor="remarks"
-            className="block text-gray-700 text-sm font-bold mb-2"
-          >
-            Remarks
-          </label>
-          <input
-            id="remarks"
-            value={remarks}
-            onChange={(event) => {
-              setRemarks(event.target.value);
-            }}
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline h-10"
-          />
-        </div>
-        <div>
-          <button
-            className="bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full mb-3"
-            type="button"
-            onClick={handleClickSave}
-          >
-            {getButtonLabel()}
-          </button>
-        </div>
-      </form>
-    </section>
+      </div>
+    </div>
   );
 }

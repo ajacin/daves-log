@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useInvitees } from '../lib/context/invitees';
+import { ConfirmationModal } from '../components/ConfirmationModal';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faPlus,
@@ -25,6 +26,8 @@ export function Invitees() {
   const [isBulkLoading, setIsBulkLoading] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [currentInvitee, setCurrentInvitee] = useState(null);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteId, setDeleteId] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     group: 'friends',
@@ -210,15 +213,22 @@ export function Invitees() {
   };
 
   const handleDelete = async (inviteeId) => {
-    if (window.confirm('Are you sure you want to delete this invitee?')) {
+    setDeleteModalOpen(true);
+    setDeleteId(inviteeId);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (deleteId) {
       try {
-        await remove(inviteeId);
+        await remove(deleteId);
         toast.success('Invitee removed successfully');
       } catch (error) {
         toast.error('Failed to remove invitee');
         console.error('Error removing invitee:', error);
       }
     }
+    setDeleteModalOpen(false);
+    setDeleteId(null);
   };
 
   // Helper functions for UI
@@ -620,6 +630,18 @@ export function Invitees() {
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Invitee"
+        message="Are you sure you want to delete this invitee? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        type="danger"
+      />
     </div>
   );
 } 

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useUser } from "../lib/context/user";
 import { useAutomations } from "../lib/context/automations";
+import { ConfirmationModal } from "../components/ConfirmationModal";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faPlus,
@@ -145,6 +146,8 @@ export function Automations() {
   const [showIconPicker, setShowIconPicker] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [topAutomations, setTopAutomations] = useState([]);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteId, setDeleteId] = useState(null);
 
   useEffect(() => {
     if (!user.current) {
@@ -190,14 +193,21 @@ export function Automations() {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm("Are you sure you want to delete this automation?")) {
-      const success = await automations.remove(id);
+    setDeleteModalOpen(true);
+    setDeleteId(id);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (deleteId) {
+      const success = await automations.remove(deleteId);
       if (success) {
         toast.success("Automation deleted successfully");
       } else {
         toast.error("Failed to delete automation");
       }
     }
+    setDeleteModalOpen(false);
+    setDeleteId(null);
   };
 
   const handleEdit = (automation) => {
@@ -561,6 +571,18 @@ export function Automations() {
           })
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Automation"
+        message="Are you sure you want to delete this automation? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        type="danger"
+      />
     </div>
   );
 }
