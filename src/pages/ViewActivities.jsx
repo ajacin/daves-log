@@ -15,21 +15,6 @@ import {
 import { ActivityIcon } from "../components/ActivityIcon";
 // import Clock from "../components/Clock";
 
-const getActivityCardColor = (activityName) => {
-  switch (activityName) {
-    case "Feed":
-      return "from-blue-50 to-blue-100 border-blue-500";
-    case "Diaper":
-      return "from-violet-50 to-violet-100 border-violet-500";
-    case "Vitamin D":
-      return "from-pink-50 to-pink-100 border-pink-500";
-    case "Medicine":
-      return "from-purple-50 to-purple-100 border-purple-500";
-    default:
-      return "from-gray-50 to-gray-100 border-gray-500";
-  }
-};
-
 const getUnitIcon = (unit) => {
   switch (unit?.toLowerCase()) {
     case "ml":
