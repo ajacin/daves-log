@@ -1,21 +1,99 @@
-import React, { useState } from "react";
-
-// import component 👇
+import React, { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
+import { useSettings } from '../../lib/context/settings';
 import Drawer from "react-modern-drawer";
-
-//import styles 👇
 import "react-modern-drawer/dist/index.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBars } from "@fortawesome/free-solid-svg-icons";
 import DrawerItems from "./DrawerItems";
 
 const AppDrawer = () => {
-  const [isOpen, setIsOpen] = useState(false);
+  const { sidePanelMode } = useSettings()
+  const [isOpen, setIsOpen] = useState(false)
+  const location = useLocation()
 
-  const toggleDrawer = () => {
-    setIsOpen((prevState) => !prevState);
-  };
+  // Set drawer to open by default on desktop
+  useEffect(() => {
+    const isDesktop = window.innerWidth >= 768;
+    if (isDesktop && sidePanelMode === 'auto') {
+      setIsOpen(true);
+    }
+  }, [sidePanelMode]);
 
+  // Auto-close on mobile when route changes
+  useEffect(() => {
+    const isMobile = window.innerWidth < 768;
+    if (isMobile && sidePanelMode === 'auto') {
+      setIsOpen(false);
+    }
+  }, [location.pathname, sidePanelMode]);
+
+  // Apply layout class for sidebar mode
+  useEffect(() => {
+    if (sidePanelMode === 'pinned') {
+      document.body.classList.add('sidebar-layout');
+    } else {
+      document.body.classList.remove('sidebar-layout');
+    }
+    
+    return () => {
+      document.body.classList.remove('sidebar-layout');
+    };
+  }, [sidePanelMode]);
+
+  // Handle focus out for 'auto' mode
+  useEffect(() => {
+    if (sidePanelMode !== 'auto') return
+    if (!isOpen) return
+    const handleClick = (e) => {
+      if (!document.querySelector('.drawer-content')?.contains(e.target)) {
+        setIsOpen(false)
+      }
+    }
+    window.addEventListener('mousedown', handleClick)
+    return () => window.removeEventListener('mousedown', handleClick)
+  }, [sidePanelMode, isOpen])
+
+  const toggleDrawer = () => setIsOpen((prev) => !prev)
+
+  // Render sidebar for 'pinned' mode
+  if (sidePanelMode === 'pinned') {
+    return (
+      <>
+        <div className="sidebar">
+          <DrawerItems setIsDrawerOpen={() => {}} toggleDrawer={() => {}} />
+        </div>
+        <style jsx global>{`
+          .sidebar {
+            width: 280px;
+            height: 100vh;
+            background-color: white;
+            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
+            position: fixed;
+            left: 0;
+            top: 0;
+            z-index: 1000;
+          }
+          
+          .sidebar-layout {
+            padding-left: 280px;
+          }
+          
+          @media (max-width: 767px) {
+            .sidebar {
+              width: 240px;
+            }
+            
+            .sidebar-layout {
+              padding-left: 240px;
+            }
+          }
+        `}</style>
+      </>
+    );
+  }
+
+  // Render drawer for other modes
   return (
     <>
       <button
@@ -49,11 +127,16 @@ const AppDrawer = () => {
         .EZDrawer__overlay {
           z-index: 999 !important;
           background-color: rgba(0, 0, 0, 0.3) !important;
-          backdrop-filter: blur(2px) !important;
+        }
+        
+        @media (min-width: 768px) {
+          body:not(.sidebar-layout) .drawer-content {
+            position: fixed !important;
+          }
         }
       `}</style>
     </>
-  );
-};
+  )
+}
 
 export default AppDrawer;

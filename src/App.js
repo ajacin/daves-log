@@ -8,6 +8,7 @@ import { Activities } from "./pages/Activities";
 import { Ideas } from "./pages/Ideas";
 import { Automations } from "./pages/Automations";
 import { Invitees } from "./pages/Invitees";
+import { Settings } from "./pages/Settings";
 import { useUser } from "./lib/context/user";
 import { ProtectedLayout } from "./components/ProtectedLayout";
 import { UserProvider } from "./lib/context/user";
@@ -29,6 +30,7 @@ function ProtectedRoutes() {
         <Route path="ideas" element={<Ideas />} />
         <Route path="automations" element={<Automations />} />
         <Route path="invitees" element={<Invitees />} />
+        <Route path="settings" element={<Settings />} />
       </Routes>
     </ProtectedLayout>
   );

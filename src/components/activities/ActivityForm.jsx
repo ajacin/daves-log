@@ -25,8 +25,10 @@ export function ActivityForm({ onClose }) {
   const [selectedTimeDiff, setSelectedTimeDiff] = useState(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+  const [showMedicineModal, setShowMedicineModal] = useState(false);
   const [successActivityDetails, setSuccessActivityDetails] = useState(null);
   const [bypassDuplicateCheck, setBypassDuplicateCheck] = useState(false);
+  const [showDrugSuggestions, setShowDrugSuggestions] = useState(false);
 
   useEffect(() => {
     const fetchExistingActivities = async () => {
@@ -83,11 +85,31 @@ export function ActivityForm({ onClose }) {
   const activityNames = ["Feed", "Diaper", "Vitamin D", "Medicine"];
   const unitOptions = ["mL", "drops", "unit"];
   const timeDifferences = [5, 10, 15, 30, 60];
+  
+  // Common drugs list for Medicine activity
+  const commonDrugs = [
+    "Tylenol (Acetaminophen)",
+    "Advil (Ibuprofen)", 
+    "Motrin (Ibuprofen)",
+    "Benadryl (Diphenhydramine)",
+    "Nasal Drops (Saline)",
+    "Antibiotics (Amoxicillin)",
+    "Antibiotics (Azithromycin)",
+    "Cough Syrup",
+    "Fever Reducer",
+    "Pain Reliever",
+    "Vitamins",
+    "Probiotics",
+    "Gas Drops (Simethicone)",
+    "Teething Gel",
+    "Cream/Ointment"
+  ];
 
   const onActivityNameChange = (event) => {
     const selectedActivity = event.target.value;
     setActivityName(selectedActivity);
     setBypassDuplicateCheck(false);
+    setShowDrugSuggestions(false);
 
     // Reset form based on activity type
     if (selectedActivity === "Feed") {
@@ -110,6 +132,11 @@ export function ActivityForm({ onClose }) {
 
   const onUnitChange = (event) => {
     setUnit(event.target.value);
+  };
+
+  const handleDrugSelect = (drug) => {
+    setRemarks(drug);
+    setShowDrugSuggestions(false);
   };
 
   const getButtonLabel = () => {
@@ -147,7 +174,7 @@ export function ActivityForm({ onClose }) {
     }
 
     if (activityName === "Medicine" && !remarks.trim()) {
-      alert("Please enter the medicine name in the Remarks field");
+      setShowMedicineModal(true);
       return;
     }
 
@@ -403,24 +430,56 @@ export function ActivityForm({ onClose }) {
         {/* Remarks */}
         <div className="space-y-3">
           <label className="block text-sm font-medium text-slate-700">
-            Additional notes (Optional)
+            {activityName === "Medicine" ? "Medicine name (Required)" : "Additional notes (Optional)"}
           </label>
+          
+          {activityName === "Medicine" && (
+            <div className="mb-3">
+              <button
+                type="button"
+                onClick={() => setShowDrugSuggestions(!showDrugSuggestions)}
+                className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
+              >
+                {showDrugSuggestions ? "Hide" : "Show"} common drugs
+              </button>
+              
+              {showDrugSuggestions && (
+                <div className="mt-2 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                  <p className="text-xs text-slate-600 mb-2">Tap to select:</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {commonDrugs.map((drug, index) => (
+                      <button
+                        key={index}
+                        type="button"
+                        onClick={() => handleDrugSelect(drug)}
+                        className="text-xs px-2 py-1 bg-white border border-slate-200 rounded hover:bg-emerald-50 hover:border-emerald-300 transition-colors duration-200 text-left"
+                      >
+                        {drug}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          
           <input
             id="remarks"
             value={remarks}
             onChange={(event) => setRemarks(event.target.value)}
-            placeholder="Add any additional notes..."
+            placeholder={activityName === "Medicine" ? "Enter medicine name..." : "Add any additional notes..."}
             className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all duration-200"
           />
         </div>
 
         {/* Save Button */}
         <button
-          className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-semibold py-4 px-6 rounded-xl transition-all duration-200 transform hover:scale-105 hover:shadow-lg"
+          className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-semibold py-4 px-6 rounded-xl transition-all duration-200 transform hover:scale-105 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
           type="button"
           onClick={handleClickSave}
+          disabled={isLoading}
         >
-          {getButtonLabel()}
+          {isLoading ? "Saving..." : getButtonLabel()}
         </button>
       </form>
 
@@ -434,6 +493,17 @@ export function ActivityForm({ onClose }) {
         confirmText="Yes, Continue"
         cancelText="Cancel"
         type="warning"
+      />
+
+      <ConfirmationModal
+        isOpen={showMedicineModal}
+        onClose={() => setShowMedicineModal(false)}
+        onConfirm={() => setShowMedicineModal(false)}
+        title="Medicine Name Required"
+        message="Please enter the medicine name in the Additional notes field before logging this activity."
+        confirmText="OK"
+        cancelText=""
+        type="info"
       />
 
       <SuccessModal

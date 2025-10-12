@@ -24,7 +24,8 @@
     "react-scripts": "^5.0.1",
     "react-time-ago": "^7.2.1",
     "react-tiny-fab": "^4.0.4",
-    "web-vitals": "^2.1.4"
+    "web-vitals": "^2.1.4",
+    "zustand": "^5.0.8"
   },
   "scripts": {
     "start": "react-scripts start",
