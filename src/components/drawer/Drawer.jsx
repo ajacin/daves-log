@@ -73,19 +73,30 @@ const AppDrawer = () => {
             left: 0;
             top: 0;
             z-index: 1000;
+            transition: width 0.3s ease;
           }
           
           .sidebar-layout {
             padding-left: 280px;
+            transition: padding-left 0.3s ease;
           }
           
           @media (max-width: 767px) {
             .sidebar {
-              width: 240px;
+              width: 70px;
             }
             
             .sidebar-layout {
-              padding-left: 240px;
+              padding-left: 70px;
+            }
+            
+            .sidebar-text {
+              display: none;
+            }
+            
+            .sidebar-header {
+              justify-content: center !important;
+              padding: 1rem 0.5rem !important;
             }
           }
         `}</style>
