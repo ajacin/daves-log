@@ -55,6 +55,9 @@ import {
   faPlug,
   faEllipsisV,
   faExclamationTriangle,
+  faLockOpen,
+  faCopy,
+  faTimes,
 } from "@fortawesome/free-solid-svg-icons";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
@@ -148,6 +151,16 @@ export function Automations() {
   const [topAutomations, setTopAutomations] = useState([]);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [detailAutomation, setDetailAutomation] = useState(null);
+  const [detailLocked, setDetailLocked] = useState(true);
+  const [detailName, setDetailName] = useState("");
+  const [detailUrl, setDetailUrl] = useState("");
+  const [detailDescription, setDetailDescription] = useState("");
+  const [detailIcon, setDetailIcon] = useState("fa-lightbulb");
+  const [detailCategory, setDetailCategory] = useState("bulb");
+  const [detailRoom, setDetailRoom] = useState("");
+  const [detailShowIconPicker, setDetailShowIconPicker] = useState(false);
 
   useEffect(() => {
     if (!user.current) {
@@ -173,7 +186,18 @@ export function Automations() {
       room,
     };
 
-    if (editingAutomation) {
+    // Check if this is a duplicate operation (no $id means it's a new automation)
+    if (editingAutomation && !editingAutomation.$id) {
+      // This is a duplicate - create new automation
+      const success = await automations.add(automationData);
+      if (success) {
+        toast.success("Automation duplicated successfully");
+        resetForm();
+      } else {
+        toast.error("Failed to duplicate automation");
+      }
+    } else if (editingAutomation) {
+      // This is an update - modify existing automation
       const success = await automations.update(editingAutomation.$id, automationData);
       if (success) {
         toast.success("Automation updated successfully");
@@ -182,6 +206,7 @@ export function Automations() {
         toast.error("Failed to update automation");
       }
     } else {
+      // This is a new automation
       const success = await automations.add(automationData);
       if (success) {
         toast.success("Automation added successfully");
@@ -268,6 +293,68 @@ export function Automations() {
     }
   };
 
+  const handleOpenDetailModal = (automation) => {
+    setDetailAutomation(automation);
+    setDetailName(automation.name);
+    setDetailUrl(automation.url);
+    setDetailDescription(automation.description || "");
+    setDetailIcon(automation.icon);
+    setDetailCategory(automation.category);
+    setDetailRoom(automation.room);
+    setDetailShowIconPicker(false);
+    setDetailLocked(true);
+    setDetailModalOpen(true);
+  };
+
+  const handleSaveDetailChanges = async () => {
+    if (!detailAutomation || !detailName.trim() || !detailUrl.trim() || !detailRoom.trim()) return;
+
+    const success = await automations.update(detailAutomation.$id, {
+      name: detailName.trim(),
+      url: detailUrl.trim(),
+      description: detailDescription.trim(),
+      icon: detailIcon,
+      category: detailCategory,
+      room: detailRoom,
+    });
+
+    if (success) {
+      toast.success("Automation updated successfully!");
+      setDetailLocked(true);
+      await automations.init();
+    } else {
+      toast.error("Failed to update automation");
+    }
+  };
+
+  const handleDuplicateAutomation = () => {
+    if (!detailAutomation) return;
+    
+    // Open the form with pre-filled data for duplication
+    setEditingAutomation({
+      name: detailName.trim() + " (Copy)",
+      url: detailUrl.trim(),
+      description: detailDescription.trim(),
+      icon: detailIcon,
+      category: detailCategory,
+      room: detailRoom,
+      // No $id means this is a duplicate operation
+    });
+    setName(detailName.trim() + " (Copy)");
+    setUrl(detailUrl.trim());
+    setDescription(detailDescription.trim());
+    setIcon(detailIcon);
+    setCategory(detailCategory);
+    setRoom(detailRoom);
+    setIsFormOpen(true);
+    setDetailModalOpen(false);
+  };
+
+  const handleDetailIconSelect = (iconId) => {
+    setDetailIcon(iconId);
+    setDetailShowIconPicker(false);
+  };
+
   const filteredAutomations = automations.current.filter((automation) => {
     if (!category) return true;
     return automation.category === category;
@@ -298,27 +385,38 @@ export function Automations() {
               return (
                 <div
                   key={`top-${automation.$id}`}
-                  className="bg-blue-50 rounded-lg shadow-md hover:shadow-lg transition-all relative group"
+                  className="bg-blue-50 rounded-lg shadow-md hover:shadow-lg transition-all relative group cursor-pointer"
+                  onClick={() => handleOpenDetailModal(automation)}
                 >
-                  <div className="absolute top-2 right-2 z-10">
+                  <div className="absolute top-2 right-2 z-10 flex items-center gap-2">
                     <div className="text-sm font-medium text-blue-600">
                       {automation.clickedTimes || 0} clicks
                     </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleAutomationClick(automation);
+                      }}
+                      className="p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 active:scale-95 transition-transform"
+                      title="Trigger automation"
+                    >
+                      <FontAwesomeIcon icon={faPowerOff} className="h-3 w-3" />
+                    </button>
                   </div>
-                  <button
-                    onClick={() => handleAutomationClick(automation)}
-                    className="w-full h-full p-4 text-left active:scale-95 transition-transform"
-                  >
+                  <div className="w-full h-full p-4 text-left">
                     <div className="flex items-center">
                       <FontAwesomeIcon
                         icon={automationIcon}
                         className="h-6 w-6 text-blue-500 mr-2"
                       />
-                      <h3 className="text-md font-medium text-gray-900">
+                      <h3 
+                        className="text-md font-medium text-gray-900 truncate"
+                        title={automation.name}
+                      >
                         {automation.name}
                       </h3>
                     </div>
-                  </button>
+                  </div>
                 </div>
               );
             })}
@@ -330,7 +428,8 @@ export function Automations() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md">
             <h2 className="text-2xl font-bold mb-4">
-              {editingAutomation ? "Edit Automation" : "Add New Automation"}
+              {editingAutomation && !editingAutomation.$id ? "Duplicate Automation" : 
+               editingAutomation ? "Edit Automation" : "Add New Automation"}
             </h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
@@ -451,7 +550,8 @@ export function Automations() {
                   type="submit"
                   className="px-4 py-2 text-white bg-blue-500 rounded-lg hover:bg-blue-600"
                 >
-                  {editingAutomation ? "Update" : "Add"}
+                  {editingAutomation && !editingAutomation.$id ? "Create Duplicate" : 
+                   editingAutomation ? "Update" : "Add"}
                 </button>
               </div>
             </form>
@@ -500,9 +600,20 @@ export function Automations() {
             return (
               <div
                 key={automation.$id}
-                className="bg-white rounded-lg shadow-md hover:shadow-lg transition-all relative group"
+                className="bg-white rounded-lg shadow-md hover:shadow-lg transition-all relative group cursor-pointer"
+                onClick={() => handleOpenDetailModal(automation)}
               >
-                <div className="absolute top-2 right-2 z-10">
+                <div className="absolute top-2 right-2 z-10 flex items-center gap-2">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAutomationClick(automation);
+                    }}
+                    className="p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 active:scale-95 transition-transform"
+                    title="Trigger automation"
+                  >
+                    <FontAwesomeIcon icon={faPowerOff} className="h-4 w-4" />
+                  </button>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -539,16 +650,16 @@ export function Automations() {
                     </div>
                   )}
                 </div>
-                <button
-                  onClick={() => handleAutomationClick(automation)}
-                  className="w-full h-full p-6 text-left active:scale-95 transition-transform"
-                >
+                <div className="w-full h-full p-6 text-left">
                   <div className="flex items-center mb-4">
                     <FontAwesomeIcon
                       icon={automationIcon}
                       className="h-8 w-8 text-blue-500 mr-3"
                     />
-                    <h3 className="text-lg font-medium text-gray-900">
+                    <h3 
+                      className="text-lg font-medium text-gray-900 truncate"
+                      title={automation.name}
+                    >
                       {automation.name}
                     </h3>
                   </div>
@@ -565,12 +676,285 @@ export function Automations() {
                       {automation.clickedTimes || 0}
                     </p>
                   </div>
-                </button>
+                </div>
               </div>
             );
           })
         )}
       </div>
+
+      {/* Automation Detail Modal */}
+      {detailModalOpen && detailAutomation && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[95vh] overflow-hidden flex flex-col">
+            <div className="flex-shrink-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
+              <h3 className="text-xl font-semibold text-gray-900">Automation Details</h3>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setDetailLocked(!detailLocked)}
+                  className={`p-2 rounded-lg transition-colors ${
+                    detailLocked 
+                      ? 'bg-gray-100 text-gray-600 hover:bg-gray-200' 
+                      : 'bg-blue-100 text-blue-600 hover:bg-blue-200'
+                  }`}
+                  title={detailLocked ? 'Click to unlock and edit' : 'Click to lock'}
+                >
+                  <FontAwesomeIcon icon={detailLocked ? faLock : faLockOpen} className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={() => {
+                    setDetailModalOpen(false);
+                    setDetailLocked(true);
+                  }}
+                  className="text-gray-400 hover:text-gray-600 p-2"
+                >
+                  <FontAwesomeIcon icon={faTimes} className="h-6 w-6" />
+                </button>
+              </div>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto">
+              <div className="p-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Left Column */}
+                  <div className="space-y-4">
+                    {/* Usage Stats */}
+                    <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-4 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-sm text-gray-600 font-medium">Times Used</div>
+                          <div className="text-2xl font-bold text-blue-600 mt-1">
+                            {detailAutomation.clickedTimes || 0}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleAutomationClick(detailAutomation)}
+                          className="p-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 active:scale-95 transition-transform shadow-lg"
+                          title="Trigger automation"
+                        >
+                          <FontAwesomeIcon icon={faPowerOff} className="h-5 w-5" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Name */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Name <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={detailName}
+                        onChange={(e) => setDetailName(e.target.value)}
+                        disabled={detailLocked}
+                        className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 ${
+                          detailLocked 
+                            ? 'bg-gray-50 border-gray-200 text-gray-700 cursor-not-allowed' 
+                            : 'bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-200'
+                        }`}
+                        placeholder="Enter automation name"
+                      />
+                    </div>
+                    
+                    {/* Description */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Description
+                      </label>
+                      <textarea
+                        value={detailDescription}
+                        onChange={(e) => setDetailDescription(e.target.value)}
+                        disabled={detailLocked}
+                        rows="3"
+                        className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 resize-none ${
+                          detailLocked 
+                            ? 'bg-gray-50 border-gray-200 text-gray-700 cursor-not-allowed' 
+                            : 'bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-200'
+                        }`}
+                        placeholder="Add a detailed description..."
+                      />
+                    </div>
+
+                    {/* URL */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        URL <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="url"
+                        value={detailUrl}
+                        onChange={(e) => setDetailUrl(e.target.value)}
+                        disabled={detailLocked}
+                        className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 font-mono text-sm ${
+                          detailLocked 
+                            ? 'bg-gray-50 border-gray-200 text-gray-700 cursor-not-allowed' 
+                            : 'bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-200'
+                        }`}
+                        placeholder="https://example.com/automation"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Right Column */}
+                  <div className="space-y-4">
+                    {/* Icon */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Icon
+                      </label>
+                      {detailLocked ? (
+                        <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg">
+                          <FontAwesomeIcon 
+                            icon={ICONS.find((i) => i.id === detailIcon)?.icon || faLightbulb} 
+                            className="h-5 w-5 text-blue-500" 
+                          />
+                          <span className="text-sm text-gray-700">
+                            {ICONS.find((i) => i.id === detailIcon)?.name || 'Light Bulb'}
+                          </span>
+                        </div>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => setDetailShowIconPicker(!detailShowIconPicker)}
+                            className="flex items-center gap-3 px-3 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                          >
+                            <FontAwesomeIcon 
+                              icon={ICONS.find((i) => i.id === detailIcon)?.icon || faLightbulb} 
+                              className="h-4 w-4" 
+                            />
+                            <span>Select Icon</span>
+                          </button>
+                          {detailShowIconPicker && (
+                            <div className="mt-2 p-3 border border-gray-300 rounded-lg bg-white max-h-48 overflow-y-auto">
+                              <div className="grid grid-cols-6 gap-2">
+                                {ICONS.map((iconOption) => (
+                                  <button
+                                    key={iconOption.id}
+                                    type="button"
+                                    onClick={() => handleDetailIconSelect(iconOption.id)}
+                                    className={`p-2 rounded-lg transition-colors ${
+                                      detailIcon === iconOption.id
+                                        ? "bg-blue-100 text-blue-600"
+                                        : "hover:bg-gray-100"
+                                    }`}
+                                    title={iconOption.name}
+                                  >
+                                    <FontAwesomeIcon icon={iconOption.icon} className="h-4 w-4" />
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+
+                    {/* Category and Room */}
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Category <span className="text-red-500">*</span>
+                        </label>
+                        <select
+                          value={detailCategory}
+                          onChange={(e) => setDetailCategory(e.target.value)}
+                          disabled={detailLocked}
+                          className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 ${
+                            detailLocked 
+                              ? 'bg-gray-50 border-gray-200 text-gray-700 cursor-not-allowed' 
+                              : 'bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-200'
+                          }`}
+                        >
+                          {CATEGORIES.map((cat) => (
+                            <option key={cat.id} value={cat.id}>
+                              {cat.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Room <span className="text-red-500">*</span>
+                        </label>
+                        <select
+                          value={detailRoom}
+                          onChange={(e) => setDetailRoom(e.target.value)}
+                          disabled={detailLocked}
+                          className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 ${
+                            detailLocked 
+                              ? 'bg-gray-50 border-gray-200 text-gray-700 cursor-not-allowed' 
+                              : 'bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-200'
+                          }`}
+                        >
+                          <option value="">Select a room</option>
+                          {ROOMS.map((room) => (
+                            <option key={room} value={room}>
+                              {room}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex-shrink-0 border-t border-gray-200 px-6 py-4">
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    {!detailLocked ? (
+                      <>
+                        <button
+                          onClick={handleSaveDetailChanges}
+                          disabled={!detailName.trim() || !detailUrl.trim() || !detailRoom.trim()}
+                          className="flex-1 bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                        >
+                          Save Changes
+                        </button>
+                        <button
+                          onClick={() => {
+                            setDetailName(detailAutomation.name);
+                            setDetailUrl(detailAutomation.url);
+                            setDetailDescription(detailAutomation.description || "");
+                            setDetailIcon(detailAutomation.icon);
+                            setDetailCategory(detailAutomation.category);
+                            setDetailRoom(detailAutomation.room);
+                            setDetailLocked(true);
+                          }}
+                          className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-300 font-medium"
+                        >
+                          Cancel
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          onClick={handleDuplicateAutomation}
+                          className="flex-1 bg-green-500 text-white py-2 px-4 rounded-lg hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 font-medium flex items-center justify-center gap-2"
+                        >
+                          <FontAwesomeIcon icon={faCopy} />
+                          Duplicate
+                        </button>
+                        <button
+                          onClick={() => {
+                            setDetailModalOpen(false);
+                            handleDelete(detailAutomation.$id);
+                          }}
+                          className="flex-1 bg-red-500 text-white py-2 px-4 rounded-lg hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 font-medium flex items-center justify-center gap-2"
+                        >
+                          <FontAwesomeIcon icon={faTrash} />
+                          Delete
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Delete Confirmation Modal */}
       <ConfirmationModal

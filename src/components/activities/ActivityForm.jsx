@@ -192,9 +192,11 @@ export function ActivityForm({ onClose }) {
       return;
     }
 
+    // Dismiss any existing notifications with the same ID
+    toast.dismiss("saveActivitySuccessToast");
+    
     toast.loading(`Saving ${activityName}`, {
       id: "saveActivitySuccessToast",
-      position: "center",
     });
     setIsLoading(true);
 
@@ -214,7 +216,12 @@ export function ActivityForm({ onClose }) {
     if (!success) {
       toast.error(`Failed to save ${activityName}`, {
         id: "saveActivitySuccessToast",
-        position: "center",
+        duration: 3000,
+        style: {
+          background: '#EF4444',
+          color: 'white',
+          fontWeight: 'bold',
+        },
       });
       setIsLoading(false);
       return;

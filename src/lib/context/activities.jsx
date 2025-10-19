@@ -93,7 +93,12 @@ export function BabyActivitiesProvider({ children }) {
         if (response && response.$id) {
           setBabyActivities((prev) => [response, ...prev].slice(0, 10));
           await init();
-          onSuccessAdd?.(item.activityName);
+          
+          // Add slight delay to ensure cleanup of loading toast
+          setTimeout(() => {
+            onSuccessAdd?.(item.activityName);
+          }, 50);
+          
           return true;
         }
         return false;

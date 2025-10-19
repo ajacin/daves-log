@@ -26,7 +26,10 @@ import {
   faUserClock,
   faChevronLeft,
   faChevronRight,
-  faInfoCircle
+  faInfoCircle,
+  faLock,
+  faLockOpen,
+  faCopy,
 } from "@fortawesome/free-solid-svg-icons";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import toast from 'react-hot-toast';
@@ -305,7 +308,7 @@ function QuickAddTask({ onAdd, placeholder = "Add a task..." }) {
 }
 
 // Task Item Component
-function TaskItem({ task, onToggleComplete, onEdit, onDelete, onQuickDateUpdate, isProcessing }) {
+function TaskItem({ task, onToggleComplete, onEdit, onDelete, onQuickDateUpdate, isProcessing, onOpenDetail }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef(null);
 
@@ -323,15 +326,18 @@ function TaskItem({ task, onToggleComplete, onEdit, onDelete, onQuickDateUpdate,
   const isDueToday = task.dueDate && new Date(task.dueDate).toDateString() === new Date().toDateString();
 
   return (
-    <div className={`bg-white rounded border transition-all hover:shadow-sm ${
+    <div className={`bg-white rounded border transition-all hover:shadow-sm cursor-pointer ${
       task.completed ? 'opacity-75 border-gray-200' : 
       isOverdue ? 'border-red-200 bg-red-50' : 
       isDueToday ? 'border-yellow-200 bg-yellow-50' : 'border-gray-200'
     }`}>
       <div className="p-2">
-        <div className="flex items-start gap-2">
+        <div className="flex items-start gap-2" onClick={() => onOpenDetail(task)}>
           <button
-            onClick={() => onToggleComplete(task.$id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleComplete(task.$id);
+            }}
             disabled={isProcessing}
             className={`mt-0.5 w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${
               isProcessing 
@@ -345,7 +351,10 @@ function TaskItem({ task, onToggleComplete, onEdit, onDelete, onQuickDateUpdate,
           </button>
           
           <div className="flex-1 min-w-0">
-            <div className={`font-medium text-sm sm:text-xs ${task.completed ? 'line-through text-gray-500' : 'text-gray-900'}`}>
+            <div 
+              className={`font-medium text-sm sm:text-xs ${task.completed ? 'line-through text-gray-500' : 'text-gray-900'} truncate`}
+              title={task.title}
+            >
               {task.title}
             </div>
             
@@ -393,25 +402,46 @@ function TaskItem({ task, onToggleComplete, onEdit, onDelete, onQuickDateUpdate,
             {!task.completed && (
               <div className="flex gap-1 mt-1 flex-wrap">
                 <button
-                  onClick={() => onQuickDateUpdate(task.$id, 'today')}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onQuickDateUpdate(task.$id, 'today');
+                  }}
                   className="text-xs sm:text-[9px] px-1.5 py-0.5 bg-blue-100 text-blue-600 rounded hover:bg-blue-200"
                 >
                   Today
                 </button>
                 <button
-                  onClick={() => onQuickDateUpdate(task.$id, 'tomorrow')}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onQuickDateUpdate(task.$id, 'tomorrow');
+                  }}
                   className="text-xs sm:text-[9px] px-1.5 py-0.5 bg-green-100 text-green-600 rounded hover:bg-green-200"
                 >
                   Tomorrow
                 </button>
                 <button
-                  onClick={() => onQuickDateUpdate(task.$id, 'week')}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onQuickDateUpdate(task.$id, 'weekend');
+                  }}
+                  className="text-xs sm:text-[9px] px-1.5 py-0.5 bg-pink-100 text-pink-600 rounded hover:bg-pink-200"
+                >
+                  This Weekend
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onQuickDateUpdate(task.$id, 'week');
+                  }}
                   className="text-xs sm:text-[9px] px-1.5 py-0.5 bg-purple-100 text-purple-600 rounded hover:bg-purple-200"
                 >
                   In a Week
                 </button>
                 <button
-                  onClick={() => onQuickDateUpdate(task.$id, 'month')}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onQuickDateUpdate(task.$id, 'month');
+                  }}
                   className="text-xs sm:text-[9px] px-1.5 py-0.5 bg-orange-100 text-orange-600 rounded hover:bg-orange-200"
                 >
                   In a Month
@@ -422,7 +452,10 @@ function TaskItem({ task, onToggleComplete, onEdit, onDelete, onQuickDateUpdate,
           
           <div className="relative" ref={menuRef}>
             <button
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsMenuOpen(!isMenuOpen);
+              }}
               className="p-0.5 text-gray-400 hover:text-gray-600 rounded"
             >
               <FontAwesomeIcon icon={faEllipsisV} className="h-2.5 w-2.5" />
@@ -431,7 +464,8 @@ function TaskItem({ task, onToggleComplete, onEdit, onDelete, onQuickDateUpdate,
             {isMenuOpen && (
               <div className="absolute right-0 top-5 bg-white border border-gray-200 rounded shadow-lg z-10 py-1 min-w-[100px]">
                 <button
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     onEdit(task);
                     setIsMenuOpen(false);
                   }}
@@ -441,7 +475,8 @@ function TaskItem({ task, onToggleComplete, onEdit, onDelete, onQuickDateUpdate,
                   Edit
                 </button>
                 <button
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     onDelete(task.$id);
                     setIsMenuOpen(false);
                   }}
@@ -460,7 +495,7 @@ function TaskItem({ task, onToggleComplete, onEdit, onDelete, onQuickDateUpdate,
 }
 
 // Timeline Column Component
-function TimelineColumn({ title, subtitle, tasks, onAddTask, type, targetDate, isToday = false, isOverdue = false, processingTasks, hideMobileHeader = false, ...taskActions }) {
+function TimelineColumn({ title, subtitle, tasks, onAddTask, type, targetDate, isToday = false, isOverdue = false, processingTasks, hideMobileHeader = false, onOpenDetail, ...taskActions }) {
   const handleAddTask = async (taskData) => {
     if (type === 'unscheduled') {
       return await onAddTask(taskData);
@@ -528,6 +563,7 @@ function TimelineColumn({ title, subtitle, tasks, onAddTask, type, targetDate, i
             key={task.$id}
             task={task}
             isProcessing={processingTasks?.has(task.$id)}
+            onOpenDetail={onOpenDetail}
             {...taskActions}
           />
         ))}
@@ -573,6 +609,15 @@ export function Ideas() {
   const [editRecurrence, setEditRecurrence] = useState("");
   const [editCustomTagInput, setEditCustomTagInput] = useState("");
   const [showRecurringInfo, setShowRecurringInfo] = useState(false);
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [detailTask, setDetailTask] = useState(null);
+  const [detailLocked, setDetailLocked] = useState(true);
+  const [detailTitle, setDetailTitle] = useState("");
+  const [detailDescription, setDetailDescription] = useState("");
+  const [detailTags, setDetailTags] = useState([]);
+  const [detailDueDate, setDetailDueDate] = useState("");
+  const [detailRecurrence, setDetailRecurrence] = useState("");
+  const [detailCustomTagInput, setDetailCustomTagInput] = useState("");
   
   // Debounce mechanism to prevent rapid-fire clicks
   const [processingTasks, setProcessingTasks] = useState(new Set());
@@ -922,10 +967,15 @@ export function Ideas() {
     return [];
   }, [viewMode, organizedTasks, dateInfo, formatColumnHeader, priorityTags]);
 
+  // Filter columns to only show those with tasks
+  const filteredColumns = useMemo(() => {
+    return currentColumns.filter(column => column.tasks.length > 0);
+  }, [currentColumns]);
+
   // Mobile navigation functions
   const navigateColumn = (direction) => {
     const newIndex = currentColumnIndex + direction;
-    if (newIndex >= 0 && newIndex < currentColumns.length) {
+    if (newIndex >= 0 && newIndex < filteredColumns.length) {
       setCurrentColumnIndex(newIndex);
     }
   };
@@ -934,6 +984,13 @@ export function Ideas() {
   useEffect(() => {
     setCurrentColumnIndex(0);
   }, [viewMode]);
+
+  // Reset column index when filtered columns change
+  useEffect(() => {
+    if (currentColumnIndex >= filteredColumns.length) {
+      setCurrentColumnIndex(0);
+    }
+  }, [filteredColumns, currentColumnIndex]);
 
   // Task actions
   const handleAddTask = async (taskData, targetDate = null) => {
@@ -1142,19 +1199,43 @@ export function Ideas() {
       finalEditDueDate = new Date().toISOString().split('T')[0]; // Today's date in YYYY-MM-DD format
     }
 
-    const success = await ideas.update(editingTask.$id, {
-      title: editTitle.trim(),
-      description: editDescription.trim(),
-      tags: editTags,
-      dueDate: finalEditDueDate,
-      recurrence: editRecurrence || null,
-    });
+    // Check if this is a duplicate operation (no $id means it's a new task)
+    if (!editingTask.$id) {
+      // This is a duplicate - create new task
+      const success = await ideas.add({
+        title: editTitle.trim(),
+        description: editDescription.trim(),
+        tags: editTags,
+        dueDate: finalEditDueDate,
+        recurrence: editRecurrence || null,
+        completed: false,
+        entryDate: new Date().toISOString(),
+        userId: user.current.$id,
+        userName: user.current.name,
+      });
 
-    if (success) {
-      toast.success("Task updated successfully!");
-      setIsEditModalOpen(false);
+      if (success) {
+        toast.success("Task duplicated successfully!");
+        setIsEditModalOpen(false);
+      } else {
+        toast.error("Failed to duplicate task");
+      }
     } else {
-      toast.error("Failed to update task");
+      // This is an update - modify existing task
+      const success = await ideas.update(editingTask.$id, {
+        title: editTitle.trim(),
+        description: editDescription.trim(),
+        tags: editTags,
+        dueDate: finalEditDueDate,
+        recurrence: editRecurrence || null,
+      });
+
+      if (success) {
+        toast.success("Task updated successfully!");
+        setIsEditModalOpen(false);
+      } else {
+        toast.error("Failed to update task");
+      }
     }
   };
 
@@ -1194,9 +1275,17 @@ export function Ideas() {
       dueDate.setMonth(dueDate.getMonth() + 1);
       dueDate.setHours(23, 59, 0, 0);
     } else if (dateType === 'weekend') {
-      const daysUntilSaturday = (6 - dueDate.getDay() + 7) % 7;
-      dueDate.setDate(dueDate.getDate() + daysUntilSaturday);
-      dueDate.setHours(23, 59, 0, 0);
+      // Calculate days until Friday (day 5, where 0=Sunday)
+      const currentDay = dueDate.getDay()
+      let daysUntilFriday = 5 - currentDay
+      
+      // If today is Friday or after (Sat/Sun), get next Friday
+      if (daysUntilFriday <= 0) {
+        daysUntilFriday += 7
+      }
+      
+      dueDate.setDate(dueDate.getDate() + daysUntilFriday)
+      dueDate.setHours(18, 0, 0, 0) // 6:00 PM
     }
 
     const success = await ideas.update(taskId, {
@@ -1209,7 +1298,7 @@ export function Ideas() {
         'tomorrow': 'tomorrow', 
         'week': 'in a week',
         'month': 'in a month',
-        'weekend': 'this weekend'
+        'weekend': 'this weekend (Friday 6pm)'
       };
       toast.success(`Due date updated to ${messageMap[dateType] || dateType}`);
     } else {
@@ -1217,10 +1306,10 @@ export function Ideas() {
     }
   };
 
-  const handleCustomTagAdd = (e, isEdit = false) => {
+  const handleCustomTagAdd = (e, isEdit = false, isDetail = false) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      const input = isEdit ? editCustomTagInput : '';
+      const input = isEdit ? editCustomTagInput : isDetail ? detailCustomTagInput : '';
       const tag = input.trim().toLowerCase();
       if (tag) {
         if (isEdit) {
@@ -1228,9 +1317,72 @@ export function Ideas() {
             setEditTags([...editTags, tag]);
           }
           setEditCustomTagInput("");
+        } else if (isDetail) {
+          if (!detailTags.includes(tag)) {
+            setDetailTags([...detailTags, tag]);
+          }
+          setDetailCustomTagInput("");
         }
       }
     }
+  };
+
+  const handleOpenDetailModal = (task) => {
+    setDetailTask(task);
+    setDetailTitle(task.title);
+    setDetailDescription(task.description || "");
+    setDetailTags(task.tags || []);
+    setDetailDueDate(task.dueDate ? new Date(task.dueDate).toISOString().slice(0, 16) : "");
+    setDetailRecurrence(task.recurrence || "");
+    setDetailCustomTagInput("");
+    setDetailLocked(true);
+    setDetailModalOpen(true);
+  };
+
+  const handleSaveDetailChanges = async () => {
+    if (!detailTask || !detailTitle.trim()) return;
+
+    let finalDueDate = detailDueDate || null;
+    if (!finalDueDate && detailRecurrence) {
+      finalDueDate = new Date().toISOString().split('T')[0];
+    }
+
+    const success = await ideas.update(detailTask.$id, {
+      title: detailTitle.trim(),
+      description: detailDescription.trim(),
+      tags: detailTags,
+      dueDate: finalDueDate,
+      recurrence: detailRecurrence || null,
+    });
+
+    if (success) {
+      toast.success("Task updated successfully!");
+      setDetailLocked(true);
+    } else {
+      toast.error("Failed to update task");
+    }
+  };
+
+  const handleDuplicateTask = () => {
+    if (!detailTask) return;
+    
+    // Open the edit modal with pre-filled data for duplication (no $id means it's a new task)
+    setEditingTask({
+      title: detailTitle.trim() + " (Copy)",
+      description: detailDescription.trim(),
+      tags: detailTags,
+      dueDate: detailDueDate || null,
+      recurrence: detailRecurrence || null,
+      // No $id means this is a duplicate operation
+    });
+    setEditTitle(detailTitle.trim() + " (Copy)");
+    setEditDescription(detailDescription.trim());
+    setEditTags(detailTags);
+    setEditDueDate(detailDueDate || "");
+    setEditRecurrence(detailRecurrence || "");
+    setEditCustomTagInput("");
+    setIsEditModalOpen(true);
+    setDetailModalOpen(false);
   };
 
   // Bulk upload functionality
@@ -1572,7 +1724,7 @@ export function Ideas() {
           <div className="space-y-3 sm:space-y-6">
             {/* Mobile Navigation - Single Column View */}
             <div className="block lg:hidden">
-              {currentColumns.length > 0 && (
+              {filteredColumns.length > 0 && (
                 <div className="space-y-2 sm:space-y-4">
                   {/* Mobile Navigation Header */}
                   <div className="flex items-center justify-between bg-white rounded-lg border border-gray-200 p-2 sm:p-3 shadow-sm">
@@ -1586,19 +1738,19 @@ export function Ideas() {
                     
                     <div className="text-center flex-1 mx-4">
                       <div className="text-sm font-bold text-gray-900">
-                        {currentColumns[currentColumnIndex]?.title}
+                        {filteredColumns[currentColumnIndex]?.title}
                       </div>
                       <div className="text-xs text-gray-500">
-                        {currentColumns[currentColumnIndex]?.subtitle}
+                        {filteredColumns[currentColumnIndex]?.subtitle}
                       </div>
                       <div className="text-xs text-gray-400 mt-1">
-                        ({currentColumns[currentColumnIndex]?.tasks?.length || 0} task{currentColumns[currentColumnIndex]?.tasks?.length !== 1 ? 's' : ''}) • {currentColumnIndex + 1} of {currentColumns.length}
+                        ({filteredColumns[currentColumnIndex]?.tasks?.length || 0} task{filteredColumns[currentColumnIndex]?.tasks?.length !== 1 ? 's' : ''}) • {currentColumnIndex + 1} of {filteredColumns.length}
                       </div>
                     </div>
                     
                     <button
                       onClick={() => navigateColumn(1)}
-                      disabled={currentColumnIndex === currentColumns.length - 1}
+                      disabled={currentColumnIndex === filteredColumns.length - 1}
                       className="p-2 rounded-lg bg-gray-100 text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-200"
                     >
                       <FontAwesomeIcon icon={faChevronRight} className="h-4 w-4" />
@@ -1608,7 +1760,7 @@ export function Ideas() {
                   {/* Mobile Column Content */}
                   <div className="w-full">
                     {(() => {
-                      const column = currentColumns[currentColumnIndex];
+                      const column = filteredColumns[currentColumnIndex];
                       if (!column) return null;
                       
                       const getAddTaskHandler = () => {
@@ -1639,6 +1791,7 @@ export function Ideas() {
                           onEdit={handleEditTask}
                           onDelete={handleDeleteTask}
                           onQuickDateUpdate={handleQuickDateUpdate}
+                          onOpenDetail={handleOpenDetailModal}
                         />
                       );
                     })()}
@@ -1650,7 +1803,7 @@ export function Ideas() {
             {/* Desktop/Tablet Layout - All Columns */}
             <div className="hidden lg:block">
               <div className="flex gap-2 sm:gap-4 overflow-x-auto pb-2 sm:pb-4">
-                {currentColumns.map((column) => {
+                {filteredColumns.map((column) => {
                   const getAddTaskHandler = () => {
                     if (column.isTag && column.tagName) {
                       return (taskData) => handleAddTask({
@@ -1679,6 +1832,7 @@ export function Ideas() {
                       onEdit={handleEditTask}
                       onDelete={handleDeleteTask}
                       onQuickDateUpdate={handleQuickDateUpdate}
+                      onOpenDetail={handleOpenDetailModal}
                     />
                   );
                 })}
@@ -1718,6 +1872,7 @@ export function Ideas() {
                       onEdit={handleEditTask}
                       onDelete={handleDeleteTask}
                       onQuickDateUpdate={handleQuickDateUpdate}
+                      onOpenDetail={handleOpenDetailModal}
                     />
                   ))
               ) : (
@@ -1865,15 +2020,17 @@ export function Ideas() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold">Edit Task</h3>
-                <button
-                  onClick={() => setIsEditModalOpen(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <FontAwesomeIcon icon={faTimes} className="h-5 w-5" />
-                </button>
-              </div>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">
+                {editingTask && !editingTask.$id ? "Duplicate Task" : "Edit Task"}
+              </h3>
+              <button
+                onClick={() => setIsEditModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <FontAwesomeIcon icon={faTimes} className="h-5 w-5" />
+              </button>
+            </div>
               
               <div className="space-y-4">
                 <div>
@@ -1968,7 +2125,7 @@ export function Ideas() {
                     onClick={handleSaveEdit}
                     className="flex-1 bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
-                    Save Changes
+                    {editingTask && !editingTask.$id ? "Create Duplicate" : "Save Changes"}
                   </button>
                   <button
                     onClick={() => setIsEditModalOpen(false)}
@@ -2098,6 +2255,285 @@ export function Ideas() {
                 >
                   Got it!
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Task Detail Modal */}
+      {detailModalOpen && detailTask && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[95vh] overflow-hidden flex flex-col">
+            <div className="flex-shrink-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
+              <h3 className="text-xl font-semibold text-gray-900">Task Details</h3>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setDetailLocked(!detailLocked)}
+                  className={`p-2 rounded-lg transition-colors ${
+                    detailLocked 
+                      ? 'bg-gray-100 text-gray-600 hover:bg-gray-200' 
+                      : 'bg-blue-100 text-blue-600 hover:bg-blue-200'
+                  }`}
+                  title={detailLocked ? 'Click to unlock and edit' : 'Click to lock'}
+                >
+                  <FontAwesomeIcon icon={detailLocked ? faLock : faLockOpen} className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={() => {
+                    setDetailModalOpen(false);
+                    setDetailLocked(true);
+                  }}
+                  className="text-gray-400 hover:text-gray-600 p-2"
+                >
+                  <FontAwesomeIcon icon={faTimes} className="h-6 w-6" />
+                </button>
+              </div>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto">
+              <div className="p-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Left Column */}
+                  <div className="space-y-4">
+                    {/* Status Info */}
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={() => handleToggleComplete(detailTask.$id)}
+                            className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
+                              detailTask.completed 
+                                ? 'bg-green-500 border-green-500 text-white' 
+                                : 'border-gray-300 hover:border-green-500'
+                            }`}
+                          >
+                            {detailTask.completed && <FontAwesomeIcon icon={faCheck} className="h-3.5 w-3.5" />}
+                          </button>
+                          <span className="text-sm font-medium text-gray-700">
+                            {detailTask.completed ? 'Completed' : 'In Progress'}
+                          </span>
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {new Date(detailTask.entryDate).toLocaleDateString('en-US', { 
+                            month: 'short', 
+                            day: 'numeric', 
+                            year: 'numeric'
+                          })}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Title */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Title <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={detailTitle}
+                        onChange={(e) => setDetailTitle(e.target.value)}
+                        disabled={detailLocked}
+                        className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 ${
+                          detailLocked 
+                            ? 'bg-gray-50 border-gray-200 text-gray-700 cursor-not-allowed' 
+                            : 'bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-200'
+                        }`}
+                        placeholder="Enter task title"
+                      />
+                    </div>
+                    
+                    {/* Description */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Description
+                      </label>
+                      <textarea
+                        value={detailDescription}
+                        onChange={(e) => setDetailDescription(e.target.value)}
+                        disabled={detailLocked}
+                        rows="3"
+                        className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 resize-none ${
+                          detailLocked 
+                            ? 'bg-gray-50 border-gray-200 text-gray-700 cursor-not-allowed' 
+                            : 'bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-200'
+                        }`}
+                        placeholder="Add a detailed description..."
+                      />
+                    </div>
+
+                    {/* Due Date and Recurrence */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Due Date
+                        </label>
+                        <input
+                          type="datetime-local"
+                          value={detailDueDate}
+                          onChange={(e) => setDetailDueDate(e.target.value)}
+                          disabled={detailLocked}
+                          className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 ${
+                            detailLocked 
+                              ? 'bg-gray-50 border-gray-200 text-gray-700 cursor-not-allowed' 
+                              : 'bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-200'
+                          }`}
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Recurrence
+                        </label>
+                        <select
+                          value={detailRecurrence}
+                          onChange={(e) => setDetailRecurrence(e.target.value)}
+                          disabled={detailLocked}
+                          className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 ${
+                            detailLocked 
+                              ? 'bg-gray-50 border-gray-200 text-gray-700 cursor-not-allowed' 
+                              : 'bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-200'
+                          }`}
+                        >
+                          <option value="">No repeat</option>
+                          <option value="daily">Daily</option>
+                          <option value="weekly">Weekly</option>
+                          <option value="biweekly">Bi-weekly</option>
+                          <option value="monthly">Monthly</option>
+                          <option value="quarterly">Quarterly</option>
+                          <option value="yearly">Yearly</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Recurring task notice */}
+                    {detailRecurrence && !detailDueDate && !detailLocked && (
+                      <div className="text-xs text-blue-600 bg-blue-50 px-3 py-2 rounded-lg flex items-center gap-2">
+                        <FontAwesomeIcon icon={faInfoCircle} className="h-3 w-3" />
+                        <span>This recurring task will be scheduled for today</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Right Column */}
+                  <div className="space-y-4">
+                    {/* Tags */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Tags
+                      </label>
+                      <div className="flex flex-wrap gap-1 mb-2">
+                        {detailTags.map((tag) => (
+                          <span key={tag} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
+                            {tag}
+                            {!detailLocked && (
+                              <button
+                                onClick={() => setDetailTags(detailTags.filter(t => t !== tag))}
+                                className="ml-1 text-current hover:text-red-600"
+                              >
+                                <FontAwesomeIcon icon={faTimes} className="h-2.5 w-2.5" />
+                              </button>
+                            )}
+                          </span>
+                        ))}
+                      </div>
+                      {!detailLocked && (
+                        <>
+                          <input
+                            type="text"
+                            value={detailCustomTagInput}
+                            onChange={(e) => setDetailCustomTagInput(e.target.value)}
+                            onKeyDown={(e) => handleCustomTagAdd(e, false, true)}
+                            placeholder="Add tags (press Enter)"
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500 mb-2"
+                          />
+                          <div className="flex flex-wrap gap-1">
+                            {PREDEFINED_TAGS.filter(tag => !detailTags.includes(tag)).slice(0, 8).map((tag) => (
+                              <button
+                                key={tag}
+                                type="button"
+                                onClick={() => {
+                                  if (!detailTags.includes(tag)) {
+                                    setDetailTags([...detailTags, tag]);
+                                  }
+                                }}
+                                className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-full hover:bg-gray-200"
+                              >
+                                + {tag}
+                              </button>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </div>
+
+                    {/* User Info */}
+                    <div className="bg-gray-50 p-3 rounded-lg">
+                      <div className="text-sm text-gray-600">
+                        <span className="font-medium">Created by:</span> {detailTask.userName || 'Unknown'}
+                      </div>
+                      {detailTask.$updatedAt && (
+                        <div className="text-xs text-gray-500 mt-1">
+                          Last updated: {new Date(detailTask.$updatedAt).toLocaleDateString('en-US', { 
+                            month: 'short', 
+                            day: 'numeric', 
+                            year: 'numeric'
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex-shrink-0 border-t border-gray-200 px-6 py-4">
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    {!detailLocked ? (
+                      <>
+                        <button
+                          onClick={handleSaveDetailChanges}
+                          disabled={!detailTitle.trim()}
+                          className="flex-1 bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                        >
+                          Save Changes
+                        </button>
+                        <button
+                          onClick={() => {
+                            setDetailTitle(detailTask.title);
+                            setDetailDescription(detailTask.description || "");
+                            setDetailTags(detailTask.tags || []);
+                            setDetailDueDate(detailTask.dueDate ? new Date(detailTask.dueDate).toISOString().slice(0, 16) : "");
+                            setDetailRecurrence(detailTask.recurrence || "");
+                            setDetailLocked(true);
+                          }}
+                          className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-300 font-medium"
+                        >
+                          Cancel
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          onClick={handleDuplicateTask}
+                          className="flex-1 bg-green-500 text-white py-2 px-4 rounded-lg hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 font-medium flex items-center justify-center gap-2"
+                        >
+                          <FontAwesomeIcon icon={faCopy} />
+                          Duplicate Task
+                        </button>
+                        <button
+                          onClick={() => {
+                            setDetailModalOpen(false);
+                            handleDeleteTask(detailTask.$id);
+                          }}
+                          className="flex-1 bg-red-500 text-white py-2 px-4 rounded-lg hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 font-medium flex items-center justify-center gap-2"
+                        >
+                          <FontAwesomeIcon icon={faTrash} />
+                          Delete Task
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           </div>

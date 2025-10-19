@@ -68,7 +68,10 @@ export function Tasks() {
                           className="h-5 w-5 text-emerald-600 focus:ring-emerald-500 border-slate-300 rounded"
                         />
                         <div>
-                          <h3 className={`text-lg font-medium ${task.completed ? 'line-through text-slate-500' : 'text-slate-800'}`}>
+                          <h3 
+                            className={`text-lg font-medium ${task.completed ? 'line-through text-slate-500' : 'text-slate-800'} truncate`}
+                            title={task.title}
+                          >
                             {task.title}
                           </h3>
                           <p className="text-sm text-slate-500">

@@ -1,35 +1,30 @@
 import { useBabyActivities } from "../../lib/context/activities";
 import toast from "react-hot-toast";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCheck, faBaby, faPills, faDroplet } from "@fortawesome/free-solid-svg-icons";
+import { faBaby, faPills, faDroplet } from "@fortawesome/free-solid-svg-icons";
 
 export function QuickAdd() {
   const babyActivities = useBabyActivities();
 
   const onSuccessAdd = (activityName) => {
-    toast(
-      <div className="text-green-600">
-        <h3>{`${activityName} saved`}</h3>
-      </div>,
-      {
-        icon: (
-          <FontAwesomeIcon
-            color={"green"}
-            icon={faCheck}
-            className="h-6 w-6 mr-2"
-          />
-        ),
-        position: "top-center",
-        id: "saveActivitySuccessToast",
-        duration: 6000,
-      }
-    );
+    toast.success(`${activityName} saved`, {
+      id: "saveActivitySuccessToast",
+      duration: 4000,
+      style: {
+        background: '#10B981',
+        color: 'white',
+        fontWeight: 'bold',
+        fontSize: '14px',
+      },
+    });
   };
 
   const handleQuickAdd = async (activityName, value, unit) => {
+    // Dismiss any existing notifications with the same ID
+    toast.dismiss("saveActivitySuccessToast");
+    
     toast.loading(`Saving ${activityName}`, {
       id: "saveActivitySuccessToast",
-      position: "center",
     });
 
     const success = await babyActivities.add(
@@ -46,7 +41,12 @@ export function QuickAdd() {
     if (!success) {
       toast.error(`Failed to save ${activityName}`, {
         id: "saveActivitySuccessToast",
-        position: "center",
+        duration: 3000,
+        style: {
+          background: '#EF4444',
+          color: 'white',
+          fontWeight: 'bold',
+        },
       });
     }
   };
