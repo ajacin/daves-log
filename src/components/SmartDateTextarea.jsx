@@ -203,7 +203,7 @@ export function SmartDateTextarea({
         placeholder={placeholder}
         className={`w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 font-mono text-sm bg-transparent relative z-10 ${className}`}
         rows={rows}
-        style={{ color: 'transparent' }}
+        style={{ color: 'transparent', caretColor: '#111827' }}
       />
       
       {/* Visible text overlay */}
