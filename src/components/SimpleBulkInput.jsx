@@ -18,12 +18,6 @@ export function SimpleBulkInput({
   const dropdownRef = useRef(null)
   const overlayRef = useRef(null)
 
-  // Simple word detection - get the last word typed
-  const getLastWord = (text) => {
-    const words = text.split(/\s+/)
-    return words[words.length - 1] || ''
-  }
-
   // Create highlighted text with smart date highlighting
   const createHighlightedText = (text) => {
     if (!text) return ''
@@ -56,13 +50,20 @@ export function SimpleBulkInput({
 
   // Check for suggestions when text changes
   const checkSuggestions = (text) => {
-    const lastWord = getLastWord(text).toLowerCase().trim()
+    if (!text) {
+      setShowSuggestions(false)
+      setCurrentWord('')
+      return
+    }
+
+    const lines = text.split('\n')
+    const lastLine = lines[lines.length - 1]
+    const lastWord = lastLine.split(/\s+/).pop()?.toLowerCase().trim() || ''
     
-    console.log('Checking suggestions for:', lastWord) // Debug log
+    // suggestions for last typed word on the current line
     
     if (lastWord.length >= 2) {
       const newSuggestions = getDateSuggestions(lastWord)
-      console.log('Found suggestions:', newSuggestions) // Debug log
       
       if (newSuggestions.length > 0) {
         setSuggestions(newSuggestions)
@@ -86,9 +87,15 @@ export function SimpleBulkInput({
 
   // Handle suggestion selection
   const selectSuggestion = (suggestion) => {
-    const words = value.split(/\s+/)
-    words[words.length - 1] = suggestion
-    const newValue = words.join(' ')
+    const lines = value.split('\n')
+    const lastLineIndex = lines.length - 1
+    const lastLine = lines[lastLineIndex]
+    const lastWordRegex = /\S+$/
+    
+    // Replace the last word on the last line with the suggestion
+    const updatedLine = lastLine.replace(lastWordRegex, suggestion)
+    lines[lastLineIndex] = updatedLine
+    const newValue = lines.join('\n')
     
     onChange(newValue)
     setShowSuggestions(false)
@@ -100,6 +107,12 @@ export function SimpleBulkInput({
         textareaRef.current.focus()
       }
     }, 0)
+  }
+
+  // Handle mouse down on suggestion button to prevent blur
+  const handleSuggestionMouseDown = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
   }
 
   // Handle keyboard navigation
@@ -218,6 +231,7 @@ export function SimpleBulkInput({
             <button
               key={index}
               onClick={() => selectSuggestion(suggestion.text)}
+              onMouseDown={handleSuggestionMouseDown}
               className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 focus:bg-gray-50 focus:outline-none ${
                 index === selectedIndex ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
               }`}

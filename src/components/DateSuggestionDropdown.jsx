@@ -66,6 +66,11 @@ export function DateSuggestionDropdown({
     inputRef.current?.focus()
   }
 
+  const handleSuggestionMouseDown = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+  }
+
   const handleInputChange = (e) => {
     onChange(e.target.value)
   }
@@ -110,6 +115,7 @@ export function DateSuggestionDropdown({
             <button
               key={index}
               onClick={() => handleSuggestionClick(suggestion)}
+              onMouseDown={handleSuggestionMouseDown}
               className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 focus:bg-gray-50 focus:outline-none ${
                 index === selectedIndex ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
               }`}

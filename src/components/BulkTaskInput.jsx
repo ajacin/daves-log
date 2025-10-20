@@ -144,6 +144,12 @@ export function BulkTaskInput({
     }, 0)
   }
 
+  // Handle mouse down on suggestion button to prevent blur
+  const handleSuggestionMouseDown = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+  }
+
   // Handle keyboard navigation
   const handleKeyDown = (e) => {
     if (!showSuggestions || suggestions.length === 0) {
@@ -247,6 +253,7 @@ export function BulkTaskInput({
             <button
               key={index}
               onClick={() => handleSuggestionSelect(suggestion.text)}
+              onMouseDown={handleSuggestionMouseDown}
               className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 focus:bg-gray-50 focus:outline-none ${
                 index === selectedSuggestionIndex ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
               }`}

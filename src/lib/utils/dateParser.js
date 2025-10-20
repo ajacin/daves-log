@@ -66,10 +66,12 @@ const DATE_PATTERNS = {
 const SUGGESTION_PATTERNS = {
   'tom': ['tomorrow'],
   'tomorrow': ['tomorrow'],
+  'today': ['today'],
+  'tod': ['today'],
+  'to': ['today', 'tomorrow'],
   'next': ['next week', 'next month', 'next year', 'next monday', 'next tuesday', 'next wednesday', 'next thursday', 'next friday', 'next saturday', 'next sunday'],
   'nex': ['next week', 'next month', 'next year', 'next monday', 'next tuesday', 'next wednesday', 'next thursday', 'next friday', 'next saturday', 'next sunday'],
   'end': ['end of week', 'end of month', 'end of year', 'end of next week', 'end of next month', 'end of next year'],
-  'to': ['today', 'tomorrow'],
   'in': ['in 1 day', 'in 2 days', 'in 3 days', 'in 1 week', 'in 2 weeks', 'in 1 month', 'in 3 months', 'in 6 months', 'in 1 year'],
   'every': ['every monday', 'every tuesday', 'every wednesday', 'every thursday', 'every friday', 'every saturday', 'every sunday'],
   'daily': ['daily'],
@@ -181,8 +183,8 @@ export function parseDateString(dateString) {
   
   const normalized = dateString.toLowerCase().trim()
   
-  // Check for exact matches first
-  if (DATE_PATTERNS[normalized]) {
+  // Check for exact matches first (must handle 0 value e.g. 'today')
+  if (Object.prototype.hasOwnProperty.call(DATE_PATTERNS, normalized)) {
     const pattern = DATE_PATTERNS[normalized]
     const calculatedDate = calculateDate(pattern)
     
@@ -275,33 +277,68 @@ export function extractDateFromTask(taskText) {
   
   // Look for date patterns in the task text
   const words = taskText.toLowerCase().split(/\s+/)
+  let lastMatch = null
   
   for (let i = 0; i < words.length; i++) {
     // Check for single word patterns
-    if (DATE_PATTERNS[words[i]]) {
-      return {
+    if (Object.prototype.hasOwnProperty.call(DATE_PATTERNS, words[i])) {
+      lastMatch = {
         dateString: words[i],
         parsed: parseDateString(words[i]),
-        startIndex: taskText.toLowerCase().indexOf(words[i]),
-        endIndex: taskText.toLowerCase().indexOf(words[i]) + words[i].length
+        wordIndex: i,
+        wordStart: i,
+        wordEnd: i + 1
       }
+      // track the latest match
     }
     
     // Check for multi-word patterns
     for (let j = i + 1; j <= Math.min(i + 3, words.length); j++) {
       const phrase = words.slice(i, j).join(' ')
-      if (DATE_PATTERNS[phrase]) {
-        return {
+      if (Object.prototype.hasOwnProperty.call(DATE_PATTERNS, phrase)) {
+        lastMatch = {
           dateString: phrase,
           parsed: parseDateString(phrase),
-          startIndex: taskText.toLowerCase().indexOf(phrase),
-          endIndex: taskText.toLowerCase().indexOf(phrase) + phrase.length
+          wordIndex: i,
+          wordStart: i,
+          wordEnd: j
         }
+        // track the latest match
       }
     }
   }
   
-  return null
+  if (!lastMatch) {
+    return null
+  }
+  
+  // Calculate character indices based on the word positions
+  let charIndex = 0
+  let startIndex = 0
+  let endIndex = 0
+  let currentWord = 0
+  
+  const originalWords = taskText.split(/(\s+)/)
+  for (let i = 0; i < originalWords.length; i++) {
+    const part = originalWords[i]
+    if (!/\s+/.test(part)) {
+      if (currentWord === lastMatch.wordStart) {
+        startIndex = charIndex
+      }
+      if (currentWord === lastMatch.wordEnd - 1) {
+        endIndex = charIndex + part.length
+      }
+      currentWord++
+    }
+    charIndex += part.length
+  }
+  
+  return {
+    dateString: lastMatch.dateString,
+    parsed: lastMatch.parsed,
+    startIndex,
+    endIndex
+  }
 }
 
 /**
