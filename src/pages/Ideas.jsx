@@ -1003,16 +1003,19 @@ export function Ideas() {
     if (targetDate instanceof Date) {
       const date = new Date(targetDate);
       date.setHours(23, 59, 0, 0);
-      dueDate = date.toISOString().slice(0, 16);
+    // Store full ISO with timezone to avoid local/UTC shift issues
+    dueDate = date.toISOString();
     } else if (targetDate === 'today') {
       const date = new Date();
       date.setHours(23, 59, 0, 0);
-      dueDate = date.toISOString().slice(0, 16);
+    // Store full ISO with timezone to avoid local/UTC shift issues
+    dueDate = date.toISOString();
     } else if (targetDate === 'tomorrow') {
       const date = new Date();
       date.setDate(date.getDate() + 1);
       date.setHours(23, 59, 0, 0);
-      dueDate = date.toISOString().slice(0, 16);
+    // Store full ISO with timezone to avoid local/UTC shift issues
+    dueDate = date.toISOString();
     }
 
     const success = await ideas.add({
@@ -1199,6 +1202,10 @@ export function Ideas() {
 
     // Auto-assign today's date to recurring tasks if no due date is set
     let finalEditDueDate = editDueDate || null;
+    // Convert datetime-local string to full ISO with timezone
+    if (finalEditDueDate) {
+      finalEditDueDate = new Date(finalEditDueDate).toISOString();
+    }
     if (!finalEditDueDate && editRecurrence) {
       finalEditDueDate = new Date().toISOString().split('T')[0]; // Today's date in YYYY-MM-DD format
     }
@@ -1230,7 +1237,7 @@ export function Ideas() {
         title: editTitle.trim(),
         description: editDescription.trim(),
         tags: editTags,
-        dueDate: finalEditDueDate,
+      dueDate: finalEditDueDate,
         recurrence: editRecurrence || null,
       });
 
@@ -1293,7 +1300,8 @@ export function Ideas() {
     }
 
     const success = await ideas.update(taskId, {
-      dueDate: dueDate.toISOString().slice(0, 16)
+      // Store full ISO with timezone to avoid off-by-one day issues
+      dueDate: dueDate.toISOString()
     });
 
     if (success) {
@@ -1336,6 +1344,7 @@ export function Ideas() {
     setDetailTitle(task.title);
     setDetailDescription(task.description || "");
     setDetailTags(task.tags || []);
+    // Pre-fill datetime-local control using local time value
     setDetailDueDate(task.dueDate ? new Date(task.dueDate).toISOString().slice(0, 16) : "");
     setDetailRecurrence(task.recurrence || "");
     setDetailCustomTagInput("");
@@ -1349,6 +1358,12 @@ export function Ideas() {
     let finalDueDate = detailDueDate || null;
     if (!finalDueDate && detailRecurrence) {
       finalDueDate = new Date().toISOString().split('T')[0];
+    }
+    // Convert datetime-local string to full ISO with timezone when present
+    if (finalDueDate && typeof finalDueDate === 'string' && finalDueDate.length <= 19) {
+      try {
+        finalDueDate = new Date(finalDueDate).toISOString();
+      } catch (e) {}
     }
 
     const success = await ideas.update(detailTask.$id, {
