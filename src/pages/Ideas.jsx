@@ -15,6 +15,7 @@ import {
   faCalendarDay,
   faCalendarWeek,
   faCalendar,
+  faCalendarAlt,
   faCalendarPlus,
   faExclamationTriangle,
   faShoppingCart,
@@ -27,6 +28,7 @@ import {
   faChevronLeft,
   faChevronRight,
   faInfoCircle,
+  faTasks,
   faLock,
   faLockOpen,
   faCopy,
@@ -35,6 +37,8 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import toast from 'react-hot-toast';
 import React from "react";
 import confetti from 'canvas-confetti';
+import { formatDateForDisplay } from '../lib/utils/dateParser';
+import { SimpleBulkInput } from '../components/SimpleBulkInput';
 
 // Toast configuration to prevent duplicate notifications
 const toastConfig = {
@@ -1385,24 +1389,38 @@ export function Ideas() {
     setDetailModalOpen(false);
   };
 
-  // Bulk upload functionality
-  const getTaskPreview = (input) => {
+
+  // Enhanced task preview with date parsing
+  const getEnhancedTaskPreview = (input) => {
     return input
       .split('\n')
       .map(task => task.trim())
       .filter(task => task.length > 0)
       .map(task => {
+        // Parse hashtags
         const hashtags = task.match(/#\w+/g) || [];
-        const title = task.replace(/#\w+/g, '').trim();
         const tags = hashtags.map(tag => tag.substring(1));
-        return { title, tags };
+        
+        // Parse dates and remove them from title
+        const { processTaskWithDate } = require('../lib/utils/dateParser');
+        const parsedTask = processTaskWithDate(task);
+        
+        return {
+          originalText: task,
+          title: parsedTask.title,
+          tags,
+          hasDate: parsedTask.hasDate,
+          dueDate: parsedTask.dueDate,
+          dateInfo: parsedTask.dateInfo,
+          isPartial: parsedTask.dateInfo?.isPartial || false
+        };
       })
       .filter(task => task.title.length > 0);
   };
 
   const handleBulkUpload = async () => {
     try {
-      const tasksArray = getTaskPreview(bulkTasksInput).map(task => {
+      const tasksArray = getEnhancedTaskPreview(bulkTasksInput).map(task => {
         let tags = [...task.tags];
         
         // Shopping has priority - add it first if checked
@@ -1418,7 +1436,11 @@ export function Ideas() {
           }
         }
         
-        return { ...task, tags };
+        return { 
+          ...task, 
+          tags,
+          dueDate: task.dueDate ? task.dueDate.toISOString() : null
+        };
       });
 
       if (tasksArray.length === 0) {
@@ -1434,6 +1456,7 @@ export function Ideas() {
           title: task.title,
           description: "",
           entryDate: new Date().toISOString(),
+          dueDate: task.dueDate,
           tags: task.tags,
           completed: false,
         });
@@ -1887,56 +1910,51 @@ export function Ideas() {
 
       {/* Bulk Upload Modal */}
       {isBulkUploadOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold">Bulk Upload Tasks</h3>
-                <button
-                  onClick={() => {
-                    setIsBulkUploadOpen(false);
-                    setBulkTasksInput("");
-                    setIsShoppingList(false);
-                    setCommonTag("");
-                  }}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <FontAwesomeIcon icon={faTimes} className="h-5 w-5" />
-                </button>
-              </div>
-              
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Enter Tasks (one per line)
-                  </label>
-                  <div className="text-xs text-gray-500 mb-2">
-                    Example:<br />
-                    Buy groceries #walmart<br />
-                    Call dentist #appointment<br />
-                    Send email to team #work
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-white rounded-lg w-full max-w-4xl max-h-[95vh] flex flex-col">
+            <div className="flex justify-between items-center p-4 sm:p-6 border-b border-gray-200">
+              <h3 className="text-lg font-semibold">Enter tasks (one per line)</h3>
+              <button
+                onClick={() => {
+                  setIsBulkUploadOpen(false);
+                  setBulkTasksInput("");
+                  setIsShoppingList(false);
+                  setCommonTag("");
+                }}
+                className="text-gray-400 hover:text-gray-600 p-1"
+              >
+                <FontAwesomeIcon icon={faTimes} className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-hidden flex flex-col lg:flex-row">
+              {/* Left side - Input and options */}
+              <div className="flex-1 p-4 sm:p-6 flex flex-col">
+                <div className="mb-3">
+                  <div className="text-xs text-gray-500 mb-3">
+                    <span className="font-medium">Examples:</span> "Buy groceries tomorrow", "Call dentist next week", "Meeting end of month"
                   </div>
-                  <textarea
+                  <SimpleBulkInput
                     value={bulkTasksInput}
-                    onChange={(e) => setBulkTasksInput(e.target.value)}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 font-mono text-sm"
-                    rows="8"
+                    onChange={setBulkTasksInput}
+                    className="w-full flex-1"
+                    rows={6}
                     placeholder="Enter tasks here..."
                   />
+                </div>
+                
+                <div className="space-y-3 mt-4">
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={isShoppingList}
+                      onChange={() => setIsShoppingList(!isShoppingList)}
+                      className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                    />
+                    <span className="font-medium text-green-700">Tag all tasks as shopping items</span>
+                  </label>
                   
-                  <div className="mt-3">
-                    <label className="flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={isShoppingList}
-                        onChange={() => setIsShoppingList(!isShoppingList)}
-                        className="rounded border-gray-300 text-green-600 focus:ring-green-500"
-                      />
-                      <span className="font-medium text-green-700">Tag all tasks as shopping items</span>
-                    </label>
-                  </div>
-                  
-                  <div className="mt-3">
+                  <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Common Tag (optional)
                     </label>
@@ -1953,62 +1971,141 @@ export function Ideas() {
                     </p>
                   </div>
                   
-                  {bulkTasksInput && (
-                    <div className="mt-3 space-y-2">
-                      <div className="font-medium text-gray-700 text-sm">
-                        Preview ({getTaskPreview(bulkTasksInput).length} tasks):
-                      </div>
-                      <div className="bg-gray-50 p-3 rounded max-h-32 overflow-y-auto">
-                        {getTaskPreview(bulkTasksInput).map((task, index) => (
-                          <div key={index} className="text-xs text-gray-600 mb-1">
-                            <div className="flex items-center gap-2">
-                              <span className="text-gray-400">{index + 1}.</span>
-                              <span className="truncate">{task.title}</span>
-                            </div>
-                            <div className="ml-6 flex gap-1 flex-wrap">
-                              {task.tags.map((tag, tagIndex) => (
-                                <span key={tagIndex} className="px-1.5 py-0.5 bg-purple-50 text-purple-700 rounded-full text-[10px]">
-                                  {tag}
-                                </span>
-                              ))}
-                              {isShoppingList && (
-                                <span className="px-1.5 py-0.5 bg-green-50 text-green-700 rounded-full text-[10px] font-medium">
-                                  shopping
-                                </span>
-                              )}
-                              {commonTag.trim() && (
-                                <span className="px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded-full text-[10px]">
-                                  {commonTag.trim().toLowerCase().replace(/\s+/g, '')}
-                                </span>
-                              )}
-                            </div>
+                </div>
+              </div>
+              
+              {/* Right side - Preview */}
+              <div className="flex-1 p-4 sm:p-6 border-t lg:border-t-0 lg:border-l border-gray-200">
+                {getEnhancedTaskPreview(bulkTasksInput).length > 0 ? (
+                  <div className="h-full flex flex-col">
+                    <h4 className="text-sm font-medium text-gray-700 mb-3">
+                      Preview ({getEnhancedTaskPreview(bulkTasksInput).length} tasks):
+                    </h4>
+                    <div className="flex-1 overflow-y-auto border border-gray-200 rounded-lg p-3 bg-gray-50 space-y-2">
+                      {getEnhancedTaskPreview(bulkTasksInput).map((task, index) => (
+                        <div key={index} className="text-xs text-gray-600 border-b border-gray-200 pb-2 last:border-b-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-gray-400">{index + 1}.</span>
+                            <span className="truncate font-medium">{task.title}</span>
+                            {task.hasDate && (
+                              <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded-full text-[9px] font-medium">
+                                Date parsed
+                              </span>
+                            )}
                           </div>
-                        ))}
-                      </div>
+                          
+                          {/* Show original text if different from title */}
+                          {task.originalText !== task.title && (
+                            <div className="ml-6 mb-1 text-[10px] text-gray-500">
+                              Original: <span className="italic">{task.originalText}</span>
+                              <span className="ml-2 px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded-full text-[9px]">
+                                Date removed
+                              </span>
+                            </div>
+                          )}
+                          
+                          {/* Date Information */}
+                          {task.hasDate && task.dueDate && (
+                            <div className="ml-6 mb-1 flex items-center gap-1">
+                              <FontAwesomeIcon icon={faCalendarAlt} className="text-blue-500 text-[10px]" />
+                              <span className="text-blue-600 font-medium">
+                                {formatDateForDisplay(task.dueDate)}
+                              </span>
+                              {task.dateInfo?.isRecurring && (
+                                <span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded-full text-[9px]">
+                                  Recurring
+                                </span>
+                              )}
+                            </div>
+                          )}
+                          
+                          {/* Partial Date Match */}
+                          {task.isPartial && (
+                            <div className="ml-6 mb-1 flex items-center gap-1">
+                              <span className="text-orange-600 text-[10px]">⚠️</span>
+                              <span className="text-orange-600 text-[10px]">
+                                Partial date match: "{task.dateInfo?.normalized}"
+                              </span>
+                            </div>
+                          )}
+                          
+                          {/* Tags */}
+                          <div className="ml-6 flex gap-1 flex-wrap">
+                            {task.tags.map((tag, tagIndex) => (
+                              <span key={tagIndex} className="px-1.5 py-0.5 bg-purple-50 text-purple-700 rounded-full text-[10px]">
+                                {tag}
+                              </span>
+                            ))}
+                            {isShoppingList && (
+                              <span className="px-1.5 py-0.5 bg-green-50 text-green-700 rounded-full text-[10px] font-medium">
+                                shopping
+                              </span>
+                            )}
+                            {commonTag.trim() && (
+                              <span className="px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded-full text-[10px]">
+                                {commonTag.trim().toLowerCase().replace(/\s+/g, '')}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  )}
-                </div>
-                
-                <div className="flex gap-3 pt-4">
-                  <button
-                    onClick={handleBulkUpload}
-                    className="flex-1 bg-green-500 text-white py-2 px-4 rounded-lg hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500"
-                    disabled={getTaskPreview(bulkTasksInput).length === 0}
-                  >
-                    Upload {getTaskPreview(bulkTasksInput).length} Tasks
-                  </button>
-                  <button
-                    onClick={() => {
-                      setIsBulkUploadOpen(false);
-                      setBulkTasksInput("");
-                      setIsShoppingList(false);
-                      setCommonTag("");
-                    }}
-                    className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-300"
-                  >
-                    Cancel
-                  </button>
-                </div>
+                  </div>
+                ) : (
+                  <div className="h-full flex items-center justify-center text-gray-500">
+                    <div className="text-center">
+                      <FontAwesomeIcon icon={faTasks} className="h-8 w-8 mb-2 mx-auto" />
+                      <p>No tasks to preview</p>
+                      <p className="text-xs">Start typing to see preview</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            {/* Action buttons */}
+            <div className="p-4 sm:p-6 border-t border-gray-200 bg-gray-50">
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                  onClick={handleBulkUpload}
+                  className="flex-1 bg-green-500 text-white py-3 px-4 rounded-lg hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 font-medium"
+                  disabled={getEnhancedTaskPreview(bulkTasksInput).length === 0}
+                >
+                  Upload {getEnhancedTaskPreview(bulkTasksInput).length} Tasks
+                </button>
+                <button
+                  onClick={() => {
+                    setIsBulkUploadOpen(false);
+                    setBulkTasksInput("");
+                    setIsShoppingList(false);
+                    setCommonTag("");
+                  }}
+                  className="flex-1 bg-gray-300 text-gray-700 py-3 px-4 rounded-lg hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-300 font-medium"
+                >
+                  Cancel
+                </button>
+              </div>
+              
+              {/* Quick date buttons */}
+              <div className="flex flex-wrap gap-2 mt-3">
+                <button
+                  onClick={() => setBulkTasksInput(prev => prev + (prev ? '\n' : '') + 'Task today')}
+                  className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded-full hover:bg-blue-200"
+                >
+                  Today
+                </button>
+                <button
+                  onClick={() => setBulkTasksInput(prev => prev + (prev ? '\n' : '') + 'Task tomorrow')}
+                  className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded-full hover:bg-blue-200"
+                >
+                  Tomorrow
+                </button>
+                <button
+                  onClick={() => setBulkTasksInput(prev => prev + (prev ? '\n' : '') + 'Task this weekend')}
+                  className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded-full hover:bg-blue-200"
+                >
+                  This Weekend
+                </button>
               </div>
             </div>
           </div>
