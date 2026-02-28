@@ -1406,17 +1406,267 @@ export function Ideas() {
   };
 
   // Bulk upload functionality
+  const [showBulkSyntaxHelp, setShowBulkSyntaxHelp] = useState(false);
+  const [bulkSuggestions, setBulkSuggestions] = useState([]);
+  const [bulkSuggestionIndex, setBulkSuggestionIndex] = useState(0);
+  const [bulkTrigger, setBulkTrigger] = useState(null); // { type: ':' | '@', start: number, query: '' }
+  const bulkTextareaRef = useRef(null);
+
+  const DATE_SUGGESTIONS = [
+    { label: ':today', desc: 'Today' },
+    { label: ':tomorrow', desc: 'Tomorrow' },
+    { label: ':monday', desc: 'Next Monday' },
+    { label: ':tuesday', desc: 'Next Tuesday' },
+    { label: ':wednesday', desc: 'Next Wednesday' },
+    { label: ':thursday', desc: 'Next Thursday' },
+    { label: ':friday', desc: 'Next Friday' },
+    { label: ':saturday', desc: 'Next Saturday' },
+    { label: ':sunday', desc: 'Next Sunday' },
+    { label: ':+1d', desc: 'In 1 day' },
+    { label: ':+3d', desc: 'In 3 days' },
+    { label: ':+7d', desc: 'In 7 days' },
+    { label: ':+1w', desc: 'In 1 week' },
+    { label: ':+2w', desc: 'In 2 weeks' },
+    { label: ':+1m', desc: 'In 1 month' },
+    { label: ':+3m', desc: 'In 3 months' },
+    { label: ':jan', desc: 'January' },
+    { label: ':feb', desc: 'February' },
+    { label: ':mar', desc: 'March' },
+    { label: ':apr', desc: 'April' },
+    { label: ':may', desc: 'May' },
+    { label: ':jun', desc: 'June' },
+    { label: ':jul', desc: 'July' },
+    { label: ':aug', desc: 'August' },
+    { label: ':sep', desc: 'September' },
+    { label: ':oct', desc: 'October' },
+    { label: ':nov', desc: 'November' },
+    { label: ':dec', desc: 'December' },
+  ];
+
+  const RECURRENCE_SUGGESTIONS = [
+    { label: '@daily', desc: 'Every day' },
+    { label: '@weekly', desc: 'Every week' },
+    { label: '@biweekly', desc: 'Every 2 weeks' },
+    { label: '@monthly', desc: 'Every month' },
+    { label: '@quarterly', desc: 'Every 3 months' },
+    { label: '@yearly', desc: 'Every year' },
+  ];
+
+  const handleBulkInputChange = (e) => {
+    const value = e.target.value;
+    const cursor = e.target.selectionStart;
+    setBulkTasksInput(value);
+
+    // Find the trigger token being typed at cursor
+    const textBeforeCursor = value.slice(0, cursor);
+    // Look for : or @ not preceded by a non-space char (so it's the start of a token)
+    const triggerMatch = textBeforeCursor.match(/(?:^|[\s])([:|@])([\w+]*)$/);
+
+    if (triggerMatch) {
+      const type = triggerMatch[1];
+      const query = triggerMatch[2].toLowerCase();
+      const start = cursor - triggerMatch[2].length - 1; // position of : or @
+
+      const pool = type === ':' ? DATE_SUGGESTIONS : RECURRENCE_SUGGESTIONS;
+      const filtered = pool.filter(s =>
+        s.label.slice(1).toLowerCase().startsWith(query)
+      );
+
+      if (filtered.length > 0) {
+        setBulkTrigger({ type, start, query });
+        setBulkSuggestions(filtered);
+        setBulkSuggestionIndex(0);
+        return;
+      }
+    }
+
+    setBulkTrigger(null);
+    setBulkSuggestions([]);
+  };
+
+  const insertSuggestion = (suggestion) => {
+    if (!bulkTrigger || !bulkTextareaRef.current) return;
+    const ta = bulkTextareaRef.current;
+    const before = bulkTasksInput.slice(0, bulkTrigger.start);
+    const after = bulkTasksInput.slice(bulkTrigger.start + 1 + bulkTrigger.query.length);
+    const newValue = before + suggestion.label + ' ' + after;
+    setBulkTasksInput(newValue);
+    setBulkTrigger(null);
+    setBulkSuggestions([]);
+
+    // Restore focus and cursor position
+    const newCursor = before.length + suggestion.label.length + 1;
+    requestAnimationFrame(() => {
+      ta.focus();
+      ta.setSelectionRange(newCursor, newCursor);
+    });
+  };
+
+  const handleBulkKeyDown = (e) => {
+    if (bulkSuggestions.length === 0) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setBulkSuggestionIndex(i => (i + 1) % bulkSuggestions.length);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setBulkSuggestionIndex(i => (i - 1 + bulkSuggestions.length) % bulkSuggestions.length);
+    } else if (e.key === 'Enter' || e.key === 'Tab') {
+      e.preventDefault();
+      insertSuggestion(bulkSuggestions[bulkSuggestionIndex]);
+    } else if (e.key === 'Escape') {
+      setBulkTrigger(null);
+      setBulkSuggestions([]);
+    }
+  };
+
+  const MONTH_MAP = {
+    jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
+    jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11
+  };
+
+  const DAY_MAP = {
+    sunday: 0, sun: 0, monday: 1, mon: 1, tuesday: 2, tue: 2,
+    wednesday: 3, wed: 3, thursday: 4, thu: 4, friday: 5, fri: 5,
+    saturday: 6, sat: 6
+  };
+
+  const parseBulkLine = (line) => {
+    let remaining = line;
+    let dueDate = null;
+    let recurrence = null;
+    let description = "";
+
+    // 1. Extract description (-- at the end)
+    const descMatch = remaining.match(/\s--\s(.+)$/);
+    if (descMatch) {
+      description = descMatch[1].trim();
+      remaining = remaining.slice(0, descMatch.index);
+    }
+
+    // 2. Extract recurrence (@daily, @weekly, etc.)
+    const recurrenceMatch = remaining.match(/@(daily|weekly|biweekly|monthly|quarterly|yearly)\b/i);
+    if (recurrenceMatch) {
+      recurrence = recurrenceMatch[1].toLowerCase();
+      remaining = remaining.replace(recurrenceMatch[0], '');
+    }
+
+    // 3. Extract tags (#tag)
+    const hashtags = remaining.match(/#[\w][\w-]*/g) || [];
+    const tags = hashtags.map(tag => tag.substring(1));
+    remaining = remaining.replace(/#[\w][\w-]*/g, '');
+
+    // 4. Extract date tokens (first match wins)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // :today
+    if (!dueDate && /:(today)\b/i.test(remaining)) {
+      dueDate = toLocalDateString(today);
+      remaining = remaining.replace(/:(today)\b/i, '');
+    }
+
+    // :tomorrow
+    if (!dueDate && /:(tomorrow)\b/i.test(remaining)) {
+      const d = new Date(today);
+      d.setDate(d.getDate() + 1);
+      dueDate = toLocalDateString(d);
+      remaining = remaining.replace(/:(tomorrow)\b/i, '');
+    }
+
+    // :monday, :tue, etc.
+    if (!dueDate) {
+      const dayPattern = /:(monday|mon|tuesday|tue|wednesday|wed|thursday|thu|friday|fri|saturday|sat|sunday|sun)\b/i;
+      const dayMatch = remaining.match(dayPattern);
+      if (dayMatch) {
+        const targetDay = DAY_MAP[dayMatch[1].toLowerCase()];
+        const d = new Date(today);
+        const currentDay = d.getDay();
+        let diff = targetDay - currentDay;
+        if (diff <= 0) diff += 7; // always next occurrence
+        d.setDate(d.getDate() + diff);
+        dueDate = toLocalDateString(d);
+        remaining = remaining.replace(dayMatch[0], '');
+      }
+    }
+
+    // :+3d, :+1w, :+2m
+    if (!dueDate) {
+      const relMatch = remaining.match(/:\+(\d+)(d|w|m)\b/i);
+      if (relMatch) {
+        const num = parseInt(relMatch[1], 10);
+        const unit = relMatch[2].toLowerCase();
+        const d = new Date(today);
+        if (unit === 'd') d.setDate(d.getDate() + num);
+        else if (unit === 'w') d.setDate(d.getDate() + num * 7);
+        else if (unit === 'm') d.setMonth(d.getMonth() + num);
+        dueDate = toLocalDateString(d);
+        remaining = remaining.replace(relMatch[0], '');
+      }
+    }
+
+    // :mar15, :dec25
+    if (!dueDate) {
+      const absMatch = remaining.match(/:([a-z]{3})(\d{1,2})\b/i);
+      if (absMatch) {
+        const monthIdx = MONTH_MAP[absMatch[1].toLowerCase()];
+        if (monthIdx !== undefined) {
+          const day = parseInt(absMatch[2], 10);
+          let year = today.getFullYear();
+          const candidate = new Date(year, monthIdx, day);
+          // If date is in the past, use next year
+          if (candidate < today) {
+            candidate.setFullYear(year + 1);
+          }
+          dueDate = toLocalDateString(candidate);
+          remaining = remaining.replace(absMatch[0], '');
+        }
+      }
+    }
+
+    // :2026-03-15 (explicit YYYY-MM-DD)
+    if (!dueDate) {
+      const isoMatch = remaining.match(/:(\d{4}-\d{2}-\d{2})\b/);
+      if (isoMatch) {
+        const [y, m, d] = isoMatch[1].split('-').map(Number);
+        dueDate = toLocalDateString(new Date(y, m - 1, d));
+        remaining = remaining.replace(isoMatch[0], '');
+      }
+    }
+
+    const title = remaining.replace(/\s+/g, ' ').trim();
+    return { title, tags, dueDate, recurrence, description };
+  };
+
+  const formatPreviewDate = (dateStr) => {
+    if (!dateStr) return null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const [y, m, d] = dateStr.split('-').map(Number);
+    const date = new Date(y, m - 1, d);
+
+    if (date.getTime() === today.getTime()) return 'Today';
+    if (date.getTime() === tomorrow.getTime()) return 'Tomorrow';
+
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    // Show day name if within next 7 days
+    const diffDays = Math.round((date - today) / (1000 * 60 * 60 * 24));
+    if (diffDays > 0 && diffDays <= 7) {
+      return `${days[date.getDay()]}, ${months[date.getMonth()]} ${date.getDate()}`;
+    }
+    return `${months[date.getMonth()]} ${date.getDate()}${date.getFullYear() !== today.getFullYear() ? `, ${date.getFullYear()}` : ''}`;
+  };
+
   const getTaskPreview = (input) => {
     return input
       .split('\n')
-      .map(task => task.trim())
-      .filter(task => task.length > 0)
-      .map(task => {
-        const hashtags = task.match(/#\w+/g) || [];
-        const title = task.replace(/#\w+/g, '').trim();
-        const tags = hashtags.map(tag => tag.substring(1));
-        return { title, tags };
-      })
+      .map(line => line.trim())
+      .filter(line => line.length > 0)
+      .map(line => parseBulkLine(line))
       .filter(task => task.title.length > 0);
   };
 
@@ -1452,10 +1702,12 @@ export function Ideas() {
           userId: user.current.$id,
           userName: user.current.name,
           title: task.title,
-          description: "",
+          description: task.description || "",
           entryDate: new Date().toISOString(),
           tags: task.tags,
           completed: false,
+          dueDate: task.dueDate || null,
+          recurrence: task.recurrence || null,
         });
         if (success) successCount++;
       }
@@ -1847,7 +2099,7 @@ export function Ideas() {
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-td-base font-medium text-td-text">Bulk Upload</h3>
                 <button
-                  onClick={() => { setIsBulkUploadOpen(false); setBulkTasksInput(""); setIsShoppingList(false); setCommonTag(""); }}
+                  onClick={() => { setIsBulkUploadOpen(false); setBulkTasksInput(""); setIsShoppingList(false); setCommonTag(""); setShowBulkSyntaxHelp(false); }}
                   className="text-td-faint hover:text-td-text"
                 >
                   <FontAwesomeIcon icon={faTimes} className="h-3 w-3" />
@@ -1856,16 +2108,62 @@ export function Ideas() {
 
               <div className="space-y-3">
                 <div>
-                  <div className="text-td-xs text-td-faint mb-2">
-                    One task per line. Use #tag for tags.
+                  <div className="text-td-xs text-td-faint mb-2 flex items-center justify-between">
+                    <span>One task per line.</span>
+                    <button
+                      onClick={() => setShowBulkSyntaxHelp(!showBulkSyntaxHelp)}
+                      className="text-td-muted hover:text-td-text underline"
+                    >
+                      {showBulkSyntaxHelp ? 'Hide' : 'Syntax'} help
+                    </button>
                   </div>
-                  <textarea
-                    value={bulkTasksInput}
-                    onChange={(e) => setBulkTasksInput(e.target.value)}
-                    className="w-full p-2 border border-td-border text-td-sm font-mono bg-transparent focus:outline-none"
-                    rows="8"
-                    placeholder="Buy groceries #walmart&#10;Call dentist #appointment"
-                  />
+
+                  {showBulkSyntaxHelp && (
+                    <div className="border border-td-border p-3 mb-2 text-td-xs text-td-muted space-y-1.5 font-mono">
+                      <div className="text-td-text font-medium font-sans mb-1">Dates</div>
+                      <div><span className="text-td-text">:today</span> <span className="text-td-text">:tomorrow</span> — relative day</div>
+                      <div><span className="text-td-text">:monday</span> <span className="text-td-text">:fri</span> — next weekday</div>
+                      <div><span className="text-td-text">:+3d</span> <span className="text-td-text">:+1w</span> <span className="text-td-text">:+2m</span> — offset (days/weeks/months)</div>
+                      <div><span className="text-td-text">:mar15</span> <span className="text-td-text">:dec25</span> — month + day</div>
+                      <div><span className="text-td-text">:2026-03-15</span> — exact date</div>
+                      <div className="text-td-text font-medium font-sans mt-2 mb-1">Recurrence</div>
+                      <div><span className="text-td-text">@daily</span> <span className="text-td-text">@weekly</span> <span className="text-td-text">@monthly</span> <span className="text-td-text">@yearly</span></div>
+                      <div><span className="text-td-text">@biweekly</span> <span className="text-td-text">@quarterly</span></div>
+                      <div className="text-td-text font-medium font-sans mt-2 mb-1">Other</div>
+                      <div><span className="text-td-text">#tag</span> — add tags</div>
+                      <div><span className="text-td-text">-- note text</span> — add description</div>
+                    </div>
+                  )}
+
+                  <div className="relative">
+                    <textarea
+                      ref={bulkTextareaRef}
+                      value={bulkTasksInput}
+                      onChange={handleBulkInputChange}
+                      onKeyDown={handleBulkKeyDown}
+                      onBlur={() => { setTimeout(() => { setBulkTrigger(null); setBulkSuggestions([]); }, 150); }}
+                      className="w-full p-2 border border-td-border text-td-sm font-mono bg-transparent focus:outline-none"
+                      rows="8"
+                      placeholder={"Buy groceries :today #walmart\nCall dentist :tomorrow -- about cleaning\nTake vitamins :today @daily #health\nMom birthday :mar15 @yearly\nRenew subscription :+30d\nTeam meeting :monday @weekly #work"}
+                    />
+                    {bulkSuggestions.length > 0 && (
+                      <div className="absolute left-0 right-0 bottom-0 translate-y-full border border-td-border bg-td-bg z-10 max-h-40 overflow-y-auto shadow-sm">
+                        {bulkSuggestions.map((s, i) => (
+                          <button
+                            key={s.label}
+                            className={`w-full text-left px-3 py-1.5 text-td-xs flex justify-between items-center ${
+                              i === bulkSuggestionIndex ? 'bg-td-hover text-td-text' : 'text-td-muted hover:bg-td-hover'
+                            }`}
+                            onMouseDown={(e) => { e.preventDefault(); insertSuggestion(s); }}
+                            onMouseEnter={() => setBulkSuggestionIndex(i)}
+                          >
+                            <span className="font-mono">{s.label}</span>
+                            <span className="text-td-faint">{s.desc}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
 
                   <label className="flex items-center gap-2 text-td-sm text-td-muted mt-2">
                     <input type="checkbox" checked={isShoppingList} onChange={() => setIsShoppingList(!isShoppingList)} className="border-td-border" />
@@ -1888,13 +2186,18 @@ export function Ideas() {
                       <div className="text-td-xs text-td-muted mb-1">
                         Preview ({getTaskPreview(bulkTasksInput).length}):
                       </div>
-                      <div className="border border-td-border p-2 max-h-28 overflow-y-auto">
+                      <div className="border border-td-border p-2 max-h-36 overflow-y-auto">
                         {getTaskPreview(bulkTasksInput).map((task, index) => (
-                          <div key={index} className="text-td-xs text-td-muted mb-0.5">
-                            {index + 1}. {task.title}
-                            {task.tags.length > 0 && <span className="text-td-faint ml-1">{task.tags.join(', ')}</span>}
-                            {isShoppingList && <span className="text-td-faint ml-1">shopping</span>}
-                            {commonTag.trim() && <span className="text-td-faint ml-1">{commonTag.trim().toLowerCase().replace(/\s+/g, '')}</span>}
+                          <div key={index} className="text-td-xs text-td-muted mb-1">
+                            <div className="flex items-baseline gap-1 flex-wrap">
+                              <span>{index + 1}. {task.title}</span>
+                              {task.tags.length > 0 && <span className="text-td-faint">{task.tags.join(', ')}</span>}
+                              {isShoppingList && <span className="text-td-faint">shopping</span>}
+                              {commonTag.trim() && <span className="text-td-faint">{commonTag.trim().toLowerCase().replace(/\s+/g, '')}</span>}
+                              {task.dueDate && <span className="text-td-text ml-auto">→ {formatPreviewDate(task.dueDate)}</span>}
+                              {task.recurrence && <span className="text-td-faint">↻ {task.recurrence}</span>}
+                            </div>
+                            {task.description && <div className="text-td-faint pl-3 italic">— {task.description}</div>}
                           </div>
                         ))}
                       </div>
@@ -1911,7 +2214,7 @@ export function Ideas() {
                     Upload {getTaskPreview(bulkTasksInput).length}
                   </button>
                   <button
-                    onClick={() => { setIsBulkUploadOpen(false); setBulkTasksInput(""); setIsShoppingList(false); setCommonTag(""); }}
+                    onClick={() => { setIsBulkUploadOpen(false); setBulkTasksInput(""); setIsShoppingList(false); setCommonTag(""); setShowBulkSyntaxHelp(false); }}
                     className="flex-1 py-1.5 border border-td-border text-td-muted text-td-sm hover:bg-td-hover"
                   >
                     Cancel
