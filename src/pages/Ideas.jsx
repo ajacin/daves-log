@@ -1,10 +1,8 @@
 import { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import { useUser } from "../lib/context/user";
 import { useIdeas } from "../lib/context/ideas";
-import { ConfirmationModal } from "../components/ConfirmationModal";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faClock,
   faCheck,
   faEdit,
   faTrash,
@@ -12,33 +10,18 @@ import {
   faFilter,
   faSearch,
   faEllipsisV,
-  faCalendarDay,
-  faCalendarWeek,
-  faCalendar,
-  faCalendarAlt,
-  faCalendarPlus,
-  faExclamationTriangle,
   faShoppingCart,
-  faUser,
   faEye,
   faEyeSlash,
   faTimes,
-  faUpload,
-  faUserClock,
   faChevronLeft,
   faChevronRight,
-  faInfoCircle,
-  faTasks,
-  faLock,
-  faLockOpen,
-  faCopy,
+  faInfoCircle
 } from "@fortawesome/free-solid-svg-icons";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import toast from 'react-hot-toast';
 import React from "react";
 import confetti from 'canvas-confetti';
-import { formatDateForDisplay } from '../lib/utils/dateParser';
-import { SimpleBulkInput } from '../components/SimpleBulkInput';
 
 // Toast configuration to prevent duplicate notifications
 const toastConfig = {
@@ -68,6 +51,35 @@ const PREDEFINED_TAGS = [
   "maintenance", "travel", "social", "hobby", "gift", "appointment", "deadline", "important"
 ];
 
+// Format a Date as YYYY-MM-DD in *local* time (not UTC)
+const toLocalDateString = (date) => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
+
+// Parse a dueDate string to a local-midnight Date for comparison.
+// Handles both "YYYY-MM-DD" and ISO datetime "2026-03-01T00:00:00.000+00:00".
+// IMPORTANT: Always extract the date portion from the string directly,
+// never through new Date() which applies timezone conversion.
+// e.g. "2026-03-01T00:00:00.000+00:00" in EST becomes Feb 28 7pm via new Date(),
+// but the intended date is Mar 1 — so we split on 'T' and parse the date part.
+const parseDueDateToLocal = (dueDateStr) => {
+  if (!dueDateStr) return null;
+  try {
+    // Extract just the YYYY-MM-DD portion, whether it's a plain date or ISO datetime
+    const datePart = dueDateStr.split('T')[0];
+    const [year, month, day] = datePart.split('-').map(Number);
+    if (!year || !month || !day) return null;
+    const d = new Date(year, month - 1, day);
+    if (isNaN(d.getTime())) return null;
+    return d;
+  } catch {
+    return null;
+  }
+};
+
 // Helper function for text rendering with links
 const renderTextWithLinks = (text) => {
   if (!text) return '';
@@ -83,7 +95,7 @@ const renderTextWithLinks = (text) => {
           href={part}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-blue-500 hover:text-blue-600 underline break-all"
+          className="text-td-muted hover:text-td-text underline break-all"
           onClick={(e) => e.stopPropagation()}
         >
           {part}
@@ -100,21 +112,8 @@ const renderTextWithLinks = (text) => {
 
 // Tag component
 function TaskTag({ tag, onRemove, readOnly = false }) {
-  const getTagColor = (tag) => {
-    const tagColors = {
-      urgent: 'bg-red-100 text-red-700',
-      important: 'bg-orange-100 text-orange-700',
-      shopping: 'bg-green-100 text-green-700',
-      work: 'bg-blue-100 text-blue-700',
-      personal: 'bg-purple-100 text-purple-700',
-      home: 'bg-yellow-100 text-yellow-700',
-      health: 'bg-pink-100 text-pink-700',
-    };
-    return tagColors[tag] || 'bg-gray-100 text-gray-700';
-  };
-
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getTagColor(tag)}`}>
+    <span className="inline-flex items-center text-td-xs text-td-faint">
       {tag}
       {!readOnly && onRemove && (
         <button
@@ -122,17 +121,17 @@ function TaskTag({ tag, onRemove, readOnly = false }) {
             e.stopPropagation();
             onRemove(tag);
           }}
-          className="ml-1 text-current hover:text-red-600"
+          className="ml-1 text-td-faint hover:text-td-text"
         >
-          <FontAwesomeIcon icon={faTimes} className="h-3 w-3" />
+          <FontAwesomeIcon icon={faTimes} className="h-2 w-2" />
         </button>
       )}
     </span>
   );
 }
 
-// Quick Add Task Component
-function QuickAddTask({ onAdd, placeholder = "Add a task..." }) {
+// Quick Add Task Component — inline, minimal, TeuxDeux-like
+function QuickAddTask({ onAdd, placeholder = "Add…" }) {
   const [title, setTitle] = useState("");
   const [isExpanded, setIsExpanded] = useState(false);
   const [description, setDescription] = useState("");
@@ -140,15 +139,15 @@ function QuickAddTask({ onAdd, placeholder = "Add a task..." }) {
   const [dueDate, setDueDate] = useState("");
   const [recurrence, setRecurrence] = useState("");
   const [customTagInput, setCustomTagInput] = useState("");
+  const inputRef = useRef(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!title.trim()) return;
 
-    // Auto-assign today's date to recurring tasks if no due date is set
     let finalDueDate = dueDate || null;
     if (!finalDueDate && recurrence) {
-      finalDueDate = new Date().toISOString().split('T')[0]; // Today's date in YYYY-MM-DD format
+      finalDueDate = toLocalDateString(new Date());
     }
 
     const taskData = {
@@ -167,7 +166,25 @@ function QuickAddTask({ onAdd, placeholder = "Add a task..." }) {
       setDueDate("");
       setRecurrence("");
       setCustomTagInput("");
+      // Keep focus in input for fast successive entry
+      if (!isExpanded) {
+        inputRef.current?.focus();
+      }
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !isExpanded && !e.shiftKey) {
+      handleSubmit(e);
+    }
+    if (e.key === 'Escape') {
       setIsExpanded(false);
+      setTitle("");
+      setDescription("");
+      setTags([]);
+      setDueDate("");
+      setRecurrence("");
+      setCustomTagInput("");
     }
   };
 
@@ -189,61 +206,77 @@ function QuickAddTask({ onAdd, placeholder = "Add a task..." }) {
   };
 
   return (
-    <div className="bg-white rounded border border-gray-200 shadow-sm">
+    <div className="border-b border-td-border">
       <form onSubmit={handleSubmit}>
-        <div className="p-2">
+        <div className="py-1.5 px-1">
           <input
+            ref={inputRef}
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            onFocus={() => setIsExpanded(true)}
+            onKeyDown={handleKeyDown}
+            onFocus={() => {}}
             placeholder={placeholder}
-            className="w-full text-xs border-none outline-none resize-none placeholder-gray-400"
+            className="w-full text-td-base border-none outline-none bg-transparent placeholder-td-faint"
           />
-          
+
+          {/* Expand link */}
+          {title.trim() && !isExpanded && (
+            <button
+              type="button"
+              onClick={() => setIsExpanded(true)}
+              className="text-td-xs text-td-faint hover:text-td-muted mt-0.5"
+            >
+              + details
+            </button>
+          )}
+
           {isExpanded && (
-            <div className="mt-2 space-y-2">
+            <div className="mt-2 space-y-2 pb-1">
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Add description..."
-                className="w-full text-xs border border-gray-200 rounded p-1.5 resize-none outline-none focus:border-blue-500"
+                placeholder="Description…"
+                className="w-full text-td-sm border-b border-td-border bg-transparent p-0 resize-none outline-none placeholder-td-faint"
                 rows="2"
               />
-              
+
               {/* Tags */}
               <div>
-                <div className="flex flex-wrap gap-0.5 mb-1">
-                  {tags.map((tag) => (
-                    <span key={tag} className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-medium bg-purple-100 text-purple-700">
-                      {tag}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setTags(tags.filter(t => t !== tag));
-                        }}
-                        className="ml-0.5 text-current hover:text-red-600"
-                      >
-                        <FontAwesomeIcon icon={faTimes} className="h-2 w-2" />
-                      </button>
-                    </span>
-                  ))}
-                </div>
+                {tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-1">
+                    {tags.map((tag) => (
+                      <span key={tag} className="inline-flex items-center text-td-xs text-td-muted">
+                        {tag}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setTags(tags.filter(t => t !== tag));
+                          }}
+                          className="ml-0.5 text-td-faint hover:text-td-text"
+                        >
+                          <FontAwesomeIcon icon={faTimes} className="h-2 w-2" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
                 <input
                   type="text"
                   value={customTagInput}
                   onChange={(e) => setCustomTagInput(e.target.value)}
                   onKeyDown={handleCustomTagAdd}
-                  placeholder="Add tags (press Enter)"
-                  className="w-full text-[10px] border border-gray-200 rounded px-1.5 py-1 outline-none focus:border-blue-500"
+                  placeholder="Tag (enter to add)"
+                  className="w-full text-td-xs border-b border-td-border bg-transparent py-0.5 outline-none placeholder-td-faint"
                 />
-                <div className="flex flex-wrap gap-0.5 mt-1">
+                <div className="flex flex-wrap gap-1 mt-1">
                   {PREDEFINED_TAGS.filter(tag => !tags.includes(tag)).slice(0, 6).map((tag) => (
                     <button
                       key={tag}
                       type="button"
                       onClick={() => handleTagAdd(tag)}
-                      className="px-1.5 py-0.5 text-[9px] bg-gray-100 text-gray-600 rounded hover:bg-gray-200"
+                      className="text-td-xs text-td-faint hover:text-td-muted"
                     >
                       {tag}
                     </button>
@@ -252,17 +285,17 @@ function QuickAddTask({ onAdd, placeholder = "Add a task..." }) {
               </div>
 
               {/* Due Date and Recurrence */}
-              <div className="flex gap-1">
+              <div className="flex gap-2">
                 <input
-                  type="datetime-local"
+                  type="date"
                   value={dueDate}
                   onChange={(e) => setDueDate(e.target.value)}
-                  className="flex-1 text-[10px] border border-gray-200 rounded px-1.5 py-1 outline-none focus:border-blue-500"
+                  className="flex-1 text-td-xs border-b border-td-border bg-transparent py-0.5 outline-none"
                 />
                 <select
                   value={recurrence}
                   onChange={(e) => setRecurrence(e.target.value)}
-                  className="flex-1 text-[10px] border border-gray-200 rounded px-1.5 py-1 outline-none focus:border-blue-500"
+                  className="flex-1 text-td-xs border-b border-td-border bg-transparent py-0.5 outline-none"
                 >
                   <option value="">No repeat</option>
                   <option value="daily">Daily</option>
@@ -271,15 +304,14 @@ function QuickAddTask({ onAdd, placeholder = "Add a task..." }) {
                 </select>
               </div>
 
-              {/* Recurring task notice */}
               {recurrence && !dueDate && (
-                <div className="text-[9px] text-blue-600 bg-blue-50 px-2 py-1 rounded">
-                  💡 This recurring task will be scheduled for today
+                <div className="text-td-xs text-td-muted">
+                  Recurring — starts today
                 </div>
               )}
 
               {/* Actions */}
-              <div className="flex justify-between items-center">
+              <div className="flex justify-between items-center pt-1">
                 <button
                   type="button"
                   onClick={() => {
@@ -291,16 +323,16 @@ function QuickAddTask({ onAdd, placeholder = "Add a task..." }) {
                     setRecurrence("");
                     setCustomTagInput("");
                   }}
-                  className="text-[10px] text-gray-500 hover:text-gray-700"
+                  className="text-td-xs text-td-faint hover:text-td-text"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={!title.trim()}
-                  className="px-2 py-1 bg-blue-500 text-white text-[10px] rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="text-td-xs text-td-text border border-td-border rounded px-2 py-0.5 hover:bg-td-hover disabled:opacity-30 disabled:cursor-not-allowed"
                 >
-                  Add Task
+                  Add
                 </button>
               </div>
             </div>
@@ -311,9 +343,10 @@ function QuickAddTask({ onAdd, placeholder = "Add a task..." }) {
   );
 }
 
-// Task Item Component
-function TaskItem({ task, onToggleComplete, onEdit, onDelete, onQuickDateUpdate, isProcessing, onOpenDetail }) {
+// Task Row Component — flat row, not a card
+function TaskItem({ task, onToggleComplete, onEdit, onDelete, onQuickDateUpdate, isProcessing }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
   const menuRef = useRef(null);
 
   useEffect(() => {
@@ -326,180 +359,157 @@ function TaskItem({ task, onToggleComplete, onEdit, onDelete, onQuickDateUpdate,
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && !task.completed;
-  const isDueToday = task.dueDate && new Date(task.dueDate).toDateString() === new Date().toDateString();
+  const isOverdue = task.dueDate && (() => {
+    const dueDate = parseDueDateToLocal(task.dueDate);
+    if (!dueDate) return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return dueDate < today;
+  })() && !task.completed;
+
+  const handleDragStart = (e) => {
+    e.dataTransfer.setData('text/plain', JSON.stringify({
+      taskId: task.$id,
+      sourceColumn: task.dueDate || 'unscheduled'
+    }));
+    e.dataTransfer.effectAllowed = 'move';
+    e.currentTarget.style.opacity = '0.4';
+  };
+
+  const handleDragEnd = (e) => {
+    e.currentTarget.style.opacity = '1';
+  };
+
+  const formatDate = (dateStr) => {
+    try {
+      const d = parseDueDateToLocal(dateStr);
+      if (!d) return '';
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    } catch { return ''; }
+  };
 
   return (
-    <div className={`bg-white rounded border transition-all hover:shadow-sm cursor-pointer ${
-      task.completed ? 'opacity-75 border-gray-200' : 
-      isOverdue ? 'border-red-200 bg-red-50' : 
-      isDueToday ? 'border-yellow-200 bg-yellow-50' : 'border-gray-200'
-    }`}>
-      <div className="p-2">
-        <div className="flex items-start gap-2" onClick={() => onOpenDetail(task)}>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleComplete(task.$id);
-            }}
-            disabled={isProcessing}
-            className={`mt-0.5 w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${
-              isProcessing 
-                ? 'opacity-50 cursor-not-allowed border-gray-300' 
-                : task.completed 
-                  ? 'bg-green-500 border-green-500 text-white' 
-                  : 'border-gray-300 hover:border-green-500'
-            }`}
-          >
-            {task.completed && <FontAwesomeIcon icon={faCheck} className="h-2.5 w-2.5" />}
-          </button>
-          
-          <div className="flex-1 min-w-0">
-            <div 
-              className={`font-medium text-sm sm:text-xs ${task.completed ? 'line-through text-gray-500' : 'text-gray-900'} truncate`}
-              title={task.title}
-            >
-              {task.title}
-            </div>
-            
-            {task.description && (
-              <div className="mt-1">
-                <div className="text-gray-600 text-xs sm:text-[10px] break-words leading-relaxed line-clamp-2">
-                  {renderTextWithLinks(task.description)}
-                </div>
-              </div>
-            )}
-            
-            {/* Tags */}
-            {task.tags && task.tags.length > 0 && (
-              <div className="flex flex-wrap gap-0.5 mt-1">
-                {task.tags.slice(0, 3).map((tag) => (
-                  <span key={tag} className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs sm:text-[9px] font-medium bg-gray-100 text-gray-700">
-                    {tag}
-                  </span>
-                ))}
-                {task.tags.length > 3 && (
-                  <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs sm:text-[9px] font-medium bg-gray-100 text-gray-500">
-                    +{task.tags.length - 3}
-                  </span>
-                )}
-              </div>
-            )}
-            
-            {/* Due Date */}
-            {task.dueDate && (
-              <div className={`text-xs sm:text-[10px] mt-1 flex items-center gap-1 ${
-                isOverdue ? 'text-red-600' : isDueToday ? 'text-yellow-600' : 'text-gray-500'
-              }`}>
-                <FontAwesomeIcon icon={faClock} className="h-2.5 w-2.5" />
-                {new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                {task.recurrence && (
-                  <span className="ml-1 px-1 py-0.5 bg-blue-100 text-blue-600 rounded-full flex items-center gap-0.5">
-                    <FontAwesomeIcon icon={faSync} className="h-2 w-2" />
-                    {task.recurrence.charAt(0).toUpperCase()}
-                  </span>
-                )}
-              </div>
-            )}
-            
-            {/* Quick Actions */}
-            {!task.completed && (
-              <div className="flex gap-1 mt-1 flex-wrap">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onQuickDateUpdate(task.$id, 'today');
-                  }}
-                  className="text-xs sm:text-[9px] px-1.5 py-0.5 bg-blue-100 text-blue-600 rounded hover:bg-blue-200"
-                >
-                  Today
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onQuickDateUpdate(task.$id, 'tomorrow');
-                  }}
-                  className="text-xs sm:text-[9px] px-1.5 py-0.5 bg-green-100 text-green-600 rounded hover:bg-green-200"
-                >
-                  Tomorrow
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onQuickDateUpdate(task.$id, 'weekend');
-                  }}
-                  className="text-xs sm:text-[9px] px-1.5 py-0.5 bg-pink-100 text-pink-600 rounded hover:bg-pink-200"
-                >
-                  This Weekend
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onQuickDateUpdate(task.$id, 'week');
-                  }}
-                  className="text-xs sm:text-[9px] px-1.5 py-0.5 bg-purple-100 text-purple-600 rounded hover:bg-purple-200"
-                >
-                  In a Week
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onQuickDateUpdate(task.$id, 'month');
-                  }}
-                  className="text-xs sm:text-[9px] px-1.5 py-0.5 bg-orange-100 text-orange-600 rounded hover:bg-orange-200"
-                >
-                  In a Month
-                </button>
-              </div>
-            )}
-          </div>
-          
-          <div className="relative" ref={menuRef}>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsMenuOpen(!isMenuOpen);
-              }}
-              className="p-0.5 text-gray-400 hover:text-gray-600 rounded"
-            >
-              <FontAwesomeIcon icon={faEllipsisV} className="h-2.5 w-2.5" />
-            </button>
-            
-            {isMenuOpen && (
-              <div className="absolute right-0 top-5 bg-white border border-gray-200 rounded shadow-lg z-10 py-1 min-w-[100px]">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEdit(task);
-                    setIsMenuOpen(false);
-                  }}
-                  className="w-full text-left px-2 py-1 text-sm sm:text-xs text-gray-700 hover:bg-gray-100 flex items-center gap-1"
-                >
-                  <FontAwesomeIcon icon={faEdit} className="h-2.5 w-2.5" />
-                  Edit
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDelete(task.$id);
-                    setIsMenuOpen(false);
-                  }}
-                  className="w-full text-left px-2 py-1 text-sm sm:text-xs text-red-600 hover:bg-red-50 flex items-center gap-1"
-                >
-                  <FontAwesomeIcon icon={faTrash} className="h-2.5 w-2.5" />
-                  Delete
-                </button>
-              </div>
-            )}
-          </div>
+    <div
+      draggable={!task.completed}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      className={`group flex items-start gap-2 py-1.5 px-2 transition-colors border-b border-td-border ${
+        task.completed ? 'opacity-55' : ''
+      } ${!task.completed ? 'cursor-move' : 'cursor-default'} hover:bg-td-hover`}
+    >
+      {/* Checkbox — small ring */}
+      <button
+        onClick={() => onToggleComplete(task.$id)}
+        disabled={isProcessing}
+        className={`mt-0.5 w-3.5 h-3.5 rounded-full border flex-shrink-0 flex items-center justify-center transition-colors ${
+          isProcessing
+            ? 'opacity-50 cursor-not-allowed border-td-border'
+            : task.completed
+              ? 'border-td-muted bg-td-muted'
+              : 'border-td-border-strong hover:border-td-text'
+        }`}
+      >
+        {task.completed && (
+          <FontAwesomeIcon icon={faCheck} className="h-2 w-2 text-white" />
+        )}
+      </button>
+
+      {/* Main content */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-baseline gap-2">
+          <span className={`text-td-base ${task.completed ? 'line-through text-td-faint' : 'text-td-text'}`}>
+            {task.title}
+          </span>
+
+          {/* Inline meta: date + recurrence */}
+          {task.dueDate && (
+            <span className={`text-td-xs flex-shrink-0 ${isOverdue ? 'text-red-500' : 'text-td-faint'}`}>
+              {formatDate(task.dueDate)}
+              {task.recurrence && (
+                <span className="ml-0.5">
+                  <FontAwesomeIcon icon={faSync} className="h-2 w-2" />
+                </span>
+              )}
+            </span>
+          )}
+
+          {/* Inline tags */}
+          {task.tags && task.tags.length > 0 && (
+            <span className="text-td-xs text-td-faint flex-shrink-0 hidden sm:inline">
+              {task.tags.slice(0, 2).join(', ')}
+              {task.tags.length > 2 && ` +${task.tags.length - 2}`}
+            </span>
+          )}
         </div>
+
+        {/* Description — subtle, one line */}
+        {task.description && (
+          <div className="text-td-xs text-td-faint truncate mt-0.5">
+            {renderTextWithLinks(task.description)}
+          </div>
+        )}
+
+        {/* Hover actions — move shortcuts */}
+        {!task.completed && isHovered && (
+          <div className="flex gap-2 mt-1">
+            {[
+              { label: 'Today', key: 'today' },
+              { label: 'Tomorrow', key: 'tomorrow' },
+              { label: '+7d', key: 'week' },
+              { label: '+30d', key: 'month' },
+            ].map(({ label, key }) => (
+              <button
+                key={key}
+                onClick={() => onQuickDateUpdate(task.$id, key)}
+                className="text-td-xs text-td-faint hover:text-td-text transition-colors"
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* 3-dot menu — visible on hover */}
+      <div className="relative flex-shrink-0" ref={menuRef}>
+        <button
+          onClick={() => setIsMenuOpen(!isMenuOpen)}
+          className={`p-0.5 text-td-faint hover:text-td-text transition-opacity ${
+            isHovered || isMenuOpen ? 'opacity-100' : 'opacity-0'
+          }`}
+        >
+          <FontAwesomeIcon icon={faEllipsisV} className="h-3 w-3" />
+        </button>
+
+        {isMenuOpen && (
+          <div className="absolute right-0 top-5 bg-white border border-td-border z-10 py-0.5 min-w-[80px]">
+            <button
+              onClick={() => { onEdit(task); setIsMenuOpen(false); }}
+              className="w-full text-left px-2 py-1 text-td-sm text-td-text hover:bg-td-hover flex items-center gap-1.5"
+            >
+              <FontAwesomeIcon icon={faEdit} className="h-2.5 w-2.5 text-td-muted" />
+              Edit
+            </button>
+            <button
+              onClick={() => { onDelete(task.$id); setIsMenuOpen(false); }}
+              className="w-full text-left px-2 py-1 text-td-sm text-red-500 hover:bg-td-hover flex items-center gap-1.5"
+            >
+              <FontAwesomeIcon icon={faTrash} className="h-2.5 w-2.5" />
+              Delete
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-// Timeline Column Component
-function TimelineColumn({ title, subtitle, tasks, onAddTask, type, targetDate, isToday = false, isOverdue = false, processingTasks, hideMobileHeader = false, onOpenDetail, ...taskActions }) {
+// Timeline Column Component — minimal, grid-like
+function TimelineColumn({ title, subtitle, tasks, onAddTask, type, targetDate, isToday = false, isOverdue = false, processingTasks, hideMobileHeader = false, onTaskDrop, ...taskActions }) {
+  const [isDragOver, setIsDragOver] = useState(false);
+
   const handleAddTask = async (taskData) => {
     if (type === 'unscheduled') {
       return await onAddTask(taskData);
@@ -507,74 +517,82 @@ function TimelineColumn({ title, subtitle, tasks, onAddTask, type, targetDate, i
     return await onAddTask(taskData, targetDate);
   };
 
-  const getColumnStyle = () => {
-    if (isOverdue) return 'bg-red-50 border-red-200';
-    if (isToday) return 'bg-blue-50 border-blue-200';
-    return 'bg-white border-gray-200';
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setIsDragOver(true);
   };
 
-  const getHeaderStyle = () => {
-    if (isOverdue) return 'bg-red-100 border-red-200';
-    if (isToday) return 'bg-blue-100 border-blue-200';
-    if (type === 'unscheduled') return 'bg-gray-100 border-gray-200';
-    return 'bg-gray-50 border-gray-200';
+  const handleDragLeave = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX;
+    const y = e.clientY;
+    if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
+      setIsDragOver(false);
+    }
   };
 
-  const getTitleStyle = () => {
-    if (isOverdue) return 'text-red-800';
-    if (isToday) return 'text-blue-800';
-    return 'text-gray-900';
-  };
-
-  const getSubtitleStyle = () => {
-    if (isOverdue) return 'text-red-600';
-    if (isToday) return 'text-blue-600';
-    return 'text-gray-600';
+  const handleDrop = async (e) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    try {
+      const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+      const { taskId } = data;
+      if (onTaskDrop) {
+        await onTaskDrop(taskId, type, targetDate);
+      }
+    } catch (error) {
+      console.error('Error handling drop:', error);
+    }
   };
 
   return (
-    <div className={`flex-1 min-w-[280px] lg:min-w-[280px] w-full rounded-lg ${hideMobileHeader ? 'border-0 shadow-none' : 'border shadow-sm'} ${getColumnStyle()}`}>
-      {/* Column Header - Hidden in mobile navigation mode */}
+    <div
+      className={`flex-1 min-w-[220px] w-full bg-td-bg border-r border-td-border last:border-r-0 transition-colors ${
+        isDragOver ? 'bg-td-hover' : ''
+      }`}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      {/* Column Header */}
       {!hideMobileHeader && (
-        <div className={`p-3 border-b ${getHeaderStyle()}`}>
-          <div className="text-center">
-            <div className={`text-sm sm:text-xs font-bold ${getTitleStyle()}`}>
-              {title}
+        <div className="px-3 py-2 border-b border-td-border">
+          <div className="text-td-header uppercase font-medium text-td-muted tracking-wider">
+            {title}
+          </div>
+          {subtitle && (
+            <div className="text-td-xs text-td-faint">
+              {subtitle}
             </div>
-            {subtitle && (
-              <div className={`text-xs sm:text-[10px] font-medium ${getSubtitleStyle()}`}>
-                {subtitle}
-              </div>
-            )}
-            <div className="text-xs sm:text-[10px] text-gray-500 mt-0.5">
-              ({tasks.length} task{tasks.length !== 1 ? 's' : ''})
-            </div>
+          )}
+          <div className="text-td-xs text-td-faint">
+            {tasks.length}
           </div>
         </div>
       )}
-      
-      {/* Tasks */}
-      <div className={`p-2 space-y-1.5 min-h-[400px] max-h-[600px] overflow-y-auto ${hideMobileHeader ? 'pt-4' : ''}`}>
-        {/* Quick Add */}
-        <QuickAddTask 
-          onAdd={handleAddTask} 
-          placeholder={`Add to ${title.toLowerCase()}...`} 
+
+      {/* Content */}
+      <div className={`min-h-[300px] max-h-[calc(100vh-140px)] overflow-y-auto ${hideMobileHeader ? 'pt-2' : ''}`}>
+        {/* Inline Add */}
+        <QuickAddTask
+          onAdd={handleAddTask}
+          placeholder="Add…"
         />
-        
+
         {/* Task List */}
         {tasks.map((task) => (
           <TaskItem
             key={task.$id}
             task={task}
             isProcessing={processingTasks?.has(task.$id)}
-            onOpenDetail={onOpenDetail}
             {...taskActions}
           />
         ))}
-        
+
         {tasks.length === 0 && (
-          <div className="text-center py-6 text-gray-400 text-xs">
-            No tasks yet
+          <div className="py-8 px-3 text-td-faint text-td-xs text-center">
+            No tasks
           </div>
         )}
       </div>
@@ -592,6 +610,7 @@ export function Ideas() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+  const [showTimezoneWarning, setShowTimezoneWarning] = useState(false);
   const [hideCompleted, setHideCompleted] = useState(true);
   const [selectedTags, setSelectedTags] = useState([]);
   const [timeFilter, setTimeFilter] = useState(null); // 'today', 'tomorrow', 'overdue', 'week', 'next_week', 'next_month'
@@ -603,8 +622,6 @@ export function Ideas() {
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
   const [bulkTasksInput, setBulkTasksInput] = useState("");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [deleteId, setDeleteId] = useState(null);
   const [editingTask, setEditingTask] = useState(null);
   const [editTitle, setEditTitle] = useState("");
   const [editDescription, setEditDescription] = useState("");
@@ -613,15 +630,6 @@ export function Ideas() {
   const [editRecurrence, setEditRecurrence] = useState("");
   const [editCustomTagInput, setEditCustomTagInput] = useState("");
   const [showRecurringInfo, setShowRecurringInfo] = useState(false);
-  const [detailModalOpen, setDetailModalOpen] = useState(false);
-  const [detailTask, setDetailTask] = useState(null);
-  const [detailLocked, setDetailLocked] = useState(true);
-  const [detailTitle, setDetailTitle] = useState("");
-  const [detailDescription, setDetailDescription] = useState("");
-  const [detailTags, setDetailTags] = useState([]);
-  const [detailDueDate, setDetailDueDate] = useState("");
-  const [detailRecurrence, setDetailRecurrence] = useState("");
-  const [detailCustomTagInput, setDetailCustomTagInput] = useState("");
   
   // Debounce mechanism to prevent rapid-fire clicks
   const [processingTasks, setProcessingTasks] = useState(new Set());
@@ -666,6 +674,46 @@ export function Ideas() {
       colors: ['#10B981', '#3B82F6', '#8B5CF6']
     });
   };
+
+  // Check for timezone/date shift issues
+  const checkForTimezoneIssues = useCallback(() => {
+    if (!ideas.current || ideas.current.length === 0) return false;
+
+    let hasIssues = false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    ideas.current.forEach(task => {
+      if (task.dueDate) {
+        try {
+          // Check if task due date parsing creates unexpected results
+          const dueDate1 = new Date(task.dueDate);
+          const dueDate2 = new Date(task.dueDate + 'T00:00:00');
+          
+          // If the dates differ by a day, there's likely a timezone issue
+          const diff = Math.abs(dueDate1.getTime() - dueDate2.getTime());
+          if (diff >= 24 * 60 * 60 * 1000) { // 24 hours in milliseconds
+            hasIssues = true;
+          }
+
+          // Also check for "Invalid Date" scenarios
+          if (isNaN(dueDate1.getTime()) || task.dueDate.includes('Invalid')) {
+            hasIssues = true;
+          }
+        } catch (error) {
+          hasIssues = true;
+        }
+      }
+    });
+
+    return hasIssues;
+  }, [ideas]);
+
+  // Check for timezone issues whenever tasks change
+  useEffect(() => {
+    const hasIssues = checkForTimezoneIssues();
+    setShowTimezoneWarning(hasIssues);
+  }, [checkForTimezoneIssues]);
 
   // Date helper functions
   const getDateInfo = useCallback(() => {
@@ -780,7 +828,7 @@ export function Ideas() {
       nextMonthStart.setMonth(nextMonthStart.getMonth() + 1);
 
       filtered = filtered.filter(task => {
-        const taskDate = new Date(task.dueDate || task.entryDate);
+        const taskDate = parseDueDateToLocal(task.dueDate || task.entryDate) || new Date(0);
         
         switch (timeFilter) {
           case 'today':
@@ -894,8 +942,11 @@ export function Ideas() {
           return;
         }
 
-        const dueDate = new Date(task.dueDate);
-        dueDate.setHours(0, 0, 0, 0);
+        const dueDate = parseDueDateToLocal(task.dueDate);
+        if (!dueDate) {
+          periods.unscheduled.push(task);
+          return;
+        }
 
         // Overdue tasks (all past due tasks including yesterday)
         if (dueDate < today) {
@@ -971,15 +1022,10 @@ export function Ideas() {
     return [];
   }, [viewMode, organizedTasks, dateInfo, formatColumnHeader, priorityTags]);
 
-  // Filter columns to only show those with tasks
-  const filteredColumns = useMemo(() => {
-    return currentColumns.filter(column => column.tasks.length > 0);
-  }, [currentColumns]);
-
   // Mobile navigation functions
   const navigateColumn = (direction) => {
     const newIndex = currentColumnIndex + direction;
-    if (newIndex >= 0 && newIndex < filteredColumns.length) {
+    if (newIndex >= 0 && newIndex < currentColumns.length) {
       setCurrentColumnIndex(newIndex);
     }
   };
@@ -989,33 +1035,20 @@ export function Ideas() {
     setCurrentColumnIndex(0);
   }, [viewMode]);
 
-  // Reset column index when filtered columns change
-  useEffect(() => {
-    if (currentColumnIndex >= filteredColumns.length) {
-      setCurrentColumnIndex(0);
-    }
-  }, [filteredColumns, currentColumnIndex]);
-
   // Task actions
   const handleAddTask = async (taskData, targetDate = null) => {
     let dueDate = taskData.dueDate;
     
     if (targetDate instanceof Date) {
       const date = new Date(targetDate);
-      date.setHours(23, 59, 0, 0);
-    // Store full ISO with timezone to avoid local/UTC shift issues
-    dueDate = date.toISOString();
+      dueDate = toLocalDateString(date);
     } else if (targetDate === 'today') {
       const date = new Date();
-      date.setHours(23, 59, 0, 0);
-    // Store full ISO with timezone to avoid local/UTC shift issues
-    dueDate = date.toISOString();
+      dueDate = toLocalDateString(date);
     } else if (targetDate === 'tomorrow') {
       const date = new Date();
       date.setDate(date.getDate() + 1);
-      date.setHours(23, 59, 0, 0);
-    // Store full ISO with timezone to avoid local/UTC shift issues
-    dueDate = date.toISOString();
+      dueDate = toLocalDateString(date);
     }
 
     const success = await ideas.add({
@@ -1099,36 +1132,45 @@ export function Ideas() {
                                       task.title?.toLowerCase().includes('due');
             
             if (isDateSensitiveTask && task.dueDate) {
-              const dueDate = new Date(task.dueDate);
-              let nextDate;
-              
-              // Calculate next date based on recurrence pattern
-              switch (task.recurrence) {
-                case 'monthly':
-                  nextDate = new Date(dueDate);
-                  nextDate.setMonth(nextDate.getMonth() + 1);
-                  break;
-                case 'quarterly':
-                  nextDate = new Date(dueDate);
-                  nextDate.setMonth(nextDate.getMonth() + 3);
-                  break;
-                case 'yearly':
-                default:
-                  nextDate = new Date(dueDate);
-                  nextDate.setFullYear(nextDate.getFullYear() + 1);
-                  break;
-              }
-              
-              const nextDateStr = nextDate.toLocaleDateString('en-US', { 
-                month: 'short', 
-                day: 'numeric', 
-                year: 'numeric' 
-              });
-              
-              if (isBirthdayTask) {
-                message = `🎂 ${task.title} completed! Next reminder: ${nextDateStr}`;
-              } else {
-                message = `💳 ${task.title} completed! Next due: ${nextDateStr}`;
+              try {
+                const dueDate = parseDueDateToLocal(task.dueDate);
+                if (!dueDate) {
+                  message = "🎉 Task completed!";
+                } else {
+                  let nextDate;
+                  
+                  // Calculate next date based on recurrence pattern
+                  switch (task.recurrence) {
+                    case 'monthly':
+                      nextDate = new Date(dueDate);
+                      nextDate.setMonth(nextDate.getMonth() + 1);
+                      break;
+                    case 'quarterly':
+                      nextDate = new Date(dueDate);
+                      nextDate.setMonth(nextDate.getMonth() + 3);
+                      break;
+                    case 'yearly':
+                    default:
+                      nextDate = new Date(dueDate);
+                      nextDate.setFullYear(nextDate.getFullYear() + 1);
+                      break;
+                  }
+                  
+                  const nextDateStr = nextDate.toLocaleDateString('en-US', { 
+                    month: 'short', 
+                    day: 'numeric', 
+                    year: 'numeric' 
+                  });
+                  
+                  if (isBirthdayTask) {
+                    message = `🎂 ${task.title} completed! Next reminder: ${nextDateStr}`;
+                  } else {
+                    message = `💳 ${task.title} completed! Next due: ${nextDateStr}`;
+                  }
+                }
+              } catch (error) {
+                console.error('Error processing date for notification:', error);
+                message = "🎉 Task completed!";
               }
             } else {
               // Regular recurring task
@@ -1191,7 +1233,7 @@ export function Ideas() {
     setEditTitle(task.title);
     setEditDescription(task.description || "");
     setEditTags(task.tags || []);
-    setEditDueDate(task.dueDate ? new Date(task.dueDate).toISOString().slice(0, 16) : "");
+    setEditDueDate(task.dueDate ? task.dueDate.split('T')[0] : "");
     setEditRecurrence(task.recurrence || "");
     setEditCustomTagInput("");
     setIsEditModalOpen(true);
@@ -1202,70 +1244,35 @@ export function Ideas() {
 
     // Auto-assign today's date to recurring tasks if no due date is set
     let finalEditDueDate = editDueDate || null;
-    // Convert datetime-local string to full ISO with timezone
-    if (finalEditDueDate) {
-      finalEditDueDate = new Date(finalEditDueDate).toISOString();
-    }
     if (!finalEditDueDate && editRecurrence) {
-      finalEditDueDate = new Date().toISOString().split('T')[0]; // Today's date in YYYY-MM-DD format
+      finalEditDueDate = toLocalDateString(new Date());
     }
 
-    // Check if this is a duplicate operation (no $id means it's a new task)
-    if (!editingTask.$id) {
-      // This is a duplicate - create new task
-      const success = await ideas.add({
-        title: editTitle.trim(),
-        description: editDescription.trim(),
-        tags: editTags,
-        dueDate: finalEditDueDate,
-        recurrence: editRecurrence || null,
-        completed: false,
-        entryDate: new Date().toISOString(),
-        userId: user.current.$id,
-        userName: user.current.name,
-      });
-
-      if (success) {
-        toast.success("Task duplicated successfully!");
-        setIsEditModalOpen(false);
-      } else {
-        toast.error("Failed to duplicate task");
-      }
-    } else {
-      // This is an update - modify existing task
-      const success = await ideas.update(editingTask.$id, {
-        title: editTitle.trim(),
-        description: editDescription.trim(),
-        tags: editTags,
+    const success = await ideas.update(editingTask.$id, {
+      title: editTitle.trim(),
+      description: editDescription.trim(),
+      tags: editTags,
       dueDate: finalEditDueDate,
-        recurrence: editRecurrence || null,
-      });
+      recurrence: editRecurrence || null,
+    });
 
-      if (success) {
-        toast.success("Task updated successfully!");
-        setIsEditModalOpen(false);
-      } else {
-        toast.error("Failed to update task");
-      }
+    if (success) {
+      toast.success("Task updated successfully!");
+      setIsEditModalOpen(false);
+    } else {
+      toast.error("Failed to update task");
     }
   };
 
   const handleDeleteTask = async (taskId) => {
-    setDeleteModalOpen(true);
-    setDeleteId(taskId);
-  };
+    if (!window.confirm("Are you sure you want to delete this task?")) return;
 
-  const handleDeleteConfirm = async () => {
-    if (deleteId) {
-      const success = await ideas.remove(deleteId);
-      if (success) {
-        toast.success("Task deleted successfully!");
-      } else {
-        toast.error("Failed to delete task");
-      }
+    const success = await ideas.remove(taskId);
+    if (success) {
+      toast.success("Task deleted successfully!");
+    } else {
+      toast.error("Failed to delete task");
     }
-    setDeleteModalOpen(false);
-    setDeleteId(null);
   };
 
   const handleQuickDateUpdate = async (taskId, dateType) => {
@@ -1275,33 +1282,20 @@ export function Ideas() {
     let dueDate = new Date();
     
     if (dateType === 'today') {
-      dueDate.setHours(23, 59, 0, 0);
+      // Keep current date
     } else if (dateType === 'tomorrow') {
       dueDate.setDate(dueDate.getDate() + 1);
-      dueDate.setHours(23, 59, 0, 0);
     } else if (dateType === 'week') {
       dueDate.setDate(dueDate.getDate() + 7);
-      dueDate.setHours(23, 59, 0, 0);
     } else if (dateType === 'month') {
       dueDate.setMonth(dueDate.getMonth() + 1);
-      dueDate.setHours(23, 59, 0, 0);
     } else if (dateType === 'weekend') {
-      // Calculate days until Friday (day 5, where 0=Sunday)
-      const currentDay = dueDate.getDay()
-      let daysUntilFriday = 5 - currentDay
-      
-      // If today is Friday or after (Sat/Sun), get next Friday
-      if (daysUntilFriday <= 0) {
-        daysUntilFriday += 7
-      }
-      
-      dueDate.setDate(dueDate.getDate() + daysUntilFriday)
-      dueDate.setHours(18, 0, 0, 0) // 6:00 PM
+      const daysUntilSaturday = (6 - dueDate.getDay() + 7) % 7;
+      dueDate.setDate(dueDate.getDate() + daysUntilSaturday);
     }
 
     const success = await ideas.update(taskId, {
-      // Store full ISO with timezone to avoid off-by-one day issues
-      dueDate: dueDate.toISOString()
+      dueDate: toLocalDateString(dueDate)
     });
 
     if (success) {
@@ -1310,7 +1304,7 @@ export function Ideas() {
         'tomorrow': 'tomorrow', 
         'week': 'in a week',
         'month': 'in a month',
-        'weekend': 'this weekend (Friday 6pm)'
+        'weekend': 'this weekend'
       };
       toast.success(`Due date updated to ${messageMap[dateType] || dateType}`);
     } else {
@@ -1318,10 +1312,87 @@ export function Ideas() {
     }
   };
 
-  const handleCustomTagAdd = (e, isEdit = false, isDetail = false) => {
+  const handleTaskDrop = async (taskId, columnType, targetDate) => {
+    console.log('🚀 handleTaskDrop called:', { taskId, columnType, targetDate });
+    
+    const task = ideas.current.find(t => t.$id === taskId);
+    if (!task) {
+      console.error('❌ Task not found:', taskId);
+      return;
+    }
+
+    console.log('📋 Current task:', { title: task.title, currentDueDate: task.dueDate });
+
+    let newDueDate = null;
+
+    // Determine the new due date based on the column type
+    if (columnType === 'unscheduled') {
+      newDueDate = null; // Unscheduled tasks have no due date
+    } else if (columnType === 'today') {
+      const today = new Date();
+      newDueDate = toLocalDateString(today);
+    } else if (columnType === 'tomorrow') {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      newDueDate = toLocalDateString(tomorrow);
+    } else if (columnType === 'dayAfterTomorrow') {
+      const dayAfter = new Date();
+      dayAfter.setDate(dayAfter.getDate() + 2);
+      newDueDate = toLocalDateString(dayAfter);
+    } else if (columnType === 'overdue') {
+      // For overdue column, set to yesterday to make it overdue
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      newDueDate = toLocalDateString(yesterday);
+    } else if (targetDate) {
+      // For specific date columns, use the target date
+      if (targetDate instanceof Date) {
+        newDueDate = toLocalDateString(targetDate);
+      } else if (typeof targetDate === 'string') {
+        newDueDate = targetDate.split('T')[0]; // Handle both date and datetime strings
+      }
+    } else {
+      // For columns without specific target dates (remainingWeek, future), keep current date or set to today
+      console.log('⚠️ No target date for column type:', columnType);
+      const today = new Date();
+      newDueDate = toLocalDateString(today);
+    }
+
+    console.log('📅 Calculated newDueDate:', newDueDate);
+    console.log('🔄 Comparison:', { current: task.dueDate, new: newDueDate, same: task.dueDate === newDueDate });
+
+    // Don't update if the date is the same
+    if (task.dueDate === newDueDate) {
+      console.log('⏭️ Skipping update - dates are the same');
+      return;
+    }
+
+    console.log('💾 Updating task with new due date...');
+    const success = await ideas.update(taskId, {
+      dueDate: newDueDate
+    });
+
+    console.log('✅ Update result:', success);
+
+    if (success) {
+      const columnName = columnType === 'unscheduled' ? 'unscheduled' : 
+                        columnType === 'today' ? 'today' :
+                        columnType === 'tomorrow' ? 'tomorrow' :
+                        columnType === 'dayAfterTomorrow' ? 'day after tomorrow' :
+                        columnType === 'overdue' ? 'overdue' :
+                        columnType === 'remainingWeek' ? 'this week' :
+                        columnType === 'future' ? 'future' :
+                        'the selected date';
+      toast.success(`Task moved to ${columnName}!`);
+    } else {
+      toast.error("Failed to move task");
+    }
+  };
+
+  const handleCustomTagAdd = (e, isEdit = false) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      const input = isEdit ? editCustomTagInput : isDetail ? detailCustomTagInput : '';
+      const input = isEdit ? editCustomTagInput : '';
       const tag = input.trim().toLowerCase();
       if (tag) {
         if (isEdit) {
@@ -1329,113 +1400,29 @@ export function Ideas() {
             setEditTags([...editTags, tag]);
           }
           setEditCustomTagInput("");
-        } else if (isDetail) {
-          if (!detailTags.includes(tag)) {
-            setDetailTags([...detailTags, tag]);
-          }
-          setDetailCustomTagInput("");
         }
       }
     }
   };
 
-  const handleOpenDetailModal = (task) => {
-    setDetailTask(task);
-    setDetailTitle(task.title);
-    setDetailDescription(task.description || "");
-    setDetailTags(task.tags || []);
-    // Pre-fill datetime-local control using local time value
-    setDetailDueDate(task.dueDate ? new Date(task.dueDate).toISOString().slice(0, 16) : "");
-    setDetailRecurrence(task.recurrence || "");
-    setDetailCustomTagInput("");
-    setDetailLocked(true);
-    setDetailModalOpen(true);
-  };
-
-  const handleSaveDetailChanges = async () => {
-    if (!detailTask || !detailTitle.trim()) return;
-
-    let finalDueDate = detailDueDate || null;
-    if (!finalDueDate && detailRecurrence) {
-      finalDueDate = new Date().toISOString().split('T')[0];
-    }
-    // Convert datetime-local string to full ISO with timezone when present
-    if (finalDueDate && typeof finalDueDate === 'string' && finalDueDate.length <= 19) {
-      try {
-        finalDueDate = new Date(finalDueDate).toISOString();
-      } catch (e) {}
-    }
-
-    const success = await ideas.update(detailTask.$id, {
-      title: detailTitle.trim(),
-      description: detailDescription.trim(),
-      tags: detailTags,
-      dueDate: finalDueDate,
-      recurrence: detailRecurrence || null,
-    });
-
-    if (success) {
-      toast.success("Task updated successfully!");
-      setDetailLocked(true);
-    } else {
-      toast.error("Failed to update task");
-    }
-  };
-
-  const handleDuplicateTask = () => {
-    if (!detailTask) return;
-    
-    // Open the edit modal with pre-filled data for duplication (no $id means it's a new task)
-    setEditingTask({
-      title: detailTitle.trim() + " (Copy)",
-      description: detailDescription.trim(),
-      tags: detailTags,
-      dueDate: detailDueDate || null,
-      recurrence: detailRecurrence || null,
-      // No $id means this is a duplicate operation
-    });
-    setEditTitle(detailTitle.trim() + " (Copy)");
-    setEditDescription(detailDescription.trim());
-    setEditTags(detailTags);
-    setEditDueDate(detailDueDate || "");
-    setEditRecurrence(detailRecurrence || "");
-    setEditCustomTagInput("");
-    setIsEditModalOpen(true);
-    setDetailModalOpen(false);
-  };
-
-
-  // Enhanced task preview with date parsing
-  const getEnhancedTaskPreview = (input) => {
+  // Bulk upload functionality
+  const getTaskPreview = (input) => {
     return input
       .split('\n')
       .map(task => task.trim())
       .filter(task => task.length > 0)
       .map(task => {
-        // Parse hashtags
         const hashtags = task.match(/#\w+/g) || [];
+        const title = task.replace(/#\w+/g, '').trim();
         const tags = hashtags.map(tag => tag.substring(1));
-        
-        // Parse dates and remove them from title
-        const { processTaskWithDate } = require('../lib/utils/dateParser');
-        const parsedTask = processTaskWithDate(task);
-        
-        return {
-          originalText: task,
-          title: parsedTask.title,
-          tags,
-          hasDate: parsedTask.hasDate,
-          dueDate: parsedTask.dueDate,
-          dateInfo: parsedTask.dateInfo,
-          isPartial: parsedTask.dateInfo?.isPartial || false
-        };
+        return { title, tags };
       })
       .filter(task => task.title.length > 0);
   };
 
   const handleBulkUpload = async () => {
     try {
-      const tasksArray = getEnhancedTaskPreview(bulkTasksInput).map(task => {
+      const tasksArray = getTaskPreview(bulkTasksInput).map(task => {
         let tags = [...task.tags];
         
         // Shopping has priority - add it first if checked
@@ -1451,11 +1438,7 @@ export function Ideas() {
           }
         }
         
-        return { 
-          ...task, 
-          tags,
-          dueDate: task.dueDate ? task.dueDate.toISOString() : null
-        };
+        return { ...task, tags };
       });
 
       if (tasksArray.length === 0) {
@@ -1471,7 +1454,6 @@ export function Ideas() {
           title: task.title,
           description: "",
           entryDate: new Date().toISOString(),
-          dueDate: task.dueDate,
           tags: task.tags,
           completed: false,
         });
@@ -1495,324 +1477,267 @@ export function Ideas() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-gray-500">Loading tasks...</div>
+      <div className="min-h-screen flex items-center justify-center bg-td-bg">
+        <div className="text-td-faint text-td-sm">Loading…</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-2 py-2 sm:px-4 sm:py-4">
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="text-2xl font-bold text-gray-900">Tasks ({filteredTasks.length})</h1>
-            
-            <div className="flex items-center gap-2">
-              {/* Bulk Upload */}
-              <button
-                onClick={() => setIsBulkUploadOpen(true)}
-                className="px-3 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 text-sm flex items-center gap-2"
-              >
-                <FontAwesomeIcon icon={faUpload} className="h-4 w-4" />
-                <span className="hidden sm:inline">Bulk Upload</span>
-              </button>
-              
-              {/* View Mode Toggle */}
-              <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+    <div className="min-h-screen bg-td-bg">
+      {/* Timezone Warning — subtle banner */}
+      {showTimezoneWarning && (
+        <div className="border-b border-td-border px-4 py-2 flex items-center justify-between">
+          <span className="text-td-xs text-td-muted">
+            Some dates may appear shifted due to timezone settings.
+          </span>
+          <button onClick={() => setShowTimezoneWarning(false)} className="text-td-faint hover:text-td-text">
+            <FontAwesomeIcon icon={faTimes} className="h-3 w-3" />
+          </button>
+        </div>
+      )}
+
+      {/* Top Bar — minimal, 44px */}
+      <div className="bg-td-bg border-b border-td-border sticky top-0 z-10">
+        <div className="flex items-center h-11 px-3 gap-3">
+          {/* Left: title + count */}
+          <div className="flex items-baseline gap-1.5 pl-8">
+            <span className="text-td-base font-medium text-td-text">Tasks</span>
+            <span className="text-td-xs text-td-faint">{filteredTasks.length}</span>
+          </div>
+
+          {/* Center: search */}
+          <div className="flex-1 max-w-md mx-auto">
+            <div className="relative">
+              <FontAwesomeIcon icon={faSearch} className="absolute left-2 top-1.5 h-3 w-3 text-td-faint" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search…"
+                className="w-full pl-7 pr-6 py-1 border border-td-border text-td-sm bg-transparent focus:outline-none"
+              />
+              {searchQuery && (
                 <button
-                  onClick={() => setViewMode('timeline')}
-                  className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-                    viewMode === 'timeline' 
-                      ? 'bg-blue-500 text-white' 
-                      : 'text-gray-600 hover:text-gray-800'
-                  }`}
-                  title="Timeline view"
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-2 top-1.5 text-td-faint hover:text-td-text"
                 >
-                  Timeline
+                  <FontAwesomeIcon icon={faTimes} className="h-3 w-3" />
                 </button>
-                <button
-                  onClick={() => setViewMode('tags')}
-                  className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-                    viewMode === 'tags' 
-                      ? 'bg-blue-500 text-white' 
-                      : 'text-gray-600 hover:text-gray-800'
-                  }`}
-                  title="Tag view"
-                >
-                  Tags
-                </button>
-                <button
-                  onClick={() => setViewMode('list')}
-                  className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-                    viewMode === 'list' 
-                      ? 'bg-blue-500 text-white' 
-                      : 'text-gray-600 hover:text-gray-800'
-                  }`}
-                  title="List view"
-                >
-                  List
-                </button>
-              </div>
+              )}
             </div>
           </div>
 
-          {/* Search and Filter Controls */}
-                      <div className="flex flex-col lg:flex-row gap-2 sm:gap-4">
-            {/* Search */}
-            <div className="flex-1">
-              <div className="relative">
-                <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search tasks by title, description, or tags..."
-                  className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500"
-                />
-                {searchQuery && (
-                  <button
-                    onClick={() => setSearchQuery("")}
-                    className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
-                  >
-                    <FontAwesomeIcon icon={faTimes} className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
-            </div>
-            
-            {/* Quick Filter Buttons */}
-            <div className="flex items-center gap-2 flex-wrap">
-              {/* Hide Completed */}
-              <button
-                onClick={() => setHideCompleted(!hideCompleted)}
-                className={`px-3 py-2 rounded-lg text-sm flex items-center gap-2 ${
-                  hideCompleted 
-                    ? 'bg-green-100 text-green-700 hover:bg-green-200' 
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-                title={hideCompleted ? 'Show completed tasks' : 'Hide completed tasks'}
-              >
-                <FontAwesomeIcon icon={hideCompleted ? faEyeSlash : faEye} className="h-4 w-4" />
-                <span className="hidden sm:inline">{hideCompleted ? 'Show Done' : 'Hide Done'}</span>
-              </button>
+          {/* Right: compact text buttons */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsBulkUploadOpen(true)}
+              className="text-td-sm text-td-muted hover:text-td-text"
+            >
+              Upload
+            </button>
 
-              {/* Shopping List */}
-              <button
-                onClick={() => setIsShoppingList(!isShoppingList)}
-                className={`px-3 py-2 rounded-lg text-sm flex items-center gap-2 ${
-                  isShoppingList
-                    ? 'bg-orange-100 text-orange-700 hover:bg-orange-200'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-                title={isShoppingList ? 'Show all tasks' : 'Show shopping list only'}
-              >
-                <FontAwesomeIcon icon={faShoppingCart} className="h-4 w-4" />
-                <span className="hidden sm:inline">{isShoppingList ? 'All Tasks' : 'Shopping'}</span>
-              </button>
-              
-              {/* Advanced Filters */}
-              <button
-                onClick={() => setShowFilters(!showFilters)}
-                className={`px-3 py-2 rounded-lg text-sm flex items-center gap-2 ${
-                  showFilters || selectedTags.length > 0 || timeFilter || userFilter
-                    ? 'bg-purple-100 text-purple-700 hover:bg-purple-200'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                <FontAwesomeIcon icon={faFilter} className="h-4 w-4" />
-                <span className="hidden sm:inline">
-                  Filters
-                  {(selectedTags.length + (timeFilter ? 1 : 0) + (userFilter ? 1 : 0)) > 0 && 
-                    ` (${selectedTags.length + (timeFilter ? 1 : 0) + (userFilter ? 1 : 0)})`
-                  }
-                </span>
-              </button>
+            {/* View toggle — text links */}
+            <div className="flex items-center gap-0.5 border border-td-border px-1 py-0.5">
+              {['timeline', 'tags', 'list'].map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => setViewMode(mode)}
+                  className={`px-1.5 py-0.5 text-td-xs capitalize transition-colors ${
+                    viewMode === mode
+                      ? 'text-td-text font-medium bg-td-hover'
+                      : 'text-td-faint hover:text-td-muted'
+                  }`}
+                >
+                  {mode}
+                </button>
+              ))}
             </div>
+
+            {/* Filters */}
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className={`text-td-sm transition-colors ${
+                showFilters || selectedTags.length > 0 || timeFilter || userFilter
+                  ? 'text-td-text font-medium'
+                  : 'text-td-muted hover:text-td-text'
+              }`}
+            >
+              <FontAwesomeIcon icon={faFilter} className="h-3 w-3" />
+              {(selectedTags.length + (timeFilter ? 1 : 0) + (userFilter ? 1 : 0)) > 0 && (
+                <span className="ml-0.5 text-td-xs">{selectedTags.length + (timeFilter ? 1 : 0) + (userFilter ? 1 : 0)}</span>
+              )}
+            </button>
+
+            {/* Hide/show completed */}
+            <button
+              onClick={() => setHideCompleted(!hideCompleted)}
+              className="text-td-sm text-td-muted hover:text-td-text"
+              title={hideCompleted ? 'Show done' : 'Hide done'}
+            >
+              <FontAwesomeIcon icon={hideCompleted ? faEyeSlash : faEye} className="h-3 w-3" />
+            </button>
+
+            {/* Shopping filter */}
+            <button
+              onClick={() => setIsShoppingList(!isShoppingList)}
+              className={`text-td-sm ${isShoppingList ? 'text-td-text font-medium' : 'text-td-muted hover:text-td-text'}`}
+              title={isShoppingList ? 'Show all' : 'Shopping only'}
+            >
+              <FontAwesomeIcon icon={faShoppingCart} className="h-3 w-3" />
+            </button>
           </div>
-          
-          {/* Advanced Filters Panel */}
-          {showFilters && (
-            <div className="mt-2 p-2 sm:mt-4 sm:p-4 bg-gray-50 rounded-lg space-y-2 sm:space-y-4">
-              {/* Time Filters */}
-              <div>
-                <h3 className="text-sm font-medium text-gray-700 mb-2">Filter by Time</h3>
-                <div className="flex flex-wrap gap-2">
-                  {[
-                    { key: 'today', label: 'Today', icon: faCalendarDay },
-                    { key: 'tomorrow', label: 'Tomorrow', icon: faCalendarPlus },
-                    { key: 'overdue', label: 'Overdue', icon: faExclamationTriangle },
-                    { key: 'week', label: 'This Week', icon: faCalendarWeek },
-                    { key: 'next_week', label: 'Next Week', icon: faCalendarWeek },
-                    { key: 'next_month', label: 'Next Month', icon: faCalendar },
-                  ].map(({ key, label, icon }) => (
-                    <button
-                      key={key}
-                      onClick={() => setTimeFilter(timeFilter === key ? null : key)}
-                      className={`px-3 py-1 rounded-full text-sm flex items-center gap-2 ${
-                        timeFilter === key
-                          ? 'bg-blue-500 text-white'
-                          : 'bg-white text-gray-700 hover:bg-gray-100'
-                      }`}
-                    >
-                      <FontAwesomeIcon icon={icon} className="h-3 w-3" />
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </div>
+        </div>
 
-              {/* User Filters */}
-              <div>
-                <h3 className="text-sm font-medium text-gray-700 mb-2">Filter by User</h3>
-                <div className="flex flex-wrap gap-2">
+        {/* Filters panel — compact */}
+        {showFilters && (
+          <div className="border-t border-td-border px-3 py-2 space-y-2">
+            {/* Time */}
+            <div className="flex items-center gap-1 flex-wrap">
+              <span className="text-td-xs text-td-faint w-12">Time</span>
+              {[
+                { key: 'today', label: 'Today' },
+                { key: 'tomorrow', label: 'Tomorrow' },
+                { key: 'overdue', label: 'Overdue' },
+                { key: 'week', label: 'This Week' },
+                { key: 'next_week', label: 'Next Week' },
+                { key: 'next_month', label: 'Next Month' },
+              ].map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => setTimeFilter(timeFilter === key ? null : key)}
+                  className={`px-2 py-0.5 text-td-xs border transition-colors ${
+                    timeFilter === key
+                      ? 'border-td-text text-td-text'
+                      : 'border-td-border text-td-muted hover:text-td-text'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {/* User */}
+            <div className="flex items-center gap-1 flex-wrap">
+              <span className="text-td-xs text-td-faint w-12">User</span>
+              <button
+                onClick={() => setUserFilter(userFilter === user.current.$id ? null : user.current.$id)}
+                className={`px-2 py-0.5 text-td-xs border transition-colors ${
+                  userFilter === user.current.$id
+                    ? 'border-td-text text-td-text'
+                    : 'border-td-border text-td-muted hover:text-td-text'
+                }`}
+              >
+                Me
+              </button>
+              {Object.values(uniqueUsers).map((userInfo) => (
+                userInfo.id !== user.current.$id && (
                   <button
-                    onClick={() => setUserFilter(userFilter === user.current.$id ? null : user.current.$id)}
-                    className={`px-3 py-1 rounded-full text-sm flex items-center gap-2 ${
-                      userFilter === user.current.$id
-                        ? 'bg-green-500 text-white'
-                        : 'bg-white text-gray-700 hover:bg-gray-100'
+                    key={userInfo.id}
+                    onClick={() => setUserFilter(userFilter === userInfo.id ? null : userInfo.id)}
+                    className={`px-2 py-0.5 text-td-xs border transition-colors ${
+                      userFilter === userInfo.id
+                        ? 'border-td-text text-td-text'
+                        : 'border-td-border text-td-muted hover:text-td-text'
                     }`}
                   >
-                    <FontAwesomeIcon icon={faUserClock} className="h-3 w-3" />
-                    My Tasks
+                    {userInfo.name}
                   </button>
-                  {Object.values(uniqueUsers).map((userInfo) => (
-                    userInfo.id !== user.current.$id && (
-                      <button
-                        key={userInfo.id}
-                        onClick={() => setUserFilter(userFilter === userInfo.id ? null : userInfo.id)}
-                        className={`px-3 py-1 rounded-full text-sm flex items-center gap-2 ${
-                          userFilter === userInfo.id
-                            ? 'bg-green-500 text-white'
-                            : 'bg-white text-gray-700 hover:bg-gray-100'
-                        }`}
-                      >
-                        <FontAwesomeIcon icon={faUser} className="h-3 w-3" />
-                        {userInfo.name}
-                      </button>
-                    )
-                  ))}
-                </div>
-              </div>
-
-              {/* Tag Filters */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-sm font-medium text-gray-700">Filter by Tags</h3>
-                  <button
-                    onClick={() => setShowRecurringInfo(true)}
-                    className="text-blue-500 hover:text-blue-600 p-1 rounded"
-                    title="Learn about special recurring task tags"
-                  >
-                    <FontAwesomeIcon icon={faInfoCircle} className="h-4 w-4" />
-                  </button>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {availableTags.slice(0, 15).map((tag) => (
-                    <button
-                      key={tag}
-                      onClick={() => {
-                        setSelectedTags(prev => 
-                          prev.includes(tag) 
-                            ? prev.filter(t => t !== tag)
-                            : [...prev, tag]
-                        );
-                      }}
-                      className={`px-3 py-1 rounded-full text-sm ${
-                        selectedTags.includes(tag)
-                          ? 'bg-purple-500 text-white'
-                          : 'bg-white text-gray-700 hover:bg-gray-100'
-                      }`}
-                    >
-                      {tag}
-                      <span className="ml-1 text-xs opacity-75">
-                        ({ideas.current.filter(task => task.tags?.includes(tag)).length})
-                      </span>
-                    </button>
-                  ))}
-                </div>
-                
-                {/* Clear Filters */}
-                {(selectedTags.length > 0 || timeFilter || userFilter) && (
-                  <div className="mt-3 pt-3 border-t border-gray-200">
-                    <button
-                      onClick={() => {
-                        setSelectedTags([]);
-                        setTimeFilter(null);
-                        setUserFilter(null);
-                      }}
-                      className="px-3 py-1 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 text-sm"
-                    >
-                      Clear All Filters
-                    </button>
-                  </div>
-                )}
-              </div>
+                )
+              ))}
             </div>
-          )}
-        </div>
+
+            {/* Tags */}
+            <div className="flex items-center gap-1 flex-wrap">
+              <span className="text-td-xs text-td-faint w-12">Tags</span>
+              {availableTags.slice(0, 15).map((tag) => (
+                <button
+                  key={tag}
+                  onClick={() => {
+                    setSelectedTags(prev =>
+                      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+                    );
+                  }}
+                  className={`px-2 py-0.5 text-td-xs border transition-colors ${
+                    selectedTags.includes(tag)
+                      ? 'border-td-text text-td-text'
+                      : 'border-td-border text-td-muted hover:text-td-text'
+                  }`}
+                >
+                  {tag}
+                </button>
+              ))}
+              <button
+                onClick={() => setShowRecurringInfo(true)}
+                className="text-td-faint hover:text-td-muted text-td-xs ml-1"
+                title="Recurring task info"
+              >
+                <FontAwesomeIcon icon={faInfoCircle} className="h-3 w-3" />
+              </button>
+            </div>
+
+            {/* Clear */}
+            {(selectedTags.length > 0 || timeFilter || userFilter) && (
+              <div className="pt-1 border-t border-td-border">
+                <button
+                  onClick={() => { setSelectedTags([]); setTimeFilter(null); setUserFilter(null); }}
+                  className="text-td-xs text-td-muted hover:text-td-text"
+                >
+                  Clear filters
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Main Content */}
-      <div className="max-w-full mx-auto px-2 py-3 sm:px-4 sm:py-6">
-        {/* Task Layout - Timeline, Tags, or List */}
+      <div className="w-full">
         {viewMode === 'timeline' || viewMode === 'tags' ? (
-          <div className="space-y-3 sm:space-y-6">
-            {/* Mobile Navigation - Single Column View */}
+          <>
+            {/* Mobile Navigation — single column */}
             <div className="block lg:hidden">
-              {filteredColumns.length > 0 && (
-                <div className="space-y-2 sm:space-y-4">
-                  {/* Mobile Navigation Header */}
-                  <div className="flex items-center justify-between bg-white rounded-lg border border-gray-200 p-2 sm:p-3 shadow-sm">
+              {currentColumns.length > 0 && (
+                <div>
+                  {/* Mobile nav header */}
+                  <div className="flex items-center justify-between border-b border-td-border px-3 py-2">
                     <button
                       onClick={() => navigateColumn(-1)}
                       disabled={currentColumnIndex === 0}
-                      className="p-2 rounded-lg bg-gray-100 text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-200"
+                      className="p-1 text-td-muted disabled:opacity-30 hover:text-td-text"
                     >
-                      <FontAwesomeIcon icon={faChevronLeft} className="h-4 w-4" />
+                      <FontAwesomeIcon icon={faChevronLeft} className="h-3 w-3" />
                     </button>
-                    
-                    <div className="text-center flex-1 mx-4">
-                      <div className="text-sm font-bold text-gray-900">
-                        {filteredColumns[currentColumnIndex]?.title}
+
+                    <div className="text-center flex-1">
+                      <div className="text-td-header uppercase font-medium text-td-muted tracking-wider">
+                        {currentColumns[currentColumnIndex]?.title}
                       </div>
-                      <div className="text-xs text-gray-500">
-                        {filteredColumns[currentColumnIndex]?.subtitle}
-                      </div>
-                      <div className="text-xs text-gray-400 mt-1">
-                        ({filteredColumns[currentColumnIndex]?.tasks?.length || 0} task{filteredColumns[currentColumnIndex]?.tasks?.length !== 1 ? 's' : ''}) • {currentColumnIndex + 1} of {filteredColumns.length}
+                      <div className="text-td-xs text-td-faint">
+                        {currentColumns[currentColumnIndex]?.subtitle} · {currentColumns[currentColumnIndex]?.tasks?.length || 0} · {currentColumnIndex + 1}/{currentColumns.length}
                       </div>
                     </div>
-                    
+
                     <button
                       onClick={() => navigateColumn(1)}
-                      disabled={currentColumnIndex === filteredColumns.length - 1}
-                      className="p-2 rounded-lg bg-gray-100 text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-200"
+                      disabled={currentColumnIndex === currentColumns.length - 1}
+                      className="p-1 text-td-muted disabled:opacity-30 hover:text-td-text"
                     >
-                      <FontAwesomeIcon icon={faChevronRight} className="h-4 w-4" />
+                      <FontAwesomeIcon icon={faChevronRight} className="h-3 w-3" />
                     </button>
                   </div>
 
-                  {/* Mobile Column Content */}
+                  {/* Mobile column content */}
                   <div className="w-full">
                     {(() => {
-                      const column = filteredColumns[currentColumnIndex];
+                      const column = currentColumns[currentColumnIndex];
                       if (!column) return null;
-                      
                       const getAddTaskHandler = () => {
                         if (column.isTag && column.tagName) {
-                          return (taskData) => handleAddTask({
-                            ...taskData,
-                            tags: [...(taskData.tags || []), column.tagName]
-                          });
+                          return (taskData) => handleAddTask({ ...taskData, tags: [...(taskData.tags || []), column.tagName] });
                         }
-                        return column.targetDate ? 
-                          (taskData) => handleAddTask(taskData, column.targetDate) : 
-                          handleAddTask;
+                        return column.targetDate ? (taskData) => handleAddTask(taskData, column.targetDate) : handleAddTask;
                       };
-                      
                       return (
                         <TimelineColumn
                           title={column.title}
@@ -1825,11 +1750,11 @@ export function Ideas() {
                           isOverdue={column.isOverdue}
                           processingTasks={processingTasks}
                           hideMobileHeader={true}
+                          onTaskDrop={handleTaskDrop}
                           onToggleComplete={handleToggleComplete}
                           onEdit={handleEditTask}
                           onDelete={handleDeleteTask}
                           onQuickDateUpdate={handleQuickDateUpdate}
-                          onOpenDetail={handleOpenDetailModal}
                         />
                       );
                     })()}
@@ -1838,67 +1763,59 @@ export function Ideas() {
               )}
             </div>
 
-            {/* Desktop/Tablet Layout - All Columns */}
-            <div className="hidden lg:block">
-              <div className="flex gap-2 sm:gap-4 overflow-x-auto pb-2 sm:pb-4">
-                {filteredColumns.map((column) => {
-                  const getAddTaskHandler = () => {
-                    if (column.isTag && column.tagName) {
-                      return (taskData) => handleAddTask({
-                        ...taskData,
-                        tags: [...(taskData.tags || []), column.tagName]
-                      });
-                    }
-                    return column.targetDate ? 
-                      (taskData) => handleAddTask(taskData, column.targetDate) : 
-                      handleAddTask;
-                  };
-                  
-                  return (
-                    <TimelineColumn
-                      key={column.key}
-                      title={column.title}
-                      subtitle={column.subtitle}
-                      tasks={column.tasks}
-                      onAddTask={getAddTaskHandler()}
-                      type={column.key}
-                      targetDate={column.targetDate}
-                      isToday={column.isToday}
-                      isOverdue={column.isOverdue}
-                      processingTasks={processingTasks}
-                      onToggleComplete={handleToggleComplete}
-                      onEdit={handleEditTask}
-                      onDelete={handleDeleteTask}
-                      onQuickDateUpdate={handleQuickDateUpdate}
-                      onOpenDetail={handleOpenDetailModal}
-                    />
-                  );
-                })}
-              </div>
+            {/* Desktop — CSS grid of columns */}
+            <div className="hidden lg:flex overflow-x-auto" style={{ height: 'calc(100vh - 44px)' }}>
+              {currentColumns.map((column) => {
+                const getAddTaskHandler = () => {
+                  if (column.isTag && column.tagName) {
+                    return (taskData) => handleAddTask({ ...taskData, tags: [...(taskData.tags || []), column.tagName] });
+                  }
+                  return column.targetDate ? (taskData) => handleAddTask(taskData, column.targetDate) : handleAddTask;
+                };
+                return (
+                  <TimelineColumn
+                    key={column.key}
+                    title={column.title}
+                    subtitle={column.subtitle}
+                    tasks={column.tasks}
+                    onAddTask={getAddTaskHandler()}
+                    type={column.key}
+                    targetDate={column.targetDate}
+                    isToday={column.isToday}
+                    isOverdue={column.isOverdue}
+                    processingTasks={processingTasks}
+                    onTaskDrop={handleTaskDrop}
+                    onToggleComplete={handleToggleComplete}
+                    onEdit={handleEditTask}
+                    onDelete={handleDeleteTask}
+                    onQuickDateUpdate={handleQuickDateUpdate}
+                  />
+                );
+              })}
             </div>
-          </div>
+          </>
         ) : (
           /* List View */
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-gray-900">All Tasks</h2>
-              <QuickAddTask onAdd={(taskData) => handleAddTask(taskData)} placeholder="Add new task..." />
+          <div className="max-w-2xl mx-auto px-3 py-4">
+            <div className="border-b border-td-border pb-2 mb-2">
+              <QuickAddTask onAdd={(taskData) => handleAddTask(taskData)} placeholder="Add…" />
             </div>
-            <div className="grid gap-3">
+            <div>
               {filteredTasks.length > 0 ? (
                 filteredTasks
                   .sort((a, b) => {
-                    // Sort by completion status first
-                    if (a.completed !== b.completed) {
-                      return a.completed ? 1 : -1;
-                    }
-                    // Then by due date
+                    if (a.completed !== b.completed) return a.completed ? 1 : -1;
                     if (a.dueDate && b.dueDate) {
-                      return new Date(a.dueDate) - new Date(b.dueDate);
+                      try {
+                        let aDate, bDate;
+                        aDate = parseDueDateToLocal(a.dueDate);
+                        bDate = parseDueDateToLocal(b.dueDate);
+                        if (!aDate || !bDate) return 0;
+                        return aDate - bDate;
+                      } catch { return 0; }
                     }
                     if (a.dueDate && !b.dueDate) return -1;
                     if (!a.dueDate && b.dueDate) return 1;
-                    // Finally by created date
                     return new Date(b.entryDate || 0) - new Date(a.entryDate || 0);
                   })
                   .map((task) => (
@@ -1910,12 +1827,11 @@ export function Ideas() {
                       onEdit={handleEditTask}
                       onDelete={handleDeleteTask}
                       onQuickDateUpdate={handleQuickDateUpdate}
-                      onOpenDetail={handleOpenDetailModal}
                     />
                   ))
               ) : (
-                <div className="text-center py-8 text-gray-400">
-                  No tasks match your current filters
+                <div className="py-12 text-center text-td-faint text-td-sm">
+                  No tasks match your filters
                 </div>
               )}
             </div>
@@ -1925,202 +1841,82 @@ export function Ideas() {
 
       {/* Bulk Upload Modal */}
       {isBulkUploadOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
-          <div className="bg-white rounded-lg w-full max-w-4xl max-h-[95vh] flex flex-col">
-            <div className="flex justify-between items-center p-4 sm:p-6 border-b border-gray-200">
-              <h3 className="text-lg font-semibold">Enter tasks (one per line)</h3>
-              <button
-                onClick={() => {
-                  setIsBulkUploadOpen(false);
-                  setBulkTasksInput("");
-                  setIsShoppingList(false);
-                  setCommonTag("");
-                }}
-                className="text-gray-400 hover:text-gray-600 p-1"
-              >
-                <FontAwesomeIcon icon={faTimes} className="h-5 w-5" />
-              </button>
-            </div>
-            
-            <div className="flex-1 overflow-hidden flex flex-col lg:flex-row">
-              {/* Left side - Input and options */}
-              <div className="flex-1 p-4 sm:p-6 flex flex-col">
-                <div className="mb-3">
-                  <div className="text-xs text-gray-500 mb-3">
-                    <span className="font-medium">Examples:</span> "Buy groceries tomorrow", "Call dentist next week", "Meeting end of month"
+        <div className="fixed inset-0 bg-black/15 flex items-center justify-center z-50 p-4">
+          <div className="bg-td-bg border border-td-border max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-5">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-td-base font-medium text-td-text">Bulk Upload</h3>
+                <button
+                  onClick={() => { setIsBulkUploadOpen(false); setBulkTasksInput(""); setIsShoppingList(false); setCommonTag(""); }}
+                  className="text-td-faint hover:text-td-text"
+                >
+                  <FontAwesomeIcon icon={faTimes} className="h-3 w-3" />
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <div className="text-td-xs text-td-faint mb-2">
+                    One task per line. Use #tag for tags.
                   </div>
-                  <SimpleBulkInput
+                  <textarea
                     value={bulkTasksInput}
-                    onChange={setBulkTasksInput}
-                    className="w-full flex-1"
-                    rows={6}
-                    placeholder="Enter tasks here..."
+                    onChange={(e) => setBulkTasksInput(e.target.value)}
+                    className="w-full p-2 border border-td-border text-td-sm font-mono bg-transparent focus:outline-none"
+                    rows="8"
+                    placeholder="Buy groceries #walmart&#10;Call dentist #appointment"
                   />
-                </div>
-                
-                <div className="space-y-3 mt-4">
-                  <label className="flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={isShoppingList}
-                      onChange={() => setIsShoppingList(!isShoppingList)}
-                      className="rounded border-gray-300 text-green-600 focus:ring-green-500"
-                    />
-                    <span className="font-medium text-green-700">Tag all tasks as shopping items</span>
+
+                  <label className="flex items-center gap-2 text-td-sm text-td-muted mt-2">
+                    <input type="checkbox" checked={isShoppingList} onChange={() => setIsShoppingList(!isShoppingList)} className="border-td-border" />
+                    Tag all as shopping
                   </label>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Common Tag (optional)
-                    </label>
+
+                  <div className="mt-2">
                     <input
                       type="text"
                       value={commonTag}
                       onChange={(e) => setCommonTag(e.target.value)}
-                      className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-sm"
-                      placeholder="e.g., movieday, vacation, workout"
+                      className="w-full p-1.5 border border-td-border text-td-sm bg-transparent focus:outline-none"
+                      placeholder="Common tag (optional)"
                       maxLength="20"
                     />
-                    <p className="mt-1 text-xs text-gray-500">
-                      Add a tag that will be applied to all tasks in this upload
-                    </p>
                   </div>
-                  
+
+                  {bulkTasksInput && (
+                    <div className="mt-2">
+                      <div className="text-td-xs text-td-muted mb-1">
+                        Preview ({getTaskPreview(bulkTasksInput).length}):
+                      </div>
+                      <div className="border border-td-border p-2 max-h-28 overflow-y-auto">
+                        {getTaskPreview(bulkTasksInput).map((task, index) => (
+                          <div key={index} className="text-td-xs text-td-muted mb-0.5">
+                            {index + 1}. {task.title}
+                            {task.tags.length > 0 && <span className="text-td-faint ml-1">{task.tags.join(', ')}</span>}
+                            {isShoppingList && <span className="text-td-faint ml-1">shopping</span>}
+                            {commonTag.trim() && <span className="text-td-faint ml-1">{commonTag.trim().toLowerCase().replace(/\s+/g, '')}</span>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
-              
-              {/* Right side - Preview */}
-              <div className="flex-1 p-4 sm:p-6 border-t lg:border-t-0 lg:border-l border-gray-200">
-                {getEnhancedTaskPreview(bulkTasksInput).length > 0 ? (
-                  <div className="h-full flex flex-col">
-                    <h4 className="text-sm font-medium text-gray-700 mb-3">
-                      Preview ({getEnhancedTaskPreview(bulkTasksInput).length} tasks):
-                    </h4>
-                    <div className="flex-1 overflow-y-auto border border-gray-200 rounded-lg p-3 bg-gray-50 space-y-2">
-                      {getEnhancedTaskPreview(bulkTasksInput).map((task, index) => (
-                        <div key={index} className="text-xs text-gray-600 border-b border-gray-200 pb-2 last:border-b-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-gray-400">{index + 1}.</span>
-                            <span className="truncate font-medium">{task.title}</span>
-                            {task.hasDate && (
-                              <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded-full text-[9px] font-medium">
-                                Date parsed
-                              </span>
-                            )}
-                          </div>
-                          
-                          {/* Show original text if different from title */}
-                          {task.originalText !== task.title && (
-                            <div className="ml-6 mb-1 text-[10px] text-gray-500">
-                              Original: <span className="italic">{task.originalText}</span>
-                              <span className="ml-2 px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded-full text-[9px]">
-                                Date removed
-                              </span>
-                            </div>
-                          )}
-                          
-                          {/* Date Information */}
-                          {task.hasDate && task.dueDate && (
-                            <div className="ml-6 mb-1 flex items-center gap-1">
-                              <FontAwesomeIcon icon={faCalendarAlt} className="text-blue-500 text-[10px]" />
-                              <span className="text-blue-600 font-medium">
-                                {formatDateForDisplay(task.dueDate)}
-                              </span>
-                              {task.dateInfo?.isRecurring && (
-                                <span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded-full text-[9px]">
-                                  Recurring
-                                </span>
-                              )}
-                            </div>
-                          )}
-                          
-                          {/* Partial Date Match */}
-                          {task.isPartial && (
-                            <div className="ml-6 mb-1 flex items-center gap-1">
-                              <span className="text-orange-600 text-[10px]">⚠️</span>
-                              <span className="text-orange-600 text-[10px]">
-                                Partial date match: "{task.dateInfo?.normalized}"
-                              </span>
-                            </div>
-                          )}
-                          
-                          {/* Tags */}
-                          <div className="ml-6 flex gap-1 flex-wrap">
-                            {task.tags.map((tag, tagIndex) => (
-                              <span key={tagIndex} className="px-1.5 py-0.5 bg-purple-50 text-purple-700 rounded-full text-[10px]">
-                                {tag}
-                              </span>
-                            ))}
-                            {isShoppingList && (
-                              <span className="px-1.5 py-0.5 bg-green-50 text-green-700 rounded-full text-[10px] font-medium">
-                                shopping
-                              </span>
-                            )}
-                            {commonTag.trim() && (
-                              <span className="px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded-full text-[10px]">
-                                {commonTag.trim().toLowerCase().replace(/\s+/g, '')}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="h-full flex items-center justify-center text-gray-500">
-                    <div className="text-center">
-                      <FontAwesomeIcon icon={faTasks} className="h-8 w-8 mb-2 mx-auto" />
-                      <p>No tasks to preview</p>
-                      <p className="text-xs">Start typing to see preview</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-            
-            {/* Action buttons */}
-            <div className="p-4 sm:p-6 border-t border-gray-200 bg-gray-50">
-              <div className="flex flex-col sm:flex-row gap-3">
-                <button
-                  onClick={handleBulkUpload}
-                  className="flex-1 bg-green-500 text-white py-3 px-4 rounded-lg hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 font-medium"
-                  disabled={getEnhancedTaskPreview(bulkTasksInput).length === 0}
-                >
-                  Upload {getEnhancedTaskPreview(bulkTasksInput).length} Tasks
-                </button>
-                <button
-                  onClick={() => {
-                    setIsBulkUploadOpen(false);
-                    setBulkTasksInput("");
-                    setIsShoppingList(false);
-                    setCommonTag("");
-                  }}
-                  className="flex-1 bg-gray-300 text-gray-700 py-3 px-4 rounded-lg hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-300 font-medium"
-                >
-                  Cancel
-                </button>
-              </div>
-              
-              {/* Quick date buttons */}
-              <div className="flex flex-wrap gap-2 mt-3">
-                <button
-                  onClick={() => setBulkTasksInput(prev => prev + (prev ? '\n' : '') + 'Task today')}
-                  className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded-full hover:bg-blue-200"
-                >
-                  Today
-                </button>
-                <button
-                  onClick={() => setBulkTasksInput(prev => prev + (prev ? '\n' : '') + 'Task tomorrow')}
-                  className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded-full hover:bg-blue-200"
-                >
-                  Tomorrow
-                </button>
-                <button
-                  onClick={() => setBulkTasksInput(prev => prev + (prev ? '\n' : '') + 'Task this weekend')}
-                  className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded-full hover:bg-blue-200"
-                >
-                  This Weekend
-                </button>
+
+                <div className="flex gap-2 pt-2 border-t border-td-border">
+                  <button
+                    onClick={handleBulkUpload}
+                    className="flex-1 py-1.5 border border-td-text text-td-text text-td-sm hover:bg-td-hover disabled:opacity-30"
+                    disabled={getTaskPreview(bulkTasksInput).length === 0}
+                  >
+                    Upload {getTaskPreview(bulkTasksInput).length}
+                  </button>
+                  <button
+                    onClick={() => { setIsBulkUploadOpen(false); setBulkTasksInput(""); setIsShoppingList(false); setCommonTag(""); }}
+                    className="flex-1 py-1.5 border border-td-border text-td-muted text-td-sm hover:bg-td-hover"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -2129,57 +1925,42 @@ export function Ideas() {
 
       {/* Edit Task Modal */}
       {isEditModalOpen && editingTask && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">
-                {editingTask && !editingTask.$id ? "Duplicate Task" : "Edit Task"}
-              </h3>
-              <button
-                onClick={() => setIsEditModalOpen(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <FontAwesomeIcon icon={faTimes} className="h-5 w-5" />
-              </button>
-            </div>
-              
-              <div className="space-y-4">
+        <div className="fixed inset-0 bg-black/15 flex items-center justify-center z-50 p-4">
+          <div className="bg-td-bg border border-td-border max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-5">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-td-base font-medium text-td-text">Edit Task</h3>
+                <button onClick={() => setIsEditModalOpen(false)} className="text-td-faint hover:text-td-text">
+                  <FontAwesomeIcon icon={faTimes} className="h-3 w-3" />
+                </button>
+              </div>
+
+              <div className="space-y-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Title
-                  </label>
+                  <label className="block text-td-xs text-td-muted mb-1">Title</label>
                   <input
                     type="text"
                     value={editTitle}
                     onChange={(e) => setEditTitle(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
+                    className="w-full border border-td-border px-2 py-1.5 text-td-base bg-transparent focus:outline-none"
                   />
                 </div>
-                
+
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Description
-                  </label>
+                  <label className="block text-td-xs text-td-muted mb-1">Description</label>
                   <textarea
                     value={editDescription}
                     onChange={(e) => setEditDescription(e.target.value)}
                     rows="3"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
+                    className="w-full border border-td-border px-2 py-1.5 text-td-sm bg-transparent focus:outline-none"
                   />
                 </div>
-                
+
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Tags
-                  </label>
-                  <div className="flex flex-wrap gap-1 mb-2">
+                  <label className="block text-td-xs text-td-muted mb-1">Tags</label>
+                  <div className="flex flex-wrap gap-1.5 mb-2">
                     {editTags.map((tag) => (
-                      <TaskTag
-                        key={tag}
-                        tag={tag}
-                        onRemove={(tagToRemove) => setEditTags(editTags.filter(t => t !== tagToRemove))}
-                      />
+                      <TaskTag key={tag} tag={tag} onRemove={(t) => setEditTags(editTags.filter(x => x !== t))} />
                     ))}
                   </div>
                   <input
@@ -2187,32 +1968,27 @@ export function Ideas() {
                     value={editCustomTagInput}
                     onChange={(e) => setEditCustomTagInput(e.target.value)}
                     onKeyDown={(e) => handleCustomTagAdd(e, true)}
-                    placeholder="Add tags (press Enter)"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
+                    placeholder="Add tag (enter)"
+                    className="w-full border border-td-border px-2 py-1.5 text-td-sm bg-transparent focus:outline-none"
                   />
                 </div>
-                
-                <div className="grid grid-cols-2 gap-4">
+
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Due Date
-                    </label>
+                    <label className="block text-td-xs text-td-muted mb-1">Due Date</label>
                     <input
-                      type="datetime-local"
+                      type="date"
                       value={editDueDate}
                       onChange={(e) => setEditDueDate(e.target.value)}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
+                      className="w-full border border-td-border px-2 py-1.5 text-td-sm bg-transparent focus:outline-none"
                     />
                   </div>
-                  
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Repeat
-                    </label>
+                    <label className="block text-td-xs text-td-muted mb-1">Repeat</label>
                     <select
                       value={editRecurrence}
                       onChange={(e) => setEditRecurrence(e.target.value)}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
+                      className="w-full border border-td-border px-2 py-1.5 text-td-sm bg-transparent focus:outline-none"
                     >
                       <option value="">No repeat</option>
                       <option value="daily">Daily</option>
@@ -2222,26 +1998,22 @@ export function Ideas() {
                       <option value="quarterly">Quarterly</option>
                       <option value="yearly">Yearly</option>
                     </select>
-
-                    {/* Recurring task notice */}
                     {editRecurrence && !editDueDate && (
-                      <div className="text-xs text-blue-600 bg-blue-50 px-3 py-2 rounded-lg mt-2">
-                        💡 This recurring task will be scheduled for today
-                      </div>
+                      <div className="text-td-xs text-td-muted mt-1">Starts today</div>
                     )}
                   </div>
                 </div>
-                
-                <div className="flex gap-3 pt-4">
+
+                <div className="flex gap-2 pt-2 border-t border-td-border">
                   <button
                     onClick={handleSaveEdit}
-                    className="flex-1 bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="flex-1 py-1.5 border border-td-text text-td-text text-td-sm hover:bg-td-hover"
                   >
-                    {editingTask && !editingTask.$id ? "Create Duplicate" : "Save Changes"}
+                    Save
                   </button>
                   <button
                     onClick={() => setIsEditModalOpen(false)}
-                    className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-300"
+                    className="flex-1 py-1.5 border border-td-border text-td-muted text-td-sm hover:bg-td-hover"
                   >
                     Cancel
                   </button>
@@ -2254,415 +2026,58 @@ export function Ideas() {
 
       {/* Recurring Task Info Modal */}
       {showRecurringInfo && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
+        <div className="fixed inset-0 bg-black/15 flex items-center justify-center z-50 p-4">
+          <div className="bg-td-bg border border-td-border max-w-xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-5">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold flex items-center gap-2">
-                  <FontAwesomeIcon icon={faInfoCircle} className="text-blue-500" />
-                  Recurring Task Scheduling Guide
-                </h3>
-                <button
-                  onClick={() => setShowRecurringInfo(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <FontAwesomeIcon icon={faTimes} className="h-5 w-5" />
+                <h3 className="text-td-base font-medium text-td-text">Recurring Tasks</h3>
+                <button onClick={() => setShowRecurringInfo(false)} className="text-td-faint hover:text-td-text">
+                  <FontAwesomeIcon icon={faTimes} className="h-3 w-3" />
                 </button>
               </div>
-              
-              <div className="space-y-6">
-                {/* Date-Sensitive Tasks */}
+
+              <div className="space-y-4 text-td-sm text-td-muted">
                 <div>
-                  <h4 className="font-medium text-gray-800 mb-3 flex items-center gap-2">
-                    🎂 Date-Sensitive Tasks (Use Original Date)
-                  </h4>
-                  <div className="bg-blue-50 p-4 rounded-lg space-y-3">
-                    <p className="text-sm text-gray-700">
-                      These tasks always reschedule to the same date, regardless of when you complete them:
-                    </p>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <h5 className="font-medium text-blue-800 mb-2">Special Tags:</h5>
-                        <div className="space-y-1">
-                          {['birthday', 'anniversary', 'bills', 'rent', 'mortgage'].map(tag => (
-                            <div key={tag} className="flex items-center gap-2">
-                              <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs">
-                                {tag}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <h5 className="font-medium text-blue-800 mb-2">Title Keywords:</h5>
-                        <div className="space-y-1 text-sm text-gray-600">
-                          <div>• "birthday" or "anniversary"</div>
-                          <div>• "rent", "mortgage", or "bill"</div>
-                          <div>• "payment" or "due"</div>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="bg-white p-3 rounded border-l-4 border-blue-400">
-                      <p className="text-sm text-gray-600">
-                        <strong>Example:</strong> "Mom's Birthday" due Jan 15th → Always reschedules to Jan 15th next year, 
-                        even if completed late.
-                      </p>
-                    </div>
+                  <h4 className="font-medium text-td-text mb-1">Date-Sensitive Tasks</h4>
+                  <p>Tags like birthday, anniversary, bills, rent, mortgage always reschedule to the same date.</p>
+                  <p className="text-td-xs text-td-faint mt-1">Example: "Mom's Birthday" due Jan 15 → Jan 15 next year, even if completed late.</p>
+                </div>
+
+                <div>
+                  <h4 className="font-medium text-td-text mb-1">Regular Tasks</h4>
+                  <p>Reschedule based on completion date.</p>
+                  <p className="text-td-xs text-td-faint mt-1">Example: "Clean garage" (weekly) done Wed → next Wed.</p>
+                </div>
+
+                <div>
+                  <h4 className="font-medium text-td-text mb-1">Patterns</h4>
+                  <div className="grid grid-cols-3 gap-1 text-td-xs">
+                    <span>Daily: every day</span>
+                    <span>Weekly: 7 days</span>
+                    <span>Biweekly: 14 days</span>
+                    <span>Monthly: same date</span>
+                    <span>Quarterly: 3 months</span>
+                    <span>Yearly: same date</span>
                   </div>
                 </div>
 
-                {/* Regular Tasks */}
-                <div>
-                  <h4 className="font-medium text-gray-800 mb-3 flex items-center gap-2">
-                    📅 Regular Tasks (Use Completion Date)
-                  </h4>
-                  <div className="bg-green-50 p-4 rounded-lg space-y-3">
-                    <p className="text-sm text-gray-700">
-                      These tasks reschedule based on when you complete them, allowing flexible timing:
-                    </p>
-                    
-                    <div className="bg-white p-3 rounded border-l-4 border-green-400">
-                      <p className="text-sm text-gray-600">
-                        <strong>Example:</strong> "Clean garage" (weekly) completed on Wednesday → 
-                        Next occurrence scheduled for next Wednesday.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Recurrence Patterns */}
-                <div>
-                  <h4 className="font-medium text-gray-800 mb-3">📊 Recurrence Patterns</h4>
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-                      <div><strong>Daily:</strong> Every day</div>
-                      <div><strong>Weekly:</strong> Every 7 days</div>
-                      <div><strong>Biweekly:</strong> Every 14 days</div>
-                      <div><strong>Monthly:</strong> Same date next month</div>
-                      <div><strong>Quarterly:</strong> Every 3 months</div>
-                      <div><strong>Yearly:</strong> Same date next year</div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Tips */}
-                <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-                  <h4 className="font-medium text-yellow-800 mb-2">💡 Pro Tips</h4>
-                  <ul className="space-y-1 text-sm text-yellow-700">
-                    <li>• Use #birthday or #anniversary tags for special dates</li>
-                    <li>• Use #bills for payments that must stay on specific dates</li>
-                    <li>• Regular tasks without special tags are flexible with timing</li>
-                    <li>• Yearly tasks handle leap years automatically (Feb 29 → Feb 28)</li>
-                  </ul>
+                <div className="text-td-xs text-td-faint">
+                  Leap years handled automatically (Feb 29 → Feb 28).
                 </div>
               </div>
-              
-              <div className="mt-6 flex justify-end">
+
+              <div className="mt-4 pt-2 border-t border-td-border flex justify-end">
                 <button
                   onClick={() => setShowRecurringInfo(false)}
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                  className="px-3 py-1 border border-td-text text-td-text text-td-sm hover:bg-td-hover"
                 >
-                  Got it!
+                  Close
                 </button>
               </div>
             </div>
           </div>
         </div>
       )}
-
-      {/* Task Detail Modal */}
-      {detailModalOpen && detailTask && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[95vh] overflow-hidden flex flex-col">
-            <div className="flex-shrink-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
-              <h3 className="text-xl font-semibold text-gray-900">Task Details</h3>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setDetailLocked(!detailLocked)}
-                  className={`p-2 rounded-lg transition-colors ${
-                    detailLocked 
-                      ? 'bg-gray-100 text-gray-600 hover:bg-gray-200' 
-                      : 'bg-blue-100 text-blue-600 hover:bg-blue-200'
-                  }`}
-                  title={detailLocked ? 'Click to unlock and edit' : 'Click to lock'}
-                >
-                  <FontAwesomeIcon icon={detailLocked ? faLock : faLockOpen} className="h-5 w-5" />
-                </button>
-                <button
-                  onClick={() => {
-                    setDetailModalOpen(false);
-                    setDetailLocked(true);
-                  }}
-                  className="text-gray-400 hover:text-gray-600 p-2"
-                >
-                  <FontAwesomeIcon icon={faTimes} className="h-6 w-6" />
-                </button>
-              </div>
-            </div>
-            
-            <div className="flex-1 overflow-y-auto">
-              <div className="p-6">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Left Column */}
-                  <div className="space-y-4">
-                    {/* Status Info */}
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <button
-                            onClick={() => handleToggleComplete(detailTask.$id)}
-                            className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
-                              detailTask.completed 
-                                ? 'bg-green-500 border-green-500 text-white' 
-                                : 'border-gray-300 hover:border-green-500'
-                            }`}
-                          >
-                            {detailTask.completed && <FontAwesomeIcon icon={faCheck} className="h-3.5 w-3.5" />}
-                          </button>
-                          <span className="text-sm font-medium text-gray-700">
-                            {detailTask.completed ? 'Completed' : 'In Progress'}
-                          </span>
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {new Date(detailTask.entryDate).toLocaleDateString('en-US', { 
-                            month: 'short', 
-                            day: 'numeric', 
-                            year: 'numeric'
-                          })}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Title */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Title <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={detailTitle}
-                        onChange={(e) => setDetailTitle(e.target.value)}
-                        disabled={detailLocked}
-                        className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 ${
-                          detailLocked 
-                            ? 'bg-gray-50 border-gray-200 text-gray-700 cursor-not-allowed' 
-                            : 'bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-200'
-                        }`}
-                        placeholder="Enter task title"
-                      />
-                    </div>
-                    
-                    {/* Description */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Description
-                      </label>
-                      <textarea
-                        value={detailDescription}
-                        onChange={(e) => setDetailDescription(e.target.value)}
-                        disabled={detailLocked}
-                        rows="3"
-                        className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 resize-none ${
-                          detailLocked 
-                            ? 'bg-gray-50 border-gray-200 text-gray-700 cursor-not-allowed' 
-                            : 'bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-200'
-                        }`}
-                        placeholder="Add a detailed description..."
-                      />
-                    </div>
-
-                    {/* Due Date and Recurrence */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Due Date
-                        </label>
-                        <input
-                          type="datetime-local"
-                          value={detailDueDate}
-                          onChange={(e) => setDetailDueDate(e.target.value)}
-                          disabled={detailLocked}
-                          className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 ${
-                            detailLocked 
-                              ? 'bg-gray-50 border-gray-200 text-gray-700 cursor-not-allowed' 
-                              : 'bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-200'
-                          }`}
-                        />
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Recurrence
-                        </label>
-                        <select
-                          value={detailRecurrence}
-                          onChange={(e) => setDetailRecurrence(e.target.value)}
-                          disabled={detailLocked}
-                          className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 ${
-                            detailLocked 
-                              ? 'bg-gray-50 border-gray-200 text-gray-700 cursor-not-allowed' 
-                              : 'bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-200'
-                          }`}
-                        >
-                          <option value="">No repeat</option>
-                          <option value="daily">Daily</option>
-                          <option value="weekly">Weekly</option>
-                          <option value="biweekly">Bi-weekly</option>
-                          <option value="monthly">Monthly</option>
-                          <option value="quarterly">Quarterly</option>
-                          <option value="yearly">Yearly</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    {/* Recurring task notice */}
-                    {detailRecurrence && !detailDueDate && !detailLocked && (
-                      <div className="text-xs text-blue-600 bg-blue-50 px-3 py-2 rounded-lg flex items-center gap-2">
-                        <FontAwesomeIcon icon={faInfoCircle} className="h-3 w-3" />
-                        <span>This recurring task will be scheduled for today</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Right Column */}
-                  <div className="space-y-4">
-                    {/* Tags */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Tags
-                      </label>
-                      <div className="flex flex-wrap gap-1 mb-2">
-                        {detailTags.map((tag) => (
-                          <span key={tag} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
-                            {tag}
-                            {!detailLocked && (
-                              <button
-                                onClick={() => setDetailTags(detailTags.filter(t => t !== tag))}
-                                className="ml-1 text-current hover:text-red-600"
-                              >
-                                <FontAwesomeIcon icon={faTimes} className="h-2.5 w-2.5" />
-                              </button>
-                            )}
-                          </span>
-                        ))}
-                      </div>
-                      {!detailLocked && (
-                        <>
-                          <input
-                            type="text"
-                            value={detailCustomTagInput}
-                            onChange={(e) => setDetailCustomTagInput(e.target.value)}
-                            onKeyDown={(e) => handleCustomTagAdd(e, false, true)}
-                            placeholder="Add tags (press Enter)"
-                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500 mb-2"
-                          />
-                          <div className="flex flex-wrap gap-1">
-                            {PREDEFINED_TAGS.filter(tag => !detailTags.includes(tag)).slice(0, 8).map((tag) => (
-                              <button
-                                key={tag}
-                                type="button"
-                                onClick={() => {
-                                  if (!detailTags.includes(tag)) {
-                                    setDetailTags([...detailTags, tag]);
-                                  }
-                                }}
-                                className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-full hover:bg-gray-200"
-                              >
-                                + {tag}
-                              </button>
-                            ))}
-                          </div>
-                        </>
-                      )}
-                    </div>
-
-                    {/* User Info */}
-                    <div className="bg-gray-50 p-3 rounded-lg">
-                      <div className="text-sm text-gray-600">
-                        <span className="font-medium">Created by:</span> {detailTask.userName || 'Unknown'}
-                      </div>
-                      {detailTask.$updatedAt && (
-                        <div className="text-xs text-gray-500 mt-1">
-                          Last updated: {new Date(detailTask.$updatedAt).toLocaleDateString('en-US', { 
-                            month: 'short', 
-                            day: 'numeric', 
-                            year: 'numeric'
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex-shrink-0 border-t border-gray-200 px-6 py-4">
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    {!detailLocked ? (
-                      <>
-                        <button
-                          onClick={handleSaveDetailChanges}
-                          disabled={!detailTitle.trim()}
-                          className="flex-1 bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-                        >
-                          Save Changes
-                        </button>
-                        <button
-                          onClick={() => {
-                            setDetailTitle(detailTask.title);
-                            setDetailDescription(detailTask.description || "");
-                            setDetailTags(detailTask.tags || []);
-                            setDetailDueDate(detailTask.dueDate ? new Date(detailTask.dueDate).toISOString().slice(0, 16) : "");
-                            setDetailRecurrence(detailTask.recurrence || "");
-                            setDetailLocked(true);
-                          }}
-                          className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-300 font-medium"
-                        >
-                          Cancel
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <button
-                          onClick={handleDuplicateTask}
-                          className="flex-1 bg-green-500 text-white py-2 px-4 rounded-lg hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 font-medium flex items-center justify-center gap-2"
-                        >
-                          <FontAwesomeIcon icon={faCopy} />
-                          Duplicate Task
-                        </button>
-                        <button
-                          onClick={() => {
-                            setDetailModalOpen(false);
-                            handleDeleteTask(detailTask.$id);
-                          }}
-                          className="flex-1 bg-red-500 text-white py-2 px-4 rounded-lg hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 font-medium flex items-center justify-center gap-2"
-                        >
-                          <FontAwesomeIcon icon={faTrash} />
-                          Delete Task
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Delete Confirmation Modal */}
-      <ConfirmationModal
-        isOpen={deleteModalOpen}
-        onClose={() => setDeleteModalOpen(false)}
-        onConfirm={handleDeleteConfirm}
-        title="Delete Task"
-        message="Are you sure you want to delete this task? This action cannot be undone."
-        confirmText="Delete"
-        cancelText="Cancel"
-        type="danger"
-      />
     </div>
   );
 }

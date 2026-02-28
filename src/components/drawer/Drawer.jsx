@@ -1,6 +1,4 @@
-import React, { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
-import { useSettings } from '../../lib/context/settings';
+import React, { useState } from "react";
 import Drawer from "react-modern-drawer";
 import "react-modern-drawer/dist/index.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -8,114 +6,22 @@ import { faBars } from "@fortawesome/free-solid-svg-icons";
 import DrawerItems from "./DrawerItems";
 
 const AppDrawer = () => {
-  const { sidePanelMode } = useSettings()
-  const [isOpen, setIsOpen] = useState(false)
-  const location = useLocation()
+  const [isOpen, setIsOpen] = useState(false);
 
-  // Set drawer to open by default on desktop
-  useEffect(() => {
-    const isDesktop = window.innerWidth >= 768;
-    if (isDesktop && sidePanelMode === 'auto') {
-      setIsOpen(true);
-    }
-  }, [sidePanelMode]);
+  const toggleDrawer = () => {
+    setIsOpen((prevState) => !prevState);
+  };
 
-  // Auto-close on mobile when route changes
-  useEffect(() => {
-    const isMobile = window.innerWidth < 768;
-    if (isMobile && sidePanelMode === 'auto') {
-      setIsOpen(false);
-    }
-  }, [location.pathname, sidePanelMode]);
-
-  // Apply layout class for sidebar mode
-  useEffect(() => {
-    if (sidePanelMode === 'pinned') {
-      document.body.classList.add('sidebar-layout');
-    } else {
-      document.body.classList.remove('sidebar-layout');
-    }
-    
-    return () => {
-      document.body.classList.remove('sidebar-layout');
-    };
-  }, [sidePanelMode]);
-
-  // Handle focus out for 'auto' mode
-  useEffect(() => {
-    if (sidePanelMode !== 'auto') return
-    if (!isOpen) return
-    const handleClick = (e) => {
-      if (!document.querySelector('.drawer-content')?.contains(e.target)) {
-        setIsOpen(false)
-      }
-    }
-    window.addEventListener('mousedown', handleClick)
-    return () => window.removeEventListener('mousedown', handleClick)
-  }, [sidePanelMode, isOpen])
-
-  const toggleDrawer = () => setIsOpen((prev) => !prev)
-
-  // Render sidebar for 'pinned' mode
-  if (sidePanelMode === 'pinned') {
-    return (
-      <>
-        <div className="sidebar">
-          <DrawerItems setIsDrawerOpen={() => {}} toggleDrawer={() => {}} />
-        </div>
-        <style jsx global>{`
-          .sidebar {
-            width: 280px;
-            height: 100vh;
-            background-color: white;
-            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
-            position: fixed;
-            left: 0;
-            top: 0;
-            z-index: 1000;
-            transition: width 0.3s ease;
-          }
-          
-          .sidebar-layout {
-            padding-left: 280px;
-            transition: padding-left 0.3s ease;
-          }
-          
-          @media (max-width: 767px) {
-            .sidebar {
-              width: 70px;
-            }
-            
-            .sidebar-layout {
-              padding-left: 70px;
-            }
-            
-            .sidebar-text {
-              display: none;
-            }
-            
-            .sidebar-header {
-              justify-content: center !important;
-              padding: 1rem 0.5rem !important;
-            }
-          }
-        `}</style>
-      </>
-    );
-  }
-
-  // Render drawer for other modes
   return (
     <>
       <button
         onClick={toggleDrawer}
-        className="fixed left-4 top-4 z-[1001] p-3 bg-gradient-to-r from-cyan-500 to-cyan-600 rounded-lg shadow-lg hover:from-cyan-600 hover:to-cyan-700 transition-all duration-200 cursor-pointer md:left-6 md:top-6 md:p-3.5 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-opacity-50 active:scale-95"
+        className="fixed left-3 top-3 z-[1001] p-2 rounded border border-td-border bg-td-bg hover:bg-td-hover transition-colors cursor-pointer focus:outline-none"
+        aria-label="Menu"
       >
         <FontAwesomeIcon
-          color="white"
           icon={faBars}
-          size="xl"
-          className="w-5 h-5 md:w-6 md:h-6"
+          className="w-3.5 h-3.5 text-td-muted"
         />
       </button>
 
@@ -123,7 +29,7 @@ const AppDrawer = () => {
         open={isOpen}
         onClose={toggleDrawer}
         direction="left"
-        size={280}
+        size={240}
         zIndex={1000}
         className="drawer-content"
       >
@@ -133,21 +39,15 @@ const AppDrawer = () => {
       <style jsx global>{`
         .drawer-content {
           background-color: white !important;
-          box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
+          border-right: 1px solid var(--td-border) !important;
         }
         .EZDrawer__overlay {
           z-index: 999 !important;
-          background-color: rgba(0, 0, 0, 0.3) !important;
-        }
-        
-        @media (min-width: 768px) {
-          body:not(.sidebar-layout) .drawer-content {
-            position: fixed !important;
-          }
+          background-color: rgba(0, 0, 0, 0.15) !important;
         }
       `}</style>
     </>
-  )
-}
+  );
+};
 
 export default AppDrawer;

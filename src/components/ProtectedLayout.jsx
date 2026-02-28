@@ -10,11 +10,11 @@ export function ProtectedLayout({ children }) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-td-bg">
       <AppDrawer />
-      <main className="p-2 sm:p-4 lg:p-6">
+      <main>
         {children}
       </main>
     </div>
   );
-} 
+}

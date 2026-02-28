@@ -1,6 +1,65 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  :root {
+    --td-bg: #ffffff;
+    --td-text: #111111;
+    --td-muted: #6b6b6b;
+    --td-faint: #9a9a9a;
+    --td-border: #e9e9e9;
+    --td-border-strong: #dedede;
+    --td-hover: #f7f7f7;
+    --td-focus: #111111;
+  }
+
+  *,
+  *::before,
+  *::after {
+    box-shadow: none !important;
+  }
+
+  body {
+    font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
+    font-size: 13px;
+    line-height: 1.4;
+    color: var(--td-text);
+    background: var(--td-bg);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Focus ring: thin and dark */
+  *:focus-visible {
+    outline: 1px solid var(--td-focus);
+    outline-offset: 1px;
+  }
+
+  input:focus,
+  textarea:focus,
+  select:focus {
+    outline: none;
+    border-color: var(--td-border-strong) !important;
+  }
+
+  /* Scrollbar: thin and subtle */
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--td-border);
+    border-radius: 2px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--td-border-strong);
+  }
+}
+
 @import url("https://fonts.googleapis.com/css2?family=Digital+7&display=swap");
 
 .font-digital-7 {
