@@ -614,7 +614,7 @@ export function Ideas() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [showTimezoneWarning, setShowTimezoneWarning] = useState(false);
-  const [hideCompleted, setHideCompleted] = useState(true);
+  const [hideCompleted, setHideCompleted] = useState(false);
   const [selectedTags, setSelectedTags] = useState([]);
   const [timeFilter, setTimeFilter] = useState(null); // 'today', 'tomorrow', 'overdue', 'week', 'next_week', 'next_month'
   const [userFilter, setUserFilter] = useState(null);
@@ -1211,13 +1211,29 @@ export function Ideas() {
           toast.dismiss(`task-error-${taskId}`);
           toast.dismiss(`task-reopen-${taskId}`);
           
-          // Add slight delay to ensure cleanup
-          setTimeout(() => {
-            toast.success(message, {
-              id: `task-complete-${taskId}`,
-              ...toastConfig.success,
-            });
-          }, 50);
+          toast((t) => (
+            <div className="flex items-center gap-3">
+              <span className="text-sm">{message}</span>
+              <button
+                onClick={() => {
+                  toast.dismiss(t.id);
+                  ideas.update(taskId, { completed: false, completedAt: null });
+                  setTimeout(() => {
+                    const toastId = `task-reopen-${taskId}`;
+                    toast.success("Task reopened", { id: toastId, duration: 2000 });
+                    setTimeout(() => toast.dismiss(toastId), 2000);
+                  }, 100);
+                }}
+                className="text-sm font-bold underline whitespace-nowrap"
+              >
+                Undo
+              </button>
+            </div>
+          ), {
+            id: `task-complete-${taskId}`,
+            duration: 5000,
+            style: toastConfig.success.style,
+          });
           triggerCelebration();
         } else {
           toast.success("Task reopened", {
@@ -2113,7 +2129,7 @@ export function Ideas() {
 
       {/* Bulk Upload Modal */}
       {isBulkUploadOpen && (
-        <div className="fixed inset-0 bg-black/15 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/15 flex items-center justify-center z-50 safe-area-overlay">
           <div className="bg-td-bg border border-td-border max-w-md w-full max-h-[90vh] overflow-y-auto">
             <div className="p-5">
               <div className="flex justify-between items-center mb-4">
@@ -2248,7 +2264,7 @@ export function Ideas() {
 
       {/* Edit Task Modal */}
       {isEditModalOpen && editingTask && (
-        <div className="fixed inset-0 bg-black/15 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/15 flex items-center justify-center z-50 safe-area-overlay">
           <div className="bg-td-bg border border-td-border max-w-md w-full max-h-[90vh] overflow-y-auto">
             <div className="p-5">
               <div className="flex justify-between items-center mb-4">
@@ -2349,7 +2365,7 @@ export function Ideas() {
 
       {/* Recurring Task Info Modal */}
       {showRecurringInfo && (
-        <div className="fixed inset-0 bg-black/15 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/15 flex items-center justify-center z-50 safe-area-overlay">
           <div className="bg-td-bg border border-td-border max-w-xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-5">
               <div className="flex justify-between items-center mb-4">

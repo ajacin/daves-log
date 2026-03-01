@@ -14,7 +14,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         <TasksProvider>
           <AutomationsProvider>
             <App />
-            <Toaster position="top-right" />
+            <Toaster position="top-center" />
           </AutomationsProvider>
         </TasksProvider>
       </UserProvider>

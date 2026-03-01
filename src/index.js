@@ -10,7 +10,6 @@ import { BabyActivitiesProvider } from "./lib/context/activities";
 import TimeAgo from "javascript-time-ago";
 
 import en from "javascript-time-ago/locale/en.json";
-
 import { Toaster } from "react-hot-toast";
 
 TimeAgo.addDefaultLocale(en);
@@ -18,12 +17,12 @@ TimeAgo.addDefaultLocale(en);
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
   <React.StrictMode>
-    <Toaster />
     <BrowserRouter>
       <UserProvider>
         <IdeasProvider>
           <BabyActivitiesProvider>
             <App />
+            <Toaster position="top-center" />
           </BabyActivitiesProvider>
         </IdeasProvider>
       </UserProvider>
