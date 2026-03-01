@@ -16,7 +16,8 @@ import {
   faTimes,
   faChevronLeft,
   faChevronRight,
-  faInfoCircle
+  faInfoCircle,
+  faUpload
 } from "@fortawesome/free-solid-svg-icons";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import toast from 'react-hot-toast';
@@ -356,7 +357,11 @@ function TaskItem({ task, onToggleComplete, onEdit, onDelete, onQuickDateUpdate,
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
   }, []);
 
   const isOverdue = task.dueDate && (() => {
@@ -437,9 +442,9 @@ function TaskItem({ task, onToggleComplete, onEdit, onDelete, onQuickDateUpdate,
 
           {/* Inline tags */}
           {task.tags && task.tags.length > 0 && (
-            <span className="text-td-xs text-td-faint flex-shrink-0 hidden sm:inline">
-              {task.tags.slice(0, 2).join(', ')}
-              {task.tags.length > 2 && ` +${task.tags.length - 2}`}
+            <span className="text-td-xs text-td-faint flex-shrink-0">
+              <span className="sm:hidden">{task.tags[0]}{task.tags.length > 1 && ` +${task.tags.length - 1}`}</span>
+              <span className="hidden sm:inline">{task.tags.slice(0, 2).join(', ')}{task.tags.length > 2 && ` +${task.tags.length - 2}`}</span>
             </span>
           )}
         </div>
@@ -451,8 +456,8 @@ function TaskItem({ task, onToggleComplete, onEdit, onDelete, onQuickDateUpdate,
           </div>
         )}
 
-        {/* Hover actions — move shortcuts */}
-        {!task.completed && isHovered && (
+        {/* Quick actions — visible on hover (desktop) or menu open (mobile) */}
+        {!task.completed && (isHovered || isMenuOpen) && (
           <div className="flex gap-2 mt-1">
             {[
               { label: 'Today', key: 'today' },
@@ -476,9 +481,7 @@ function TaskItem({ task, onToggleComplete, onEdit, onDelete, onQuickDateUpdate,
       <div className="relative flex-shrink-0" ref={menuRef}>
         <button
           onClick={() => setIsMenuOpen(!isMenuOpen)}
-          className={`p-0.5 text-td-faint hover:text-td-text transition-opacity ${
-            isHovered || isMenuOpen ? 'opacity-100' : 'opacity-0'
-          }`}
+          className="p-1 text-td-faint hover:text-td-text"
         >
           <FontAwesomeIcon icon={faEllipsisV} className="h-3 w-3" />
         </button>
@@ -1028,6 +1031,22 @@ export function Ideas() {
     if (newIndex >= 0 && newIndex < currentColumns.length) {
       setCurrentColumnIndex(newIndex);
     }
+  };
+
+  // Swipe gesture for mobile column navigation
+  const touchStartRef = useRef(null);
+  const handleTouchStart = (e) => {
+    touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  };
+  const handleTouchEnd = (e) => {
+    if (!touchStartRef.current) return;
+    const dx = e.changedTouches[0].clientX - touchStartRef.current.x;
+    const dy = e.changedTouches[0].clientY - touchStartRef.current.y;
+    // Only trigger if horizontal swipe is dominant and > 50px
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      navigateColumn(dx < 0 ? 1 : -1);
+    }
+    touchStartRef.current = null;
   };
 
   // Reset column index when view mode changes
@@ -1786,7 +1805,8 @@ export function Ideas() {
               onClick={() => setIsBulkUploadOpen(true)}
               className="text-td-sm text-td-muted hover:text-td-text"
             >
-              Upload
+              <FontAwesomeIcon icon={faUpload} className="h-3 w-3 sm:hidden" />
+              <span className="hidden sm:inline">Upload</span>
             </button>
 
             {/* View toggle — text links */}
@@ -1948,7 +1968,7 @@ export function Ideas() {
         {viewMode === 'timeline' || viewMode === 'tags' ? (
           <>
             {/* Mobile Navigation — single column */}
-            <div className="block lg:hidden">
+            <div className="block lg:hidden" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
               {currentColumns.length > 0 && (
                 <div>
                   {/* Mobile nav header */}
@@ -1956,9 +1976,9 @@ export function Ideas() {
                     <button
                       onClick={() => navigateColumn(-1)}
                       disabled={currentColumnIndex === 0}
-                      className="p-1 text-td-muted disabled:opacity-30 hover:text-td-text"
+                      className="p-2 text-td-muted disabled:opacity-30 hover:text-td-text"
                     >
-                      <FontAwesomeIcon icon={faChevronLeft} className="h-3 w-3" />
+                      <FontAwesomeIcon icon={faChevronLeft} className="h-4 w-4" />
                     </button>
 
                     <div className="text-center flex-1">
@@ -1973,9 +1993,9 @@ export function Ideas() {
                     <button
                       onClick={() => navigateColumn(1)}
                       disabled={currentColumnIndex === currentColumns.length - 1}
-                      className="p-1 text-td-muted disabled:opacity-30 hover:text-td-text"
+                      className="p-2 text-td-muted disabled:opacity-30 hover:text-td-text"
                     >
-                      <FontAwesomeIcon icon={faChevronRight} className="h-3 w-3" />
+                      <FontAwesomeIcon icon={faChevronRight} className="h-4 w-4" />
                     </button>
                   </div>
 
@@ -2143,7 +2163,7 @@ export function Ideas() {
                       onKeyDown={handleBulkKeyDown}
                       onBlur={() => { setTimeout(() => { setBulkTrigger(null); setBulkSuggestions([]); }, 150); }}
                       className="w-full p-2 border border-td-border text-td-sm font-mono bg-transparent focus:outline-none"
-                      rows="8"
+                      rows="6"
                       placeholder={"Buy groceries :today #walmart\nCall dentist :tomorrow -- about cleaning\nTake vitamins :today @daily #health\nMom birthday :mar15 @yearly\nRenew subscription :+30d\nTeam meeting :monday @weekly #work"}
                     />
                     {bulkSuggestions.length > 0 && (
@@ -2276,7 +2296,7 @@ export function Ideas() {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-td-xs text-td-muted mb-1">Due Date</label>
                     <input
