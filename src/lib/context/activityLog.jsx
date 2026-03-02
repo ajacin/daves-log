@@ -31,12 +31,14 @@ export function ActivityLogProvider({ children }) {
     }
 
     if (filters?.dateFrom) {
-      queries.push(Query.greaterThanEqual("$createdAt", new Date(filters.dateFrom).toISOString()));
+      const [y, m, d] = filters.dateFrom.split('-').map(Number);
+      const startOfDay = new Date(y, m - 1, d, 0, 0, 0, 0);
+      queries.push(Query.greaterThanEqual("$createdAt", startOfDay.toISOString()));
     }
 
     if (filters?.dateTo) {
-      const endOfDay = new Date(filters.dateTo);
-      endOfDay.setHours(23, 59, 59, 999);
+      const [y, m, d] = filters.dateTo.split('-').map(Number);
+      const endOfDay = new Date(y, m - 1, d, 23, 59, 59, 999);
       queries.push(Query.lessThanEqual("$createdAt", endOfDay.toISOString()));
     }
 

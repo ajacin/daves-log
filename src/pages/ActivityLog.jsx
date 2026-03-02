@@ -111,14 +111,18 @@ function ChangeSummary({ entry }) {
   return null;
 }
 
+function toLocalDateString(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
 function getDefaultDateFrom() {
   const d = new Date();
   d.setDate(d.getDate() - 7);
-  return d.toISOString().slice(0, 10);
+  return toLocalDateString(d);
 }
 
 function getDefaultDateTo() {
-  return new Date().toISOString().slice(0, 10);
+  return toLocalDateString(new Date());
 }
 
 function ActivityLogContent() {
