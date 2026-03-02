@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, useCallback, useRef } f
 import { databases } from "../appwrite";
 import { ID, Query } from "appwrite";
 import { useUser } from "./user";
+import { logAction, determineAction, extractRelevantBefore } from "../activityLogger";
 
 export const DATABASE_ID = process.env.REACT_APP_DATABASE_ID; // Replace with your database ID
 export const COLLECTION_ID = process.env.REACT_APP_COLLECTION_ID_IDEAS_TRACKER;
@@ -97,7 +98,7 @@ export function IdeasProvider(props) {
     }
   }, [user, handleError]);
 
-  const add = useCallback(async (idea) => {
+  const add = useCallback(async (idea, meta) => {
     if (!hasPermission) return false;
     try {
       // Ensure tags is an array and completed has a default value
@@ -118,6 +119,16 @@ export function IdeasProvider(props) {
 
       if (response && response.$id) {
         setIdeas((prev) => [response, ...prev]);
+        logAction({
+          action: meta?.source === 'auto-recurring' ? 'recurring_task_created' : 'task_created',
+          taskId: response.$id,
+          taskTitle: ideaWithDefaults.title,
+          userId: ideaWithDefaults.userId,
+          userName: ideaWithDefaults.userName,
+          before: null,
+          after: ideaWithDefaults,
+          meta,
+        });
         return true;
       }
       return false;
@@ -127,21 +138,35 @@ export function IdeasProvider(props) {
     }
   }, [hasPermission, handleError]);
 
-  const remove = useCallback(async (id) => {
+  const remove = useCallback(async (id, meta) => {
     if (!hasPermission) return false;
     try {
+      const task = ideas.find((i) => i.$id === id);
       await databases.deleteDocument(DATABASE_ID, COLLECTION_ID, id);
       setIdeas((prev) => prev.filter((idea) => idea.$id !== id));
+      if (task) {
+        logAction({
+          action: 'task_deleted',
+          taskId: id,
+          taskTitle: task.title,
+          userId: task.userId,
+          userName: task.userName,
+          before: { title: task.title, description: task.description, tags: task.tags, dueDate: task.dueDate, completed: task.completed, recurrence: task.recurrence },
+          after: null,
+          meta,
+        });
+      }
       return true;
     } catch (error) {
       handleError(error);
       return false;
     }
-  }, [hasPermission, handleError]);
+  }, [ideas, hasPermission, handleError]);
 
-  const update = useCallback(async (id, updates) => {
+  const update = useCallback(async (id, updates, meta) => {
     if (!hasPermission) return false;
     try {
+      const task = ideas.find((i) => i.$id === id);
       const response = await databases.updateDocument(
         DATABASE_ID,
         COLLECTION_ID,
@@ -151,12 +176,24 @@ export function IdeasProvider(props) {
       setIdeas((prev) =>
         prev.map((idea) => (idea.$id === id ? response : idea))
       );
+      const action = determineAction(updates);
+      const before = extractRelevantBefore(task, updates);
+      logAction({
+        action,
+        taskId: id,
+        taskTitle: task?.title || response.title,
+        userId: user?.$id,
+        userName: user?.name,
+        before,
+        after: updates,
+        meta,
+      });
       return true;
     } catch (error) {
       handleError(error);
       return false;
     }
-  }, [hasPermission, handleError]);
+  }, [ideas, user, hasPermission, handleError]);
 
   // Define the createNextRecurringTask function
   createNextRecurringTaskRef.current = async (completedTask, completionDate) => {
@@ -254,8 +291,8 @@ export function IdeasProvider(props) {
         parentTaskId: completedTask.$id // Reference to the original task
       };
       
-      await add(newTask);
-      
+      await add(newTask, { source: 'auto-recurring', parentTaskId: completedTask.$id, recurrence: completedTask.recurrence });
+
     } catch (error) {
       console.error("Error creating recurring task:", error);
     }
@@ -276,8 +313,8 @@ export function IdeasProvider(props) {
           completedAt: !idea.completed ? completedAt : null
         };
         
-        const success = await update(id, updates);
-        
+        const success = await update(id, updates, { source: 'toggle-complete' });
+
         // If task was marked as complete and has recurrence pattern, create the next instance
         if (success && !idea.completed && idea.recurrence && createNextRecurringTaskRef.current) {
           await createNextRecurringTaskRef.current(idea, completedAt);

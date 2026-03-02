@@ -1077,7 +1077,7 @@ export function Ideas() {
       entryDate: new Date().toISOString(),
       userId: user.current.$id,
       userName: user.current.name,
-    });
+    }, { source: 'manual' });
 
     if (success) {
       toast.success("Task added successfully!");
@@ -1217,7 +1217,7 @@ export function Ideas() {
               <button
                 onClick={() => {
                   toast.dismiss(t.id);
-                  ideas.update(taskId, { completed: false, completedAt: null });
+                  ideas.update(taskId, { completed: false, completedAt: null }, { source: 'undo' });
                   setTimeout(() => {
                     const toastId = `task-reopen-${taskId}`;
                     toast.success("Task reopened", { id: toastId, duration: 2000 });
@@ -1289,7 +1289,7 @@ export function Ideas() {
       tags: editTags,
       dueDate: finalEditDueDate,
       recurrence: editRecurrence || null,
-    });
+    }, { source: 'edit-modal' });
 
     if (success) {
       toast.success("Task updated successfully!");
@@ -1302,7 +1302,7 @@ export function Ideas() {
   const handleDeleteTask = async (taskId) => {
     if (!window.confirm("Are you sure you want to delete this task?")) return;
 
-    const success = await ideas.remove(taskId);
+    const success = await ideas.remove(taskId, { source: 'manual-delete' });
     if (success) {
       toast.success("Task deleted successfully!");
     } else {
@@ -1331,12 +1331,12 @@ export function Ideas() {
 
     const success = await ideas.update(taskId, {
       dueDate: toLocalDateString(dueDate)
-    });
+    }, { source: 'quick-date', dateType });
 
     if (success) {
       const messageMap = {
         'today': 'today',
-        'tomorrow': 'tomorrow', 
+        'tomorrow': 'tomorrow',
         'week': 'in a week',
         'month': 'in a month',
         'weekend': 'this weekend'
@@ -1405,7 +1405,7 @@ export function Ideas() {
     console.log('💾 Updating task with new due date...');
     const success = await ideas.update(taskId, {
       dueDate: newDueDate
-    });
+    }, { source: 'drag-drop', columnType });
 
     console.log('✅ Update result:', success);
 
@@ -1743,7 +1743,7 @@ export function Ideas() {
           completed: false,
           dueDate: task.dueDate || null,
           recurrence: task.recurrence || null,
-        });
+        }, { source: 'bulk-upload' });
         if (success) successCount++;
       }
 
