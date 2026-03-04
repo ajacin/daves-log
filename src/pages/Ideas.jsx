@@ -18,7 +18,8 @@ import {
   faChevronRight,
   faInfoCircle,
   faUpload,
-  faBriefcase
+  faBriefcase,
+  faCopy
 } from "@fortawesome/free-solid-svg-icons";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import toast from 'react-hot-toast';
@@ -483,29 +484,30 @@ function TaskItem({ task, onToggleComplete, onEdit, onDelete, onQuickDateUpdate,
 
       {/* Main content */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-baseline gap-2">
+        <div>
           <span className={`text-td-base ${task.completed ? 'line-through text-td-faint' : 'text-td-text'}`}>
             {task.title}
           </span>
-
-          {/* Inline meta: date + recurrence */}
-          {task.dueDate && (
-            <span className={`text-td-xs flex-shrink-0 ${isOverdue ? 'text-red-500' : 'text-td-faint'}`}>
-              {formatDate(task.dueDate)}
-              {task.recurrence && (
-                <span className="ml-0.5">
-                  <FontAwesomeIcon icon={faSync} className="h-2 w-2" />
+          {/* Inline meta: date + recurrence + tags */}
+          {(task.dueDate || (task.tags && task.tags.length > 0)) && (
+            <div className="flex items-center gap-2 mt-0.5">
+              {task.dueDate && (
+                <span className={`text-td-xs whitespace-nowrap ${isOverdue ? 'text-red-500' : 'text-td-faint'}`}>
+                  {formatDate(task.dueDate)}
+                  {task.recurrence && (
+                    <span className="ml-0.5">
+                      <FontAwesomeIcon icon={faSync} className="h-2 w-2" />
+                    </span>
+                  )}
                 </span>
               )}
-            </span>
-          )}
-
-          {/* Inline tags */}
-          {task.tags && task.tags.length > 0 && (
-            <span className="text-td-xs text-td-faint flex-shrink-0">
-              <span className="sm:hidden">{task.tags[0]}{task.tags.length > 1 && ` +${task.tags.length - 1}`}</span>
-              <span className="hidden sm:inline">{task.tags.slice(0, 2).join(', ')}{task.tags.length > 2 && ` +${task.tags.length - 2}`}</span>
-            </span>
+              {task.tags && task.tags.length > 0 && (
+                <span className="text-td-xs text-td-faint whitespace-nowrap">
+                  <span className="sm:hidden">{task.tags[0]}{task.tags.length > 1 && ` +${task.tags.length - 1}`}</span>
+                  <span className="hidden sm:inline">{task.tags.slice(0, 2).join(', ')}{task.tags.length > 2 && ` +${task.tags.length - 2}`}</span>
+                </span>
+              )}
+            </div>
           )}
         </div>
 
@@ -720,6 +722,12 @@ export function Ideas() {
   const [currentColumnIndex, setCurrentColumnIndex] = useState(0);
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
   const [bulkTasksInput, setBulkTasksInput] = useState("");
+  const [bulkUploadMode, setBulkUploadMode] = useState('text');
+  const [jsonInput, setJsonInput] = useState("");
+  const [jsonParsedTasks, setJsonParsedTasks] = useState([]);
+  const [jsonError, setJsonError] = useState("");
+  const [jsonPromptCopied, setJsonPromptCopied] = useState(false);
+  const jsonFileInputRef = useRef(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
   const [editTitle, setEditTitle] = useState("");
@@ -1192,8 +1200,20 @@ export function Ideas() {
 
     // Prevent duplicate calls using state-based debouncing
     if (processingTasks.has(taskId)) return;
-    
+
     const newCompletedState = !task.completed;
+
+    // Block completion if there are unfinished subtasks
+    if (newCompletedState && task.subtasks) {
+      try {
+        const items = JSON.parse(task.subtasks);
+        const unfinished = items.filter(st => !st.done);
+        if (unfinished.length > 0) {
+          toast.error(`Complete all subtasks first (${unfinished.length} remaining)`, { id: `subtask-block-${taskId}` });
+          return;
+        }
+      } catch { /* ignore parse errors */ }
+    }
     
     // Mark task as processing to prevent duplicates
     setProcessingTasks(prev => new Set([...prev, taskId]));
@@ -1863,6 +1883,225 @@ export function Ideas() {
     }
   };
 
+  const VALID_RECURRENCES = ['daily', 'weekly', 'biweekly', 'monthly', 'quarterly', 'yearly'];
+
+  const parseAndValidateJson = (rawText) => {
+    setJsonError("");
+    setJsonParsedTasks([]);
+
+    if (!rawText.trim()) return;
+
+    let parsed;
+    try {
+      parsed = JSON.parse(rawText);
+    } catch (e) {
+      setJsonError(`Invalid JSON: ${e.message}`);
+      return;
+    }
+
+    if (!Array.isArray(parsed)) {
+      setJsonError("JSON must be an array of task objects: [ {...}, {...} ]");
+      return;
+    }
+
+    if (parsed.length === 0) {
+      setJsonError("Array is empty — add at least one task object.");
+      return;
+    }
+
+    const errors = [];
+    const validTasks = [];
+
+    parsed.forEach((item, i) => {
+      if (typeof item !== 'object' || item === null || Array.isArray(item)) {
+        errors.push(`Item ${i + 1}: must be an object`);
+        return;
+      }
+
+      if (!item.title || typeof item.title !== 'string' || !item.title.trim()) {
+        errors.push(`Item ${i + 1}: "title" is required and must be a non-empty string`);
+        return;
+      }
+
+      if (item.description !== undefined && typeof item.description !== 'string') {
+        errors.push(`Item ${i + 1}: "description" must be a string`);
+        return;
+      }
+
+      if (item.tags !== undefined) {
+        if (!Array.isArray(item.tags) || !item.tags.every(t => typeof t === 'string')) {
+          errors.push(`Item ${i + 1}: "tags" must be an array of strings`);
+          return;
+        }
+      }
+
+      if (item.dueDate !== undefined && item.dueDate !== null) {
+        if (typeof item.dueDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(item.dueDate)) {
+          errors.push(`Item ${i + 1}: "dueDate" must be YYYY-MM-DD format or null`);
+          return;
+        }
+      }
+
+      if (item.recurrence !== undefined && item.recurrence !== null) {
+        if (!VALID_RECURRENCES.includes(item.recurrence)) {
+          errors.push(`Item ${i + 1}: "recurrence" must be one of: ${VALID_RECURRENCES.join(', ')}`);
+          return;
+        }
+      }
+
+      if (item.subtasks !== undefined && item.subtasks !== null) {
+        if (!Array.isArray(item.subtasks)) {
+          errors.push(`Item ${i + 1}: "subtasks" must be an array`);
+          return;
+        }
+        for (let j = 0; j < item.subtasks.length; j++) {
+          const st = item.subtasks[j];
+          if (typeof st !== 'object' || !st.text || typeof st.text !== 'string') {
+            errors.push(`Item ${i + 1}, subtask ${j + 1}: must have a "text" string`);
+            return;
+          }
+        }
+      }
+
+      validTasks.push({
+        title: item.title.trim(),
+        description: item.description || "",
+        tags: (item.tags || []).map(t => t.toLowerCase().replace(/\s+/g, '')),
+        dueDate: item.dueDate || null,
+        recurrence: item.recurrence || null,
+        subtasks: item.subtasks ? item.subtasks.map(st => ({ text: st.text, done: st.done === true })) : null,
+      });
+    });
+
+    if (errors.length > 0) {
+      setJsonError(errors.join('\n'));
+    }
+    setJsonParsedTasks(validTasks);
+  };
+
+  const handleJsonBulkUpload = async () => {
+    try {
+      if (jsonParsedTasks.length === 0) {
+        toast.error("No valid tasks to upload");
+        return;
+      }
+
+      let successCount = 0;
+      for (const task of jsonParsedTasks) {
+        const tags = [...task.tags];
+        if (!tags.includes('json')) {
+          tags.push('json');
+        }
+        if (commonTag.trim()) {
+          const cleanTag = commonTag.trim().toLowerCase().replace(/\s+/g, '');
+          if (!tags.includes(cleanTag)) {
+            tags.push(cleanTag);
+          }
+        }
+
+        const success = await ideas.add({
+          userId: user.current.$id,
+          userName: user.current.name,
+          title: task.title,
+          description: task.description || "",
+          entryDate: new Date().toISOString(),
+          tags,
+          completed: false,
+          dueDate: task.dueDate || null,
+          recurrence: task.recurrence || null,
+          subtasks: task.subtasks ? JSON.stringify(task.subtasks) : null,
+        }, { source: 'json-upload' });
+        if (success) successCount++;
+      }
+
+      if (successCount > 0) {
+        toast.success(`Successfully added ${successCount} tasks!`, {
+          id: `json-upload-success`,
+          ...toastConfig.success,
+        });
+        closeBulkUploadModal();
+      }
+    } catch (error) {
+      toast.error("Failed to create tasks");
+    }
+  };
+
+  const handleJsonFileUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 500 * 1024) {
+      setJsonError("File too large (max 500KB)");
+      return;
+    }
+
+    if (!file.name.endsWith('.json')) {
+      setJsonError("Please select a .json file");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target.result;
+      setJsonInput(text);
+      parseAndValidateJson(text);
+    };
+    reader.onerror = () => {
+      setJsonError("Failed to read file");
+    };
+    reader.readAsText(file);
+
+    // Reset file input so same file can be re-selected
+    e.target.value = '';
+  };
+
+  const handleCopyAIPrompt = async () => {
+    const prompt = `Analyze the data above — it could be plain text, a link, an email, meeting notes, a forwarded message, AI-generated analysis, or any other content. Identify all actionable tasks and convert them into a JSON array of task objects. Return ONLY valid JSON, no markdown, no explanation.
+
+Each task object must follow this exact schema:
+{
+  "title": "string (REQUIRED)",
+  "description": "string (optional, default "")",
+  "tags": ["string"] (optional, default []),
+  "dueDate": "YYYY-MM-DD" or null (optional),
+  "recurrence": "daily"|"weekly"|"biweekly"|"monthly"|"quarterly"|"yearly"|null (optional),
+  "subtasks": [{"text": "string", "done": false}] or null (optional)
+}
+
+Rules:
+- Output a JSON array: [ {...}, {...} ]
+- "title" is the only required field
+- Tags should be lowercase, no spaces
+- Infer due dates from context when mentioned (use today's date as reference)
+- Use "subtasks" for checklists or sub-items
+- Break compound sentences into separate tasks
+- For emails/messages: extract action items, follow-ups, and deadlines
+- For links/articles: extract key takeaways as tasks if applicable
+- Add relevant tags based on the content category (e.g. "email", "meeting", "shopping")
+`;
+    try {
+      await navigator.clipboard.writeText(prompt);
+      setJsonPromptCopied(true);
+      toast.success("AI prompt copied to clipboard!", { id: 'ai-prompt-copy', ...toastConfig.success });
+      setTimeout(() => setJsonPromptCopied(false), 2000);
+    } catch {
+      toast.error("Failed to copy to clipboard");
+    }
+  };
+
+  const closeBulkUploadModal = () => {
+    setIsBulkUploadOpen(false);
+    setBulkTasksInput("");
+    setIsShoppingList(false);
+    setCommonTag("");
+    setShowBulkSyntaxHelp(false);
+    setBulkUploadMode('text');
+    setJsonInput("");
+    setJsonParsedTasks([]);
+    setJsonError("");
+    setJsonPromptCopied(false);
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-td-bg">
@@ -2286,17 +2525,43 @@ export function Ideas() {
         <div className="fixed inset-0 bg-black/15 flex items-center justify-center z-50 safe-area-overlay">
           <div className="bg-td-bg border border-td-border max-w-md w-full max-h-[90vh] overflow-y-auto">
             <div className="p-5">
-              <div className="flex justify-between items-center mb-4">
+              <div className="flex justify-between items-center mb-3">
                 <h3 className="text-td-base font-medium text-td-text">Bulk Upload</h3>
                 <button
-                  onClick={() => { setIsBulkUploadOpen(false); setBulkTasksInput(""); setIsShoppingList(false); setCommonTag(""); setShowBulkSyntaxHelp(false); }}
+                  onClick={closeBulkUploadModal}
                   className="text-td-faint hover:text-td-text"
                 >
                   <FontAwesomeIcon icon={faTimes} className="h-3 w-3" />
                 </button>
               </div>
 
+              {/* Tab bar */}
+              <div className="flex border-b border-td-border mb-3">
+                <button
+                  onClick={() => setBulkUploadMode('text')}
+                  className={`px-4 py-1.5 text-td-sm font-medium border-b-2 -mb-px ${
+                    bulkUploadMode === 'text'
+                      ? 'border-td-text text-td-text'
+                      : 'border-transparent text-td-faint hover:text-td-muted'
+                  }`}
+                >
+                  Text
+                </button>
+                <button
+                  onClick={() => setBulkUploadMode('json')}
+                  className={`px-4 py-1.5 text-td-sm font-medium border-b-2 -mb-px ${
+                    bulkUploadMode === 'json'
+                      ? 'border-td-text text-td-text'
+                      : 'border-transparent text-td-faint hover:text-td-muted'
+                  }`}
+                >
+                  JSON
+                </button>
+              </div>
+
               <div className="space-y-3">
+                {/* === TEXT TAB === */}
+                {bulkUploadMode === 'text' && (
                 <div>
                   <div className="text-td-xs text-td-faint mb-2 flex items-center justify-between">
                     <span>One task per line.</span>
@@ -2394,17 +2659,103 @@ export function Ideas() {
                     </div>
                   )}
                 </div>
+                )}
 
+                {/* === JSON TAB === */}
+                {bulkUploadMode === 'json' && (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-td-xs text-td-faint">Paste JSON array or upload a .json file</span>
+                    <button
+                      onClick={handleCopyAIPrompt}
+                      className="flex items-center gap-1.5 px-2 py-1 text-td-xs text-td-muted hover:text-td-text border border-td-border hover:bg-td-hover"
+                    >
+                      <FontAwesomeIcon icon={faCopy} className="h-2.5 w-2.5" />
+                      {jsonPromptCopied ? 'Copied!' : 'Copy AI prompt'}
+                    </button>
+                  </div>
+
+                  <input
+                    ref={jsonFileInputRef}
+                    type="file"
+                    accept=".json"
+                    onChange={handleJsonFileUpload}
+                    className="hidden"
+                  />
+                  <button
+                    onClick={() => jsonFileInputRef.current?.click()}
+                    className="w-full py-3 mb-2 border-2 border-dashed border-td-border text-td-sm text-td-faint hover:text-td-muted hover:border-td-muted text-center"
+                  >
+                    Choose .json file
+                  </button>
+
+                  <textarea
+                    value={jsonInput}
+                    onChange={(e) => {
+                      setJsonInput(e.target.value);
+                      parseAndValidateJson(e.target.value);
+                    }}
+                    className="w-full p-2 border border-td-border text-td-sm font-mono bg-transparent focus:outline-none"
+                    rows="6"
+                    placeholder={'[\n  {\n    "title": "Buy groceries",\n    "tags": ["shopping"],\n    "dueDate": "2026-03-15"\n  }\n]'}
+                  />
+
+                  {jsonError && (
+                    <div className="mt-2 p-2 border border-red-400/50 bg-red-500/10 text-td-xs text-red-400 font-mono whitespace-pre-wrap max-h-24 overflow-y-auto">
+                      {jsonError}
+                    </div>
+                  )}
+
+                  <div className="mt-2">
+                    <input
+                      type="text"
+                      value={commonTag}
+                      onChange={(e) => setCommonTag(e.target.value)}
+                      className="w-full p-1.5 border border-td-border text-td-sm bg-transparent focus:outline-none"
+                      placeholder="Common tag (optional)"
+                      maxLength="20"
+                    />
+                  </div>
+
+                  {jsonParsedTasks.length > 0 && (
+                    <div className="mt-2">
+                      <div className="text-td-xs text-td-muted mb-1">
+                        Preview ({jsonParsedTasks.length}):
+                      </div>
+                      <div className="border border-td-border p-2 max-h-36 overflow-y-auto">
+                        {jsonParsedTasks.map((task, index) => (
+                          <div key={index} className="text-td-xs text-td-muted mb-1">
+                            <div className="flex items-baseline gap-1 flex-wrap">
+                              <span>{index + 1}. {task.title}</span>
+                              {task.tags.length > 0 && <span className="text-td-faint">{task.tags.join(', ')}</span>}
+                              <span className="text-td-faint">json</span>
+                              {commonTag.trim() && <span className="text-td-faint">{commonTag.trim().toLowerCase().replace(/\s+/g, '')}</span>}
+                              {task.dueDate && <span className="text-td-text ml-auto">→ {formatPreviewDate(task.dueDate)}</span>}
+                              {task.recurrence && <span className="text-td-faint">↻ {task.recurrence}</span>}
+                            </div>
+                            {task.description && <div className="text-td-faint pl-3 italic">— {task.description}</div>}
+                            {task.subtasks && task.subtasks.length > 0 && (
+                              <div className="text-td-faint pl-3">{task.subtasks.length} subtask{task.subtasks.length !== 1 ? 's' : ''}</div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                )}
+
+                {/* Shared footer */}
                 <div className="flex gap-2 pt-2 border-t border-td-border">
                   <button
-                    onClick={handleBulkUpload}
+                    onClick={bulkUploadMode === 'text' ? handleBulkUpload : handleJsonBulkUpload}
                     className="flex-1 py-1.5 border border-td-text text-td-text text-td-sm hover:bg-td-hover disabled:opacity-30"
-                    disabled={getTaskPreview(bulkTasksInput).length === 0}
+                    disabled={bulkUploadMode === 'text' ? getTaskPreview(bulkTasksInput).length === 0 : jsonParsedTasks.length === 0}
                   >
-                    Upload {getTaskPreview(bulkTasksInput).length}
+                    Upload {bulkUploadMode === 'text' ? getTaskPreview(bulkTasksInput).length : jsonParsedTasks.length}
                   </button>
                   <button
-                    onClick={() => { setIsBulkUploadOpen(false); setBulkTasksInput(""); setIsShoppingList(false); setCommonTag(""); setShowBulkSyntaxHelp(false); }}
+                    onClick={closeBulkUploadModal}
                     className="flex-1 py-1.5 border border-td-border text-td-muted text-td-sm hover:bg-td-hover"
                   >
                     Cancel
