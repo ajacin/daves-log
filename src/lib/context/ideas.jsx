@@ -107,7 +107,8 @@ export function IdeasProvider(props) {
         tags: idea.tags || [],
         completed: idea.completed || false,
         dueDate: idea.dueDate || null,
-        recurrence: idea.recurrence || null
+        recurrence: idea.recurrence || null,
+        subtasks: idea.subtasks || null
       };
 
       const response = await databases.createDocument(
@@ -288,7 +289,8 @@ export function IdeasProvider(props) {
         dueDate: nextDueDate.toISOString(),
         completed: false,
         recurrence: completedTask.recurrence,
-        parentTaskId: completedTask.$id // Reference to the original task
+        parentTaskId: completedTask.$id, // Reference to the original task
+        subtasks: null // Clear checklist for next occurrence
       };
       
       await add(newTask, { source: 'auto-recurring', parentTaskId: completedTask.$id, recurrence: completedTask.recurrence });

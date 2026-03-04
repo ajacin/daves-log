@@ -17,7 +17,8 @@ import {
   faChevronLeft,
   faChevronRight,
   faInfoCircle,
-  faUpload
+  faUpload,
+  faBriefcase
 } from "@fortawesome/free-solid-svg-icons";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import toast from 'react-hot-toast';
@@ -140,6 +141,8 @@ function QuickAddTask({ onAdd, placeholder = "Add…" }) {
   const [dueDate, setDueDate] = useState("");
   const [recurrence, setRecurrence] = useState("");
   const [customTagInput, setCustomTagInput] = useState("");
+  const [subtasks, setSubtasks] = useState([]);
+  const [newSubtaskInput, setNewSubtaskInput] = useState("");
   const inputRef = useRef(null);
 
   const handleSubmit = async (e) => {
@@ -157,6 +160,7 @@ function QuickAddTask({ onAdd, placeholder = "Add…" }) {
       tags,
       dueDate: finalDueDate,
       recurrence: recurrence || null,
+      subtasks: subtasks.length > 0 ? JSON.stringify(subtasks) : null,
     };
 
     const success = await onAdd(taskData);
@@ -167,6 +171,8 @@ function QuickAddTask({ onAdd, placeholder = "Add…" }) {
       setDueDate("");
       setRecurrence("");
       setCustomTagInput("");
+      setSubtasks([]);
+      setNewSubtaskInput("");
       // Keep focus in input for fast successive entry
       if (!isExpanded) {
         inputRef.current?.focus();
@@ -186,6 +192,8 @@ function QuickAddTask({ onAdd, placeholder = "Add…" }) {
       setDueDate("");
       setRecurrence("");
       setCustomTagInput("");
+      setSubtasks([]);
+      setNewSubtaskInput("");
     }
   };
 
@@ -311,6 +319,56 @@ function QuickAddTask({ onAdd, placeholder = "Add…" }) {
                 </div>
               )}
 
+              {/* Subtasks / Checklist */}
+              <div>
+                <label className="text-td-xs text-td-muted">Checklist</label>
+                {subtasks.length > 0 && (
+                  <div className="mt-1 space-y-1">
+                    {subtasks.map((item, idx) => (
+                      <div key={idx} className="flex items-center gap-1.5">
+                        <input
+                          type="checkbox"
+                          checked={item.done}
+                          onChange={() => {
+                            const updated = [...subtasks];
+                            updated[idx] = { ...updated[idx], done: !updated[idx].done };
+                            setSubtasks(updated);
+                          }}
+                          className="h-3 w-3 accent-current flex-shrink-0"
+                        />
+                        <span className={`text-td-xs flex-1 ${item.done ? 'line-through text-td-faint' : 'text-td-text'}`}>
+                          {item.text}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setSubtasks(subtasks.filter((_, i) => i !== idx))}
+                          className="text-td-faint hover:text-td-text"
+                        >
+                          <FontAwesomeIcon icon={faTimes} className="h-2 w-2" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <input
+                  type="text"
+                  value={newSubtaskInput}
+                  onChange={(e) => setNewSubtaskInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      const text = newSubtaskInput.trim();
+                      if (text) {
+                        setSubtasks([...subtasks, { text, done: false }]);
+                        setNewSubtaskInput("");
+                      }
+                    }
+                  }}
+                  placeholder="Add item (enter)"
+                  className="w-full text-td-xs border-b border-td-border bg-transparent py-0.5 mt-1 outline-none placeholder-td-faint"
+                />
+              </div>
+
               {/* Actions */}
               <div className="flex justify-between items-center pt-1">
                 <button
@@ -323,6 +381,8 @@ function QuickAddTask({ onAdd, placeholder = "Add…" }) {
                     setDueDate("");
                     setRecurrence("");
                     setCustomTagInput("");
+                    setSubtasks([]);
+                    setNewSubtaskInput("");
                   }}
                   className="text-td-xs text-td-faint hover:text-td-text"
                 >
@@ -402,7 +462,7 @@ function TaskItem({ task, onToggleComplete, onEdit, onDelete, onQuickDateUpdate,
       onMouseLeave={() => setIsHovered(false)}
       className={`group flex items-start gap-2 py-1.5 px-2 transition-colors border-b border-td-border ${
         task.completed ? 'opacity-55' : ''
-      } ${!task.completed ? 'cursor-move' : 'cursor-default'} hover:bg-td-hover`}
+      } ${!task.completed ? 'cursor-move' : 'cursor-default'} ${task.tags?.includes('fs') ? 'border-l-2 border-l-blue-400' : ''} hover:bg-td-hover`}
     >
       {/* Checkbox — small ring */}
       <button
@@ -455,6 +515,22 @@ function TaskItem({ task, onToggleComplete, onEdit, onDelete, onQuickDateUpdate,
             {renderTextWithLinks(task.description)}
           </div>
         )}
+
+        {/* Subtask progress indicator */}
+        {task.subtasks && (() => {
+          try {
+            const items = JSON.parse(task.subtasks);
+            if (items.length > 0) {
+              const doneCount = items.filter(i => i.done).length;
+              return (
+                <span className="text-td-xs text-td-faint mt-0.5 inline-block">
+                  [{doneCount}/{items.length} items]
+                </span>
+              );
+            }
+          } catch { /* ignore bad JSON */ }
+          return null;
+        })()}
 
         {/* Quick actions — visible on hover (desktop) or menu open (mobile) */}
         {!task.completed && (isHovered || isMenuOpen) && (
@@ -510,8 +586,10 @@ function TaskItem({ task, onToggleComplete, onEdit, onDelete, onQuickDateUpdate,
 }
 
 // Timeline Column Component — minimal, grid-like
-function TimelineColumn({ title, subtitle, tasks, onAddTask, type, targetDate, isToday = false, isOverdue = false, processingTasks, hideMobileHeader = false, onTaskDrop, ...taskActions }) {
+function TimelineColumn({ title, subtitle, tasks, onAddTask, type, targetDate, isToday = false, isOverdue = false, processingTasks, hideMobileHeader = false, onTaskDrop, showWorkSection = false, ...taskActions }) {
   const [isDragOver, setIsDragOver] = useState(false);
+  const fsTasks = showWorkSection ? tasks.filter(t => t.tags?.includes('fs')) : [];
+  const regularTasks = showWorkSection ? tasks.filter(t => !t.tags?.includes('fs')) : tasks;
 
   const handleAddTask = async (taskData) => {
     if (type === 'unscheduled') {
@@ -583,8 +661,25 @@ function TimelineColumn({ title, subtitle, tasks, onAddTask, type, targetDate, i
           placeholder="Add…"
         />
 
+        {/* Pinned Work Section */}
+        {showWorkSection && fsTasks.length > 0 && (
+          <div className="border-b-2 border-blue-400/30 pb-1 mb-1">
+            <div className="px-3 pt-1 pb-0.5">
+              <span className="text-[10px] uppercase font-medium text-blue-400 tracking-wider">Work</span>
+            </div>
+            {fsTasks.map((task) => (
+              <TaskItem
+                key={task.$id}
+                task={task}
+                isProcessing={processingTasks?.has(task.$id)}
+                {...taskActions}
+              />
+            ))}
+          </div>
+        )}
+
         {/* Task List */}
-        {tasks.map((task) => (
+        {regularTasks.map((task) => (
           <TaskItem
             key={task.$id}
             task={task}
@@ -619,6 +714,7 @@ export function Ideas() {
   const [timeFilter, setTimeFilter] = useState(null); // 'today', 'tomorrow', 'overdue', 'week', 'next_week', 'next_month'
   const [userFilter, setUserFilter] = useState(null);
   const [isShoppingList, setIsShoppingList] = useState(false);
+  const [showWorkSection, setShowWorkSection] = useState(false);
   const [commonTag, setCommonTag] = useState("");
   const [viewMode, setViewMode] = useState('timeline'); // 'timeline', 'tags', or 'list'
   const [currentColumnIndex, setCurrentColumnIndex] = useState(0);
@@ -632,6 +728,8 @@ export function Ideas() {
   const [editDueDate, setEditDueDate] = useState("");
   const [editRecurrence, setEditRecurrence] = useState("");
   const [editCustomTagInput, setEditCustomTagInput] = useState("");
+  const [editSubtasks, setEditSubtasks] = useState([]);
+  const [newSubtaskText, setNewSubtaskText] = useState("");
   const [showRecurringInfo, setShowRecurringInfo] = useState(false);
   
   // Debounce mechanism to prevent rapid-fire clicks
@@ -1271,6 +1369,8 @@ export function Ideas() {
     setEditDueDate(task.dueDate ? task.dueDate.split('T')[0] : "");
     setEditRecurrence(task.recurrence || "");
     setEditCustomTagInput("");
+    setEditSubtasks(task.subtasks ? JSON.parse(task.subtasks) : []);
+    setNewSubtaskText("");
     setIsEditModalOpen(true);
   };
 
@@ -1289,6 +1389,7 @@ export function Ideas() {
       tags: editTags,
       dueDate: finalEditDueDate,
       recurrence: editRecurrence || null,
+      subtasks: editSubtasks.length > 0 ? JSON.stringify(editSubtasks) : null,
     }, { source: 'edit-modal' });
 
     if (success) {
@@ -1874,6 +1975,15 @@ export function Ideas() {
             >
               <FontAwesomeIcon icon={faShoppingCart} className="h-3 w-3" />
             </button>
+
+            {/* Work section toggle */}
+            <button
+              onClick={() => setShowWorkSection(!showWorkSection)}
+              className={`text-td-sm ${showWorkSection ? 'text-td-text font-medium' : 'text-td-muted hover:text-td-text'}`}
+              title={showWorkSection ? 'Unpin work tasks' : 'Pin work tasks to top'}
+            >
+              <FontAwesomeIcon icon={faBriefcase} className="h-3 w-3" />
+            </button>
           </div>
         </div>
 
@@ -2043,6 +2153,7 @@ export function Ideas() {
                           onEdit={handleEditTask}
                           onDelete={handleDeleteTask}
                           onQuickDateUpdate={handleQuickDateUpdate}
+                          showWorkSection={showWorkSection}
                         />
                       );
                     })()}
@@ -2077,6 +2188,7 @@ export function Ideas() {
                     onEdit={handleEditTask}
                     onDelete={handleDeleteTask}
                     onQuickDateUpdate={handleQuickDateUpdate}
+                    showWorkSection={showWorkSection}
                   />
                 );
               })}
@@ -2090,33 +2202,75 @@ export function Ideas() {
             </div>
             <div>
               {filteredTasks.length > 0 ? (
-                filteredTasks
-                  .sort((a, b) => {
-                    if (a.completed !== b.completed) return a.completed ? 1 : -1;
-                    if (a.dueDate && b.dueDate) {
-                      try {
-                        let aDate, bDate;
-                        aDate = parseDueDateToLocal(a.dueDate);
-                        bDate = parseDueDateToLocal(b.dueDate);
-                        if (!aDate || !bDate) return 0;
-                        return aDate - bDate;
-                      } catch { return 0; }
-                    }
-                    if (a.dueDate && !b.dueDate) return -1;
-                    if (!a.dueDate && b.dueDate) return 1;
-                    return new Date(b.entryDate || 0) - new Date(a.entryDate || 0);
-                  })
-                  .map((task) => (
-                    <TaskItem
-                      key={task.$id}
-                      task={task}
-                      isProcessing={processingTasks.has(task.$id)}
-                      onToggleComplete={handleToggleComplete}
-                      onEdit={handleEditTask}
-                      onDelete={handleDeleteTask}
-                      onQuickDateUpdate={handleQuickDateUpdate}
-                    />
-                  ))
+                <>
+                  {/* Pinned Work section in list view */}
+                  {showWorkSection && (() => {
+                    const pinnedWork = filteredTasks.filter(t => t.tags?.includes('fs') && !t.completed);
+                    if (pinnedWork.length === 0) return null;
+                    const sorted = [...pinnedWork].sort((a, b) => {
+                      if (a.dueDate && b.dueDate) {
+                        try {
+                          const aDate = parseDueDateToLocal(a.dueDate);
+                          const bDate = parseDueDateToLocal(b.dueDate);
+                          if (!aDate || !bDate) return 0;
+                          return aDate - bDate;
+                        } catch { return 0; }
+                      }
+                      if (a.dueDate && !b.dueDate) return -1;
+                      if (!a.dueDate && b.dueDate) return 1;
+                      return 0;
+                    });
+                    return (
+                      <div className="border-b-2 border-blue-400/30 pb-1 mb-1">
+                        <div className="px-3 pt-1 pb-0.5">
+                          <span className="text-[10px] uppercase font-medium text-blue-400 tracking-wider">Work</span>
+                        </div>
+                        {sorted.map((task) => (
+                          <TaskItem
+                            key={task.$id}
+                            task={task}
+                            isProcessing={processingTasks.has(task.$id)}
+                            onToggleComplete={handleToggleComplete}
+                            onEdit={handleEditTask}
+                            onDelete={handleDeleteTask}
+                            onQuickDateUpdate={handleQuickDateUpdate}
+                          />
+                        ))}
+                      </div>
+                    );
+                  })()}
+                  {/* Regular task list */}
+                  {(showWorkSection
+                    ? filteredTasks.filter(t => !t.tags?.includes('fs') || t.completed)
+                    : filteredTasks
+                  )
+                    .sort((a, b) => {
+                      if (a.completed !== b.completed) return a.completed ? 1 : -1;
+                      if (a.dueDate && b.dueDate) {
+                        try {
+                          let aDate, bDate;
+                          aDate = parseDueDateToLocal(a.dueDate);
+                          bDate = parseDueDateToLocal(b.dueDate);
+                          if (!aDate || !bDate) return 0;
+                          return aDate - bDate;
+                        } catch { return 0; }
+                      }
+                      if (a.dueDate && !b.dueDate) return -1;
+                      if (!a.dueDate && b.dueDate) return 1;
+                      return new Date(b.entryDate || 0) - new Date(a.entryDate || 0);
+                    })
+                    .map((task) => (
+                      <TaskItem
+                        key={task.$id}
+                        task={task}
+                        isProcessing={processingTasks.has(task.$id)}
+                        onToggleComplete={handleToggleComplete}
+                        onEdit={handleEditTask}
+                        onDelete={handleDeleteTask}
+                        onQuickDateUpdate={handleQuickDateUpdate}
+                      />
+                    ))}
+                </>
               ) : (
                 <div className="py-12 text-center text-td-faint text-td-sm">
                   No tasks match your filters
@@ -2308,6 +2462,83 @@ export function Ideas() {
                     onChange={(e) => setEditCustomTagInput(e.target.value)}
                     onKeyDown={(e) => handleCustomTagAdd(e, true)}
                     placeholder="Add tag (enter)"
+                    className="w-full border border-td-border px-2 py-1.5 text-td-sm bg-transparent focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-td-xs text-td-muted mb-1">Checklist</label>
+                  {editSubtasks.length > 0 && (
+                    <div className="space-y-1.5 mb-2">
+                      {editSubtasks.map((item, idx) => (
+                        <div key={idx} className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={item.done}
+                            onChange={() => {
+                              const updated = [...editSubtasks];
+                              updated[idx] = { ...updated[idx], done: !updated[idx].done };
+                              setEditSubtasks(updated);
+                            }}
+                            className="h-3.5 w-3.5 accent-current flex-shrink-0"
+                          />
+                          <span className={`text-td-sm flex-1 ${item.done ? 'line-through text-td-faint' : 'text-td-text'}`}>
+                            {item.text}
+                          </span>
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            {idx > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const updated = [...editSubtasks];
+                                  [updated[idx - 1], updated[idx]] = [updated[idx], updated[idx - 1]];
+                                  setEditSubtasks(updated);
+                                }}
+                                className="text-td-faint hover:text-td-text text-td-xs px-0.5"
+                              >
+                                ↑
+                              </button>
+                            )}
+                            {idx < editSubtasks.length - 1 && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const updated = [...editSubtasks];
+                                  [updated[idx], updated[idx + 1]] = [updated[idx + 1], updated[idx]];
+                                  setEditSubtasks(updated);
+                                }}
+                                className="text-td-faint hover:text-td-text text-td-xs px-0.5"
+                              >
+                                ↓
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => setEditSubtasks(editSubtasks.filter((_, i) => i !== idx))}
+                              className="text-td-faint hover:text-td-text ml-1"
+                            >
+                              <FontAwesomeIcon icon={faTimes} className="h-2.5 w-2.5" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <input
+                    type="text"
+                    value={newSubtaskText}
+                    onChange={(e) => setNewSubtaskText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const text = newSubtaskText.trim();
+                        if (text) {
+                          setEditSubtasks([...editSubtasks, { text, done: false }]);
+                          setNewSubtaskText("");
+                        }
+                      }
+                    }}
+                    placeholder="Add item (enter)"
                     className="w-full border border-td-border px-2 py-1.5 text-td-sm bg-transparent focus:outline-none"
                   />
                 </div>
