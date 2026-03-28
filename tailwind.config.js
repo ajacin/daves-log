@@ -15,8 +15,10 @@ module.exports = {
           'border-strong': '#dedede',
           hover: '#f7f7f7',
           focus: '#111111',
-          // Neutral strip for #fs / #work task rows (Ideas)
-          'work-row': '#f0f0f0',
+          // Ideas task rows: warm base tint for #fs / #work (distinct from row hover)
+          'work-row': '#f3f1ed',
+          // Ideas task row hover — cool gray, clearly different from work-row
+          'row-hover': '#e4e9f2',
         },
       },
       fontFamily: {

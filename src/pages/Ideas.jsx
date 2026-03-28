@@ -491,11 +491,11 @@ function TaskItem({ task, onToggleComplete, onEdit, onDelete, onQuickDateUpdate,
       onDragEnd={handleDragEnd}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className={`group flex items-start gap-2 py-1.5 px-2 transition-colors border-b border-td-border ${
+      className={`group flex items-start gap-2 py-1.5 px-2 transition-colors duration-150 border-b border-td-border ${
         task.completed ? 'opacity-55' : ''
       } ${!task.completed ? 'cursor-move' : 'cursor-default'} ${
         isWorkOrFsTagged ? 'bg-td-work-row' : ''
-      } hover:bg-td-hover`}
+      } hover:bg-td-row-hover`}
     >
       {/* Checkbox — small ring */}
       <button
@@ -604,9 +604,15 @@ function TaskItem({ task, onToggleComplete, onEdit, onDelete, onQuickDateUpdate,
           </ul>
         )}
 
-        {/* Quick actions — visible on hover (desktop) or menu open (mobile) */}
-        {!task.completed && (isHovered || isMenuOpen) && (
-          <div className="flex gap-2 mt-1 pl-4" onClick={(e) => e.stopPropagation()}>
+        {/* Quick actions — fixed slot so hover does not shift layout */}
+        {!task.completed && (
+          <div
+            className={`flex flex-wrap gap-2 mt-1 pl-4 min-h-5 items-center transition-opacity duration-150 ease-out ${
+              isHovered || isMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+            }`}
+            onClick={(e) => e.stopPropagation()}
+            aria-hidden={!isHovered && !isMenuOpen}
+          >
             {[
               { label: 'Today', key: 'today' },
               { label: 'Tomorrow', key: 'tomorrow' },
@@ -616,6 +622,7 @@ function TaskItem({ task, onToggleComplete, onEdit, onDelete, onQuickDateUpdate,
               <button
                 key={key}
                 type="button"
+                tabIndex={isHovered || isMenuOpen ? 0 : -1}
                 onClick={() => onQuickDateUpdate(task.$id, key)}
                 className="text-td-xs text-td-faint hover:text-td-text transition-colors"
               >
