@@ -15,6 +15,8 @@ module.exports = {
           'border-strong': '#dedede',
           hover: '#f7f7f7',
           focus: '#111111',
+          // Neutral strip for #fs / #work task rows (Ideas)
+          'work-row': '#f0f0f0',
         },
       },
       fontFamily: {

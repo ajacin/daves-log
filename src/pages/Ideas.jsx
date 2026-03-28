@@ -481,6 +481,9 @@ function TaskItem({ task, onToggleComplete, onEdit, onDelete, onQuickDateUpdate,
     } catch { return ''; }
   };
 
+  const isWorkOrFsTagged =
+    Boolean(task.tags?.includes('fs') || task.tags?.includes('work'));
+
   return (
     <div
       draggable={!task.completed}
@@ -490,7 +493,9 @@ function TaskItem({ task, onToggleComplete, onEdit, onDelete, onQuickDateUpdate,
       onMouseLeave={() => setIsHovered(false)}
       className={`group flex items-start gap-2 py-1.5 px-2 transition-colors border-b border-td-border ${
         task.completed ? 'opacity-55' : ''
-      } ${!task.completed ? 'cursor-move' : 'cursor-default'} ${task.tags?.includes('fs') ? 'border-l-2 border-l-blue-400' : ''} hover:bg-td-hover`}
+      } ${!task.completed ? 'cursor-move' : 'cursor-default'} ${
+        isWorkOrFsTagged ? 'bg-td-work-row' : ''
+      } hover:bg-td-hover`}
     >
       {/* Checkbox — small ring */}
       <button
