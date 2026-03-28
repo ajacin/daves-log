@@ -16,6 +16,7 @@ import {
   faTimes,
   faChevronLeft,
   faChevronRight,
+  faChevronDown,
   faInfoCircle,
   faUpload,
   faBriefcase,
@@ -406,10 +407,23 @@ function QuickAddTask({ onAdd, placeholder = "Add…" }) {
 }
 
 // Task Row Component — flat row, not a card
-function TaskItem({ task, onToggleComplete, onEdit, onDelete, onQuickDateUpdate, isProcessing }) {
+function TaskItem({ task, onToggleComplete, onEdit, onDelete, onQuickDateUpdate, onToggleSubtask, isProcessing }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const menuRef = useRef(null);
+
+  const parsedSubtasks = useMemo(() => {
+    if (!task.subtasks) return [];
+    try {
+      const items = JSON.parse(task.subtasks);
+      return Array.isArray(items) ? items : [];
+    } catch {
+      return [];
+    }
+  }, [task.subtasks]);
+
+  const hasExpandableContent = Boolean(task.description?.trim()) || parsedSubtasks.length > 0;
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -424,6 +438,19 @@ function TaskItem({ task, onToggleComplete, onEdit, onDelete, onQuickDateUpdate,
       document.removeEventListener('touchstart', handleClickOutside);
     };
   }, []);
+
+  const handleContentClick = () => {
+    if (!hasExpandableContent) return;
+    setIsExpanded((prev) => !prev);
+  };
+
+  const handleContentKeyDown = (e) => {
+    if (!hasExpandableContent) return;
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      setIsExpanded((prev) => !prev);
+    }
+  };
 
   const isOverdue = task.dueDate && (() => {
     const dueDate = parseDueDateToLocal(task.dueDate);
@@ -482,61 +509,99 @@ function TaskItem({ task, onToggleComplete, onEdit, onDelete, onQuickDateUpdate,
         )}
       </button>
 
-      {/* Main content */}
-      <div className="flex-1 min-w-0">
-        <div>
-          <span className={`text-td-base ${task.completed ? 'line-through text-td-faint' : 'text-td-text'}`}>
-            {task.title}
-          </span>
-          {/* Inline meta: date + recurrence + tags */}
-          {(task.dueDate || (task.tags && task.tags.length > 0)) && (
-            <div className="flex items-center gap-2 mt-0.5">
-              {task.dueDate && (
-                <span className={`text-td-xs whitespace-nowrap ${isOverdue ? 'text-red-500' : 'text-td-faint'}`}>
-                  {formatDate(task.dueDate)}
-                  {task.recurrence && (
-                    <span className="ml-0.5">
-                      <FontAwesomeIcon icon={faSync} className="h-2 w-2" />
-                    </span>
-                  )}
-                </span>
-              )}
-              {task.tags && task.tags.length > 0 && (
-                <span className="text-td-xs text-td-faint whitespace-nowrap">
-                  <span className="sm:hidden">{task.tags[0]}{task.tags.length > 1 && ` +${task.tags.length - 1}`}</span>
-                  <span className="hidden sm:inline">{task.tags.slice(0, 2).join(', ')}{task.tags.length > 2 && ` +${task.tags.length - 2}`}</span>
-                </span>
-              )}
-            </div>
+      {/* Main content — tap/click to expand description & checklist */}
+      <div
+        className={`flex-1 min-w-0 outline-none ${hasExpandableContent ? 'cursor-pointer' : ''}`}
+        onClick={handleContentClick}
+        onKeyDown={handleContentKeyDown}
+        role={hasExpandableContent ? 'button' : undefined}
+        tabIndex={hasExpandableContent ? 0 : undefined}
+        aria-expanded={hasExpandableContent ? isExpanded : undefined}
+        aria-label={hasExpandableContent ? (isExpanded ? 'Collapse task details' : 'Expand task details') : undefined}
+      >
+        <div className="flex items-start gap-1">
+          {hasExpandableContent && (
+            <span className="text-td-faint mt-0.5 flex-shrink-0" aria-hidden>
+              <FontAwesomeIcon icon={isExpanded ? faChevronDown : faChevronRight} className="h-2.5 w-2.5" />
+            </span>
           )}
+          <div className="min-w-0 flex-1">
+            <span className={`text-td-base ${task.completed ? 'line-through text-td-faint' : 'text-td-text'}`}>
+              {task.title}
+            </span>
+            {/* Inline meta: date + recurrence + tags */}
+            {(task.dueDate || (task.tags && task.tags.length > 0)) && (
+              <div className="flex items-center gap-2 mt-0.5">
+                {task.dueDate && (
+                  <span className={`text-td-xs whitespace-nowrap ${isOverdue ? 'text-red-500' : 'text-td-faint'}`}>
+                    {formatDate(task.dueDate)}
+                    {task.recurrence && (
+                      <span className="ml-0.5">
+                        <FontAwesomeIcon icon={faSync} className="h-2 w-2" />
+                      </span>
+                    )}
+                  </span>
+                )}
+                {task.tags && task.tags.length > 0 && (
+                  <span className="text-td-xs text-td-faint whitespace-nowrap">
+                    <span className="sm:hidden">{task.tags[0]}{task.tags.length > 1 && ` +${task.tags.length - 1}`}</span>
+                    <span className="hidden sm:inline">{task.tags.slice(0, 2).join(', ')}{task.tags.length > 2 && ` +${task.tags.length - 2}`}</span>
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Description — subtle, one line */}
+        {/* Description — one line collapsed, full when expanded */}
         {task.description && (
-          <div className="text-td-xs text-td-faint truncate mt-0.5">
+          <div
+            className={`text-td-xs text-td-faint mt-0.5 ${hasExpandableContent ? 'pl-4' : ''} ${isExpanded ? 'whitespace-pre-wrap break-words' : 'truncate'}`}
+          >
             {renderTextWithLinks(task.description)}
           </div>
         )}
 
-        {/* Subtask progress indicator */}
-        {task.subtasks && (() => {
-          try {
-            const items = JSON.parse(task.subtasks);
-            if (items.length > 0) {
-              const doneCount = items.filter(i => i.done).length;
-              return (
-                <span className="text-td-xs text-td-faint mt-0.5 inline-block">
-                  [{doneCount}/{items.length} items]
+        {/* Subtasks — summary when collapsed, full checklist when expanded */}
+        {parsedSubtasks.length > 0 && !isExpanded && (
+          <span className="text-td-xs text-td-faint mt-0.5 inline-block pl-4">
+            [{parsedSubtasks.filter((i) => i.done).length}/{parsedSubtasks.length} items]
+          </span>
+        )}
+        {isExpanded && parsedSubtasks.length > 0 && onToggleSubtask && (
+          <ul
+            className="mt-1.5 space-y-1 pl-4 list-none"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {parsedSubtasks.map((item, idx) => (
+              <li key={idx} className="flex items-start gap-2">
+                <button
+                  type="button"
+                  disabled={task.completed || isProcessing}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleSubtask(task.$id, idx);
+                  }}
+                  className={`mt-0.5 w-3.5 h-3.5 rounded-sm border flex-shrink-0 flex items-center justify-center ${
+                    task.completed || isProcessing ? 'opacity-50 cursor-not-allowed border-td-border' : 'border-td-border-strong hover:border-td-text'
+                  } ${item.done ? 'border-td-muted bg-td-muted' : ''}`}
+                  aria-label={item.done ? `Mark "${item.text}" not done` : `Mark "${item.text}" done`}
+                >
+                  {item.done && (
+                    <FontAwesomeIcon icon={faCheck} className="h-2 w-2 text-white" />
+                  )}
+                </button>
+                <span className={`text-td-xs flex-1 pt-0.5 ${item.done ? 'line-through text-td-faint' : 'text-td-text'}`}>
+                  {item.text}
                 </span>
-              );
-            }
-          } catch { /* ignore bad JSON */ }
-          return null;
-        })()}
+              </li>
+            ))}
+          </ul>
+        )}
 
         {/* Quick actions — visible on hover (desktop) or menu open (mobile) */}
         {!task.completed && (isHovered || isMenuOpen) && (
-          <div className="flex gap-2 mt-1">
+          <div className="flex gap-2 mt-1 pl-4" onClick={(e) => e.stopPropagation()}>
             {[
               { label: 'Today', key: 'today' },
               { label: 'Tomorrow', key: 'tomorrow' },
@@ -545,6 +610,7 @@ function TaskItem({ task, onToggleComplete, onEdit, onDelete, onQuickDateUpdate,
             ].map(({ label, key }) => (
               <button
                 key={key}
+                type="button"
                 onClick={() => onQuickDateUpdate(task.$id, key)}
                 className="text-td-xs text-td-faint hover:text-td-text transition-colors"
               >
@@ -1378,6 +1444,25 @@ export function Ideas() {
         newSet.delete(taskId);
         return newSet;
       });
+    }
+  };
+
+  const handleToggleSubtask = async (taskId, index) => {
+    const task = ideas.current.find((t) => t.$id === taskId);
+    if (!task?.subtasks) return;
+    let items;
+    try {
+      items = JSON.parse(task.subtasks);
+    } catch {
+      return;
+    }
+    if (!Array.isArray(items) || index < 0 || index >= items.length) return;
+    const next = items.map((st, i) =>
+      (i === index ? { ...st, done: !st.done } : st)
+    );
+    const success = await ideas.update(taskId, { subtasks: JSON.stringify(next) }, { source: 'task-item-subtask' });
+    if (!success) {
+      toast.error('Failed to update checklist', { duration: 2500 });
     }
   };
 
@@ -2392,6 +2477,7 @@ Rules:
                           onEdit={handleEditTask}
                           onDelete={handleDeleteTask}
                           onQuickDateUpdate={handleQuickDateUpdate}
+                          onToggleSubtask={handleToggleSubtask}
                           showWorkSection={showWorkSection}
                         />
                       );
@@ -2427,6 +2513,7 @@ Rules:
                     onEdit={handleEditTask}
                     onDelete={handleDeleteTask}
                     onQuickDateUpdate={handleQuickDateUpdate}
+                    onToggleSubtask={handleToggleSubtask}
                     showWorkSection={showWorkSection}
                   />
                 );
@@ -2473,6 +2560,7 @@ Rules:
                             onEdit={handleEditTask}
                             onDelete={handleDeleteTask}
                             onQuickDateUpdate={handleQuickDateUpdate}
+                            onToggleSubtask={handleToggleSubtask}
                           />
                         ))}
                       </div>
@@ -2507,6 +2595,7 @@ Rules:
                         onEdit={handleEditTask}
                         onDelete={handleDeleteTask}
                         onQuickDateUpdate={handleQuickDateUpdate}
+                        onToggleSubtask={handleToggleSubtask}
                       />
                     ))}
                 </>

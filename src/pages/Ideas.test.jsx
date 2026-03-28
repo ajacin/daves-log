@@ -213,6 +213,29 @@ describe('TaskItem subtask progress indicator', () => {
   });
 });
 
+describe('TaskItem expand details', () => {
+  it('reveals checklist items when expanding task details (no edit modal)', async () => {
+    const subtasksJson = JSON.stringify([
+      { text: 'Sub visible after expand', done: false },
+    ]);
+    mockIdeasData = [
+      makeTask({ $id: 'expand-checklist', title: 'Tap to expand', subtasks: subtasksJson }),
+    ];
+
+    render(<Ideas />);
+    await waitFor(() => {
+      expect(screen.queryByText('Loading…')).not.toBeInTheDocument();
+    });
+
+    expect(screen.queryByText('Sub visible after expand')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /expand task details/i }));
+
+    expect(screen.getByText('Sub visible after expand')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /edit task/i })).not.toBeInTheDocument();
+  });
+});
+
 // ── 3. TimelineColumn: filters pinned work tasks when showWorkSection is true ─
 
 describe('TimelineColumn work section filtering', () => {
