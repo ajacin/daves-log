@@ -20,7 +20,9 @@ import {
   faInfoCircle,
   faUpload,
   faBriefcase,
-  faCopy
+  faCopy,
+  faArrowUp,
+  faArrowDown
 } from "@fortawesome/free-solid-svg-icons";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import toast from 'react-hot-toast';
@@ -709,7 +711,7 @@ function TimelineColumn({ title, subtitle, tasks, onAddTask, type, targetDate, i
 
   return (
     <div
-      className={`flex-1 min-w-[220px] w-full bg-td-bg border-r border-td-border last:border-r-0 transition-colors ${
+      className={`flex flex-col flex-1 min-h-0 min-w-[220px] w-full h-full bg-td-bg border-r border-td-border last:border-r-0 transition-colors ${
         isDragOver ? 'bg-td-hover' : ''
       }`}
       onDragOver={handleDragOver}
@@ -718,7 +720,7 @@ function TimelineColumn({ title, subtitle, tasks, onAddTask, type, targetDate, i
     >
       {/* Column Header */}
       {!hideMobileHeader && (
-        <div className="px-3 py-2 border-b border-td-border">
+        <div className="flex-shrink-0 px-3 py-2 border-b border-td-border">
           <div className="text-td-header uppercase font-medium text-td-muted tracking-wider">
             {title}
           </div>
@@ -733,8 +735,8 @@ function TimelineColumn({ title, subtitle, tasks, onAddTask, type, targetDate, i
         </div>
       )}
 
-      {/* Content */}
-      <div className={`min-h-[300px] max-h-[calc(100vh-140px)] overflow-y-auto ${hideMobileHeader ? 'pt-2' : ''}`}>
+      {/* Content — flex-1 + min-h-0: single column scroll inside viewport (mobile + desktop) */}
+      <div className={`flex-1 min-h-0 overflow-y-auto overscroll-y-contain ${hideMobileHeader ? 'pt-2' : ''}`}>
         {/* Inline Add */}
         <QuickAddTask
           onAdd={handleAddTask}
@@ -2208,10 +2210,10 @@ Rules:
   }
 
   return (
-    <div className="min-h-screen bg-td-bg">
+    <div className="flex flex-col h-dvh max-h-dvh overflow-hidden bg-td-bg lg:min-h-screen lg:h-auto lg:max-h-none lg:overflow-visible">
       {/* Timezone Warning — subtle banner */}
       {showTimezoneWarning && (
-        <div className="border-b border-td-border px-4 py-2 flex items-center justify-between">
+        <div className="flex-shrink-0 border-b border-td-border px-4 py-2 flex items-center justify-between">
           <span className="text-td-xs text-td-muted">
             Some dates may appear shifted due to timezone settings.
           </span>
@@ -2221,8 +2223,8 @@ Rules:
         </div>
       )}
 
-      {/* Top Bar — minimal, 44px */}
-      <div className="bg-td-bg border-b border-td-border sticky top-0 z-10">
+      {/* Top Bar — minimal, 44px (sticky only when page can scroll, e.g. desktop list) */}
+      <div className="flex-shrink-0 bg-td-bg border-b border-td-border z-10 lg:sticky lg:top-0">
         <div className="flex items-center h-11 px-3 gap-3">
           {/* Left: title + count */}
           <div className="flex items-baseline gap-1.5 pl-8">
@@ -2425,16 +2427,20 @@ Rules:
         )}
       </div>
 
-      {/* Main Content */}
-      <div className="w-full">
+      {/* Main Content — flex-1 + min-h-0 so one scroll region on mobile */}
+      <div className="w-full flex-1 min-h-0 flex flex-col overflow-hidden lg:flex-none lg:overflow-visible">
         {viewMode === 'timeline' || viewMode === 'tags' ? (
           <>
             {/* Mobile Navigation — single column */}
-            <div className="block lg:hidden" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+            <div
+              className="flex flex-col flex-1 min-h-0 overflow-hidden lg:hidden"
+              onTouchStart={handleTouchStart}
+              onTouchEnd={handleTouchEnd}
+            >
               {currentColumns.length > 0 && (
-                <div>
+                <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
                   {/* Mobile nav header */}
-                  <div className="flex items-center justify-between border-b border-td-border px-3 py-2">
+                  <div className="flex-shrink-0 flex items-center justify-between border-b border-td-border px-3 py-2">
                     <button
                       onClick={() => navigateColumn(-1)}
                       disabled={currentColumnIndex === 0}
@@ -2461,8 +2467,8 @@ Rules:
                     </button>
                   </div>
 
-                  {/* Mobile column content */}
-                  <div className="w-full">
+                  {/* Mobile column content — fills remaining viewport height */}
+                  <div className="w-full flex-1 min-h-0 flex flex-col overflow-hidden">
                     {(() => {
                       const column = currentColumns[currentColumnIndex];
                       if (!column) return null;
@@ -2500,7 +2506,7 @@ Rules:
             </div>
 
             {/* Desktop — CSS grid of columns */}
-            <div className="hidden lg:flex overflow-x-auto" style={{ height: 'calc(100vh - 44px)' }}>
+            <div className="hidden lg:flex overflow-x-auto lg:min-h-0" style={{ height: 'calc(100dvh - 44px)' }}>
               {currentColumns.map((column) => {
                 const getAddTaskHandler = () => {
                   if (column.isTag && column.tagName) {
@@ -2534,7 +2540,7 @@ Rules:
           </>
         ) : (
           /* List View */
-          <div className="max-w-2xl mx-auto px-3 py-4">
+          <div className="max-w-2xl mx-auto px-3 py-4 flex-1 min-h-0 overflow-y-auto overscroll-y-contain lg:overflow-visible lg:flex-none">
             <div className="border-b border-td-border pb-2 mb-2">
               <QuickAddTask onAdd={(taskData) => handleAddTask(taskData)} placeholder="Add…" />
             </div>
@@ -2868,180 +2874,254 @@ Rules:
         </div>
       )}
 
-      {/* Edit Task Modal */}
+      {/* Edit Task Modal — responsive: bottom sheet on small screens, centered sheet on md+ */}
       {isEditModalOpen && editingTask && (
-        <div className="fixed inset-0 bg-black/15 flex items-center justify-center z-50 safe-area-overlay">
-          <div className="bg-td-bg border border-td-border max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-5">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-td-base font-medium text-td-text">Edit Task</h3>
-                <button onClick={() => setIsEditModalOpen(false)} className="text-td-faint hover:text-td-text">
-                  <FontAwesomeIcon icon={faTimes} className="h-3 w-3" />
-                </button>
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4 safe-area-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="edit-task-title"
+        >
+          <div className="absolute inset-0 bg-black/30 sm:bg-black/20" aria-hidden />
+
+          <div
+            className="relative flex flex-col w-full max-h-[min(100dvh,100svh)] sm:max-h-[min(90vh,900px)] bg-td-bg border border-td-border border-b-0 sm:border-b rounded-t-2xl sm:rounded-lg shadow-2xl sm:max-w-lg lg:max-w-3xl lg:w-full overflow-hidden"
+          >
+            <header className="flex-shrink-0 flex items-center justify-between gap-3 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-3 sm:px-5 sm:pt-5 sm:pb-4 border-b border-td-border bg-td-bg">
+              <div className="min-w-0">
+                <h3 id="edit-task-title" className="text-td-base sm:text-lg font-semibold text-td-text truncate">
+                  Edit task
+                </h3>
+                <p className="text-td-xs text-td-faint mt-0.5 truncate max-w-[85vw] sm:max-w-none">
+                  {editingTask.title}
+                </p>
               </div>
+              <button
+                type="button"
+                onClick={() => setIsEditModalOpen(false)}
+                className="flex-shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-md text-td-faint hover:text-td-text hover:bg-td-hover transition-colors"
+                aria-label="Close"
+              >
+                <FontAwesomeIcon icon={faTimes} className="h-4 w-4" />
+              </button>
+            </header>
 
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-td-xs text-td-muted mb-1">Title</label>
-                  <input
-                    type="text"
-                    value={editTitle}
-                    onChange={(e) => setEditTitle(e.target.value)}
-                    className="w-full border border-td-border px-2 py-1.5 text-td-base bg-transparent focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-td-xs text-td-muted mb-1">Description</label>
-                  <textarea
-                    value={editDescription}
-                    onChange={(e) => setEditDescription(e.target.value)}
-                    rows="3"
-                    className="w-full border border-td-border px-2 py-1.5 text-td-sm bg-transparent focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-td-xs text-td-muted mb-1">Tags</label>
-                  <div className="flex flex-wrap gap-1.5 mb-2">
-                    {editTags.map((tag) => (
-                      <TaskTag key={tag} tag={tag} onRemove={(t) => setEditTags(editTags.filter(x => x !== t))} />
-                    ))}
-                  </div>
-                  <input
-                    type="text"
-                    value={editCustomTagInput}
-                    onChange={(e) => setEditCustomTagInput(e.target.value)}
-                    onKeyDown={(e) => handleCustomTagAdd(e, true)}
-                    placeholder="Add tag (enter)"
-                    className="w-full border border-td-border px-2 py-1.5 text-td-sm bg-transparent focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-td-xs text-td-muted mb-1">Checklist</label>
-                  {editSubtasks.length > 0 && (
-                    <div className="space-y-1.5 mb-2">
-                      {editSubtasks.map((item, idx) => (
-                        <div key={idx} className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            checked={item.done}
-                            onChange={() => {
-                              const updated = [...editSubtasks];
-                              updated[idx] = { ...updated[idx], done: !updated[idx].done };
-                              setEditSubtasks(updated);
-                            }}
-                            className="h-3.5 w-3.5 accent-current flex-shrink-0"
-                          />
-                          <span className={`text-td-sm flex-1 ${item.done ? 'line-through text-td-faint' : 'text-td-text'}`}>
-                            {item.text}
-                          </span>
-                          <div className="flex items-center gap-1 flex-shrink-0">
-                            {idx > 0 && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const updated = [...editSubtasks];
-                                  [updated[idx - 1], updated[idx]] = [updated[idx], updated[idx - 1]];
-                                  setEditSubtasks(updated);
-                                }}
-                                className="text-td-faint hover:text-td-text text-td-xs px-0.5"
-                              >
-                                ↑
-                              </button>
-                            )}
-                            {idx < editSubtasks.length - 1 && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const updated = [...editSubtasks];
-                                  [updated[idx], updated[idx + 1]] = [updated[idx + 1], updated[idx]];
-                                  setEditSubtasks(updated);
-                                }}
-                                className="text-td-faint hover:text-td-text text-td-xs px-0.5"
-                              >
-                                ↓
-                              </button>
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => setEditSubtasks(editSubtasks.filter((_, i) => i !== idx))}
-                              className="text-td-faint hover:text-td-text ml-1"
-                            >
-                              <FontAwesomeIcon icon={faTimes} className="h-2.5 w-2.5" />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  <input
-                    type="text"
-                    value={newSubtaskText}
-                    onChange={(e) => setNewSubtaskText(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        const text = newSubtaskText.trim();
-                        if (text) {
-                          setEditSubtasks([...editSubtasks, { text, done: false }]);
-                          setNewSubtaskText("");
-                        }
-                      }
-                    }}
-                    placeholder="Add item (enter)"
-                    className="w-full border border-td-border px-2 py-1.5 text-td-sm bg-transparent focus:outline-none"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-4 sm:px-5 sm:py-5">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
+                {/* Main column: title, description, checklist */}
+                <div className="lg:col-span-7 space-y-5">
                   <div>
-                    <label className="block text-td-xs text-td-muted mb-1">Due Date</label>
+                    <label htmlFor="edit-task-title-input" className="block text-td-header text-td-muted uppercase tracking-wider mb-2">
+                      Title
+                    </label>
                     <input
-                      type="date"
-                      value={editDueDate}
-                      onChange={(e) => setEditDueDate(e.target.value)}
-                      className="w-full border border-td-border px-2 py-1.5 text-td-sm bg-transparent focus:outline-none"
+                      id="edit-task-title-input"
+                      type="text"
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      className="w-full min-h-[44px] rounded-md border border-td-border bg-td-bg px-3 py-2.5 text-td-base text-td-text shadow-sm placeholder:text-td-faint focus:outline-none focus:ring-2 focus:ring-td-border-strong focus:border-td-border-strong"
+                      autoComplete="off"
                     />
                   </div>
+
                   <div>
-                    <label className="block text-td-xs text-td-muted mb-1">Repeat</label>
-                    <select
-                      value={editRecurrence}
-                      onChange={(e) => setEditRecurrence(e.target.value)}
-                      className="w-full border border-td-border px-2 py-1.5 text-td-sm bg-transparent focus:outline-none"
-                    >
-                      <option value="">No repeat</option>
-                      <option value="daily">Daily</option>
-                      <option value="weekly">Weekly</option>
-                      <option value="biweekly">Bi-weekly</option>
-                      <option value="monthly">Monthly</option>
-                      <option value="quarterly">Quarterly</option>
-                      <option value="yearly">Yearly</option>
-                    </select>
-                    {editRecurrence && !editDueDate && (
-                      <div className="text-td-xs text-td-muted mt-1">Starts today</div>
+                    <label htmlFor="edit-task-description" className="block text-td-header text-td-muted uppercase tracking-wider mb-2">
+                      Description
+                    </label>
+                    <textarea
+                      id="edit-task-description"
+                      value={editDescription}
+                      onChange={(e) => setEditDescription(e.target.value)}
+                      rows={4}
+                      className="w-full min-h-[120px] sm:min-h-[140px] rounded-md border border-td-border bg-td-bg px-3 py-2.5 text-td-sm text-td-text leading-relaxed shadow-sm placeholder:text-td-faint focus:outline-none focus:ring-2 focus:ring-td-border-strong focus:border-td-border-strong resize-y"
+                      placeholder="Optional notes, links…"
+                    />
+                  </div>
+
+                  <div>
+                    <span className="block text-td-header text-td-muted uppercase tracking-wider mb-2">
+                      Checklist
+                    </span>
+                    {editSubtasks.length > 0 && (
+                      <ul className="space-y-2 mb-3 list-none p-0 m-0">
+                        {editSubtasks.map((item, idx) => (
+                          <li
+                            key={idx}
+                            className="flex items-center gap-2 sm:gap-3 rounded-md border border-td-border bg-td-bg px-2 py-2 sm:px-3"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={item.done}
+                              onChange={() => {
+                                const updated = [...editSubtasks];
+                                updated[idx] = { ...updated[idx], done: !updated[idx].done };
+                                setEditSubtasks(updated);
+                              }}
+                              className="h-4 w-4 sm:h-3.5 sm:w-3.5 accent-current flex-shrink-0 mt-0.5"
+                              aria-label={`Done: ${item.text}`}
+                            />
+                            <span className={`text-td-sm flex-1 min-w-0 break-words ${item.done ? 'line-through text-td-faint' : 'text-td-text'}`}>
+                              {item.text}
+                            </span>
+                            <div className="flex items-center gap-0.5 flex-shrink-0">
+                              {idx > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const updated = [...editSubtasks];
+                                    [updated[idx - 1], updated[idx]] = [updated[idx], updated[idx - 1]];
+                                    setEditSubtasks(updated);
+                                  }}
+                                  className="min-w-[40px] min-h-[40px] sm:min-w-[36px] sm:min-h-[36px] flex items-center justify-center rounded-md text-td-faint hover:text-td-text hover:bg-td-hover"
+                                  aria-label="Move item up"
+                                >
+                                  <FontAwesomeIcon icon={faArrowUp} className="h-3 w-3" />
+                                </button>
+                              )}
+                              {idx < editSubtasks.length - 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const updated = [...editSubtasks];
+                                    [updated[idx], updated[idx + 1]] = [updated[idx + 1], updated[idx]];
+                                    setEditSubtasks(updated);
+                                  }}
+                                  className="min-w-[40px] min-h-[40px] sm:min-w-[36px] sm:min-h-[36px] flex items-center justify-center rounded-md text-td-faint hover:text-td-text hover:bg-td-hover"
+                                  aria-label="Move item down"
+                                >
+                                  <FontAwesomeIcon icon={faArrowDown} className="h-3 w-3" />
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => setEditSubtasks(editSubtasks.filter((_, i) => i !== idx))}
+                                className="min-w-[40px] min-h-[40px] sm:min-w-[36px] sm:min-h-[36px] flex items-center justify-center rounded-md text-td-faint hover:text-red-500 hover:bg-td-hover"
+                                aria-label={`Remove ${item.text}`}
+                              >
+                                <FontAwesomeIcon icon={faTrash} className="h-3 w-3" />
+                              </button>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
                     )}
+                    <input
+                      type="text"
+                      value={newSubtaskText}
+                      onChange={(e) => setNewSubtaskText(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          const text = newSubtaskText.trim();
+                          if (text) {
+                            setEditSubtasks([...editSubtasks, { text, done: false }]);
+                            setNewSubtaskText("");
+                          }
+                        }
+                      }}
+                      placeholder="Add item (enter)"
+                      className="w-full min-h-[44px] rounded-md border border-td-border border-dashed bg-td-bg px-3 py-2.5 text-td-sm text-td-text shadow-sm placeholder:text-td-faint focus:outline-none focus:ring-2 focus:ring-td-border-strong focus:border-solid"
+                    />
                   </div>
                 </div>
 
-                <div className="flex gap-2 pt-2 border-t border-td-border">
-                  <button
-                    onClick={handleSaveEdit}
-                    className="flex-1 py-1.5 border border-td-text text-td-text text-td-sm hover:bg-td-hover"
-                  >
-                    Save
-                  </button>
-                  <button
-                    onClick={() => setIsEditModalOpen(false)}
-                    className="flex-1 py-1.5 border border-td-border text-td-muted text-td-sm hover:bg-td-hover"
-                  >
-                    Cancel
-                  </button>
+                {/* Side column: tags & schedule */}
+                <div className="lg:col-span-5 space-y-5 lg:border-l lg:border-td-border lg:pl-8 pt-2 lg:pt-0 border-t border-td-border lg:border-t-0">
+                  <div>
+                    <span className="block text-td-header text-td-muted uppercase tracking-wider mb-2">
+                      Tags
+                    </span>
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      {editTags.map((tag) => (
+                        <TaskTag key={tag} tag={tag} onRemove={(t) => setEditTags(editTags.filter(x => x !== t))} />
+                      ))}
+                    </div>
+                    <input
+                      type="text"
+                      value={editCustomTagInput}
+                      onChange={(e) => setEditCustomTagInput(e.target.value)}
+                      onKeyDown={(e) => handleCustomTagAdd(e, true)}
+                      placeholder="Type tag, press Enter"
+                      className="w-full min-h-[44px] rounded-md border border-td-border bg-td-bg px-3 py-2.5 text-td-sm text-td-text shadow-sm placeholder:text-td-faint focus:outline-none focus:ring-2 focus:ring-td-border-strong focus:border-td-border-strong"
+                    />
+                    <div className="flex flex-wrap gap-1.5 mt-2 max-h-24 overflow-y-auto">
+                      {PREDEFINED_TAGS.filter((tag) => !editTags.includes(tag)).slice(0, 12).map((tag) => (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() => {
+                            if (!editTags.includes(tag)) setEditTags([...editTags, tag]);
+                          }}
+                          className="text-td-xs px-2 py-1 rounded-md border border-td-border text-td-muted hover:text-td-text hover:bg-td-hover transition-colors"
+                        >
+                          {tag}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <span className="block text-td-header text-td-muted uppercase tracking-wider mb-3">
+                      Schedule
+                    </span>
+                    <div className="space-y-4">
+                      <div>
+                        <label htmlFor="edit-task-due" className="block text-td-xs text-td-muted mb-1.5">
+                          Due date
+                        </label>
+                        <input
+                          id="edit-task-due"
+                          type="date"
+                          value={editDueDate}
+                          onChange={(e) => setEditDueDate(e.target.value)}
+                          className="w-full min-h-[44px] rounded-md border border-td-border bg-td-bg px-3 py-2 text-td-sm text-td-text shadow-sm focus:outline-none focus:ring-2 focus:ring-td-border-strong focus:border-td-border-strong"
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="edit-task-repeat" className="block text-td-xs text-td-muted mb-1.5">
+                          Repeat
+                        </label>
+                        <select
+                          id="edit-task-repeat"
+                          value={editRecurrence}
+                          onChange={(e) => setEditRecurrence(e.target.value)}
+                          className="w-full min-h-[44px] rounded-md border border-td-border bg-td-bg px-3 py-2.5 text-td-sm text-td-text shadow-sm focus:outline-none focus:ring-2 focus:ring-td-border-strong focus:border-td-border-strong"
+                        >
+                          <option value="">No repeat</option>
+                          <option value="daily">Daily</option>
+                          <option value="weekly">Weekly</option>
+                          <option value="biweekly">Bi-weekly</option>
+                          <option value="monthly">Monthly</option>
+                          <option value="quarterly">Quarterly</option>
+                          <option value="yearly">Yearly</option>
+                        </select>
+                        {editRecurrence && !editDueDate && (
+                          <p className="text-td-xs text-td-muted mt-2">Recurring task starts today</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
+
+            <footer className="flex-shrink-0 flex flex-col-reverse sm:flex-row gap-2 sm:gap-3 px-4 py-3 sm:px-5 sm:py-4 border-t border-td-border bg-td-bg pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+              <button
+                type="button"
+                onClick={() => setIsEditModalOpen(false)}
+                className="w-full sm:flex-1 min-h-[48px] rounded-md border border-td-border text-td-muted text-td-sm font-medium hover:bg-td-hover transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveEdit}
+                disabled={!editTitle.trim()}
+                className="w-full sm:flex-1 min-h-[48px] rounded-md border border-td-text bg-td-text text-white text-td-sm font-medium hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
+              >
+                Save changes
+              </button>
+            </footer>
           </div>
         </div>
       )}

@@ -380,7 +380,7 @@ describe('Edit modal subtask management', () => {
     fireEvent.click(editBtn);
 
     // Edit modal should be open
-    expect(screen.getByText('Edit Task')).toBeInTheDocument();
+    expect(screen.getByText('Edit task')).toBeInTheDocument();
 
     // Existing subtasks should be displayed
     expect(screen.getByText('First')).toBeInTheDocument();
@@ -412,7 +412,7 @@ describe('Edit modal subtask management', () => {
     expect(screen.getByText('Fourth')).toBeInTheDocument();
 
     // Save and verify the update call includes the new subtask
-    const saveBtn = screen.getByText('Save');
+    const saveBtn = screen.getByText('Save changes');
     await act(async () => {
       fireEvent.click(saveBtn);
     });
@@ -441,13 +441,12 @@ describe('Edit modal subtask management', () => {
     fireEvent.click(menuBtn);
     fireEvent.click(await screen.findByText('Edit'));
 
-    // "Second" item (index 1) has an up arrow button — click it to move it before "First"
-    const upButtons = screen.getAllByText('↑');
-    // The first ↑ button belongs to "Second" (index 1, since index 0 has no ↑)
+    // "Second" item (index 1) has Move item up — click it to move it before "First"
+    const upButtons = screen.getAllByRole('button', { name: /move item up/i });
     fireEvent.click(upButtons[0]);
 
     // Save and check order
-    const saveBtn = screen.getByText('Save');
+    const saveBtn = screen.getByText('Save changes');
     await act(async () => {
       fireEvent.click(saveBtn);
     });
@@ -481,7 +480,7 @@ describe('Edit modal subtask management', () => {
 
     // Find the delete buttons (× icons) in the checklist section
     // Each subtask row has a delete button with a FontAwesome × icon
-    const editModal = screen.getByText('Edit Task').closest('.bg-td-bg');
+    const editModal = screen.getByRole('dialog');
     const checklistLabel = within(editModal).getByText('Checklist');
     const checklistSection = checklistLabel.closest('div');
     
@@ -500,7 +499,7 @@ describe('Edit modal subtask management', () => {
     expect(screen.getByText('Third')).toBeInTheDocument();
 
     // Save and verify
-    const saveBtn = screen.getByText('Save');
+    const saveBtn = screen.getByText('Save changes');
     await act(async () => {
       fireEvent.click(saveBtn);
     });
