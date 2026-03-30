@@ -148,6 +148,18 @@ function QuickAddTask({ onAdd, placeholder = "Add…" }) {
   const [subtasks, setSubtasks] = useState([]);
   const [newSubtaskInput, setNewSubtaskInput] = useState("");
   const inputRef = useRef(null);
+  const expandedFooterRef = useRef(null);
+
+  useEffect(() => {
+    if (!isExpanded) return;
+    const t = window.setTimeout(() => {
+      const el = expandedFooterRef.current;
+      if (el && typeof el.scrollIntoView === 'function') {
+        el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    }, 50);
+    return () => window.clearTimeout(t);
+  }, [isExpanded]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -373,8 +385,11 @@ function QuickAddTask({ onAdd, placeholder = "Add…" }) {
                 />
               </div>
 
-              {/* Actions */}
-              <div className="flex justify-between items-center pt-1">
+              {/* Actions — sticky, compact row (visible on small screens without a tall chrome bar) */}
+              <div
+                ref={expandedFooterRef}
+                className="sticky bottom-0 z-[2] -mx-1 px-2 py-1 mt-1 pb-[max(0.125rem,env(safe-area-inset-bottom))] bg-td-bg/98 border-t border-td-border flex justify-between items-center gap-2"
+              >
                 <button
                   type="button"
                   onClick={() => {
@@ -388,14 +403,14 @@ function QuickAddTask({ onAdd, placeholder = "Add…" }) {
                     setSubtasks([]);
                     setNewSubtaskInput("");
                   }}
-                  className="text-td-xs text-td-faint hover:text-td-text"
+                  className="h-9 min-w-[3rem] px-2 text-td-xs text-td-faint hover:text-td-text flex items-center justify-center rounded active:bg-td-hover touch-manipulation"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={!title.trim()}
-                  className="text-td-xs text-td-text border border-td-border rounded px-2 py-0.5 hover:bg-td-hover disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="h-9 px-3 text-td-xs font-medium text-td-text border border-td-border rounded-md bg-td-bg hover:bg-td-hover disabled:opacity-30 disabled:cursor-not-allowed touch-manipulation"
                 >
                   Add
                 </button>
