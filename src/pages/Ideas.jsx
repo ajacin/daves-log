@@ -2225,7 +2225,7 @@ Rules:
   }
 
   return (
-    <div className="flex flex-col h-dvh max-h-dvh overflow-hidden bg-td-bg lg:min-h-screen lg:h-auto lg:max-h-none lg:overflow-visible">
+    <div className="flex h-dvh max-h-dvh flex-col overflow-hidden bg-td-bg">
       {/* Timezone Warning — subtle banner */}
       {showTimezoneWarning && (
         <div className="flex-shrink-0 border-b border-td-border px-4 py-2 flex items-center justify-between">
@@ -2238,54 +2238,64 @@ Rules:
         </div>
       )}
 
-      {/* Top Bar — minimal, 44px (sticky only when page can scroll, e.g. desktop list) */}
-      <div className="flex-shrink-0 bg-td-bg border-b border-td-border z-10 lg:sticky lg:top-0">
-        <div className="flex items-center h-11 px-3 gap-3">
-          {/* Left: title + count */}
-          <div className="flex items-baseline gap-1.5 pl-8">
-            <span className="text-td-base font-medium text-td-text">Tasks</span>
-            <span className="text-td-xs text-td-faint">{filteredTasks.length}</span>
-          </div>
+      {/* Top Bar — mobile: title+search row + scrollable tools; md+: single row */}
+      <div className="flex-shrink-0 bg-td-bg border-b border-td-border z-10 lg:sticky lg:top-0 pt-[max(0px,env(safe-area-inset-top))] lg:pt-0">
+        <div className="flex flex-col gap-2 py-2 md:py-0 md:flex-row md:items-center md:h-11 md:gap-3 px-3">
+          <div className="flex items-center gap-3 w-full min-h-[44px] md:min-h-0 md:w-auto md:contents">
+            <div className="flex items-baseline gap-1.5 pl-8 shrink-0">
+              <span className="text-td-base font-medium text-td-text">Tasks</span>
+              <span className="text-td-xs text-td-faint">{filteredTasks.length}</span>
+            </div>
 
-          {/* Center: search */}
-          <div className="flex-1 max-w-md mx-auto">
-            <div className="relative">
-              <FontAwesomeIcon icon={faSearch} className="absolute left-2 top-1.5 h-3 w-3 text-td-faint" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search…"
-                className="w-full pl-7 pr-6 py-1 border border-td-border text-td-sm bg-transparent focus:outline-none"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery("")}
-                  className="absolute right-2 top-1.5 text-td-faint hover:text-td-text"
-                >
-                  <FontAwesomeIcon icon={faTimes} className="h-3 w-3" />
-                </button>
-              )}
+            <div className="flex-1 min-w-0 md:flex-1 md:max-w-md md:mx-auto">
+              <div className="relative">
+                <FontAwesomeIcon
+                  icon={faSearch}
+                  className="pointer-events-none absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-td-faint"
+                  aria-hidden
+                />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search…"
+                  aria-label="Search tasks"
+                  className="w-full min-h-[44px] border border-td-border bg-transparent py-2 pl-7 pr-11 text-td-sm focus:outline-none md:min-h-0 md:py-1 md:pr-6"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-0 top-1/2 flex min-h-[44px] min-w-[44px] -translate-y-1/2 items-center justify-center text-td-faint hover:text-td-text touch-manipulation md:right-2 md:min-h-0 md:min-w-0"
+                    aria-label="Clear search"
+                  >
+                    <FontAwesomeIcon icon={faTimes} className="h-3 w-3" />
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* Right: compact text buttons */}
-          <div className="flex items-center gap-2">
+          <div className="flex flex-nowrap items-center gap-1 overflow-x-auto overflow-y-hidden overscroll-x-contain overscroll-y-none touch-pan-x pl-8 pr-2 [scrollbar-width:thin] md:mx-0 md:shrink-0 md:gap-2 md:overflow-visible md:pl-0 md:pr-0">
             <button
+              type="button"
               onClick={() => setIsBulkUploadOpen(true)}
-              className="text-td-sm text-td-muted hover:text-td-text"
+              className="flex min-h-[44px] min-w-[44px] shrink-0 touch-manipulation items-center justify-center text-td-sm text-td-muted hover:text-td-text md:min-h-0 md:min-w-0 md:rounded-md md:px-3 md:py-1.5 md:hover:bg-td-hover"
+              aria-label="Upload tasks"
             >
-              <FontAwesomeIcon icon={faUpload} className="h-3 w-3 sm:hidden" />
-              <span className="hidden sm:inline">Upload</span>
+              <FontAwesomeIcon icon={faUpload} className="h-4 w-4 md:hidden" />
+              <span className="hidden md:inline">Upload</span>
             </button>
 
-            {/* View toggle — text links */}
-            <div className="flex items-center gap-0.5 border border-td-border px-1 py-0.5">
+            <div className="flex shrink-0 items-center gap-0.5 border border-td-border px-0.5 py-0.5 md:gap-1 md:px-1.5 md:py-1">
               {['timeline', 'tags', 'list'].map((mode) => (
                 <button
                   key={mode}
+                  type="button"
                   onClick={() => setViewMode(mode)}
-                  className={`px-1.5 py-0.5 text-td-xs capitalize transition-colors ${
+                  aria-label={`${mode} view`}
+                  aria-pressed={viewMode === mode}
+                  className={`min-h-[44px] shrink-0 touch-manipulation px-3 text-td-xs capitalize transition-colors md:min-h-0 md:px-3 md:py-1.5 ${
                     viewMode === mode
                       ? 'text-td-text font-medium bg-td-hover'
                       : 'text-td-faint hover:text-td-muted'
@@ -2296,46 +2306,61 @@ Rules:
               ))}
             </div>
 
-            {/* Filters */}
             <button
+              type="button"
               onClick={() => setShowFilters(!showFilters)}
-              className={`text-td-sm transition-colors ${
+              aria-label={
+                (selectedTags.length + (timeFilter ? 1 : 0) + (userFilter ? 1 : 0)) > 0
+                  ? `Filters, ${selectedTags.length + (timeFilter ? 1 : 0) + (userFilter ? 1 : 0)} active`
+                  : 'Filters'
+              }
+              aria-expanded={showFilters}
+              className={`flex min-h-[44px] min-w-[44px] shrink-0 touch-manipulation items-center justify-center gap-0.5 rounded-md text-td-sm transition-colors md:min-h-0 md:min-w-[2.75rem] md:px-2 md:py-1.5 md:hover:bg-td-hover ${
                 showFilters || selectedTags.length > 0 || timeFilter || userFilter
                   ? 'text-td-text font-medium'
                   : 'text-td-muted hover:text-td-text'
               }`}
             >
-              <FontAwesomeIcon icon={faFilter} className="h-3 w-3" />
+              <FontAwesomeIcon icon={faFilter} className="h-4 w-4 md:h-3.5 md:w-3.5" />
               {(selectedTags.length + (timeFilter ? 1 : 0) + (userFilter ? 1 : 0)) > 0 && (
-                <span className="ml-0.5 text-td-xs">{selectedTags.length + (timeFilter ? 1 : 0) + (userFilter ? 1 : 0)}</span>
+                <span className="text-td-xs">{selectedTags.length + (timeFilter ? 1 : 0) + (userFilter ? 1 : 0)}</span>
               )}
             </button>
 
-            {/* Hide/show completed */}
             <button
+              type="button"
               onClick={() => setHideCompleted(!hideCompleted)}
-              className="text-td-sm text-td-muted hover:text-td-text"
+              className="flex min-h-[44px] min-w-[44px] shrink-0 touch-manipulation items-center justify-center rounded-md text-td-sm text-td-muted hover:text-td-text md:min-h-0 md:min-w-[2.75rem] md:px-2 md:py-1.5 md:hover:bg-td-hover"
               title={hideCompleted ? 'Show done' : 'Hide done'}
+              aria-label={hideCompleted ? 'Show completed tasks' : 'Hide completed tasks'}
             >
-              <FontAwesomeIcon icon={hideCompleted ? faEyeSlash : faEye} className="h-3 w-3" />
+              <FontAwesomeIcon icon={hideCompleted ? faEyeSlash : faEye} className="h-4 w-4 md:h-3.5 md:w-3.5" />
             </button>
 
-            {/* Shopping filter */}
             <button
+              type="button"
               onClick={() => setIsShoppingList(!isShoppingList)}
-              className={`text-td-sm ${isShoppingList ? 'text-td-text font-medium' : 'text-td-muted hover:text-td-text'}`}
+              className={`flex min-h-[44px] min-w-[44px] shrink-0 touch-manipulation items-center justify-center rounded-md text-td-sm md:min-h-0 md:min-w-[2.75rem] md:px-2 md:py-1.5 md:hover:bg-td-hover ${
+                isShoppingList ? 'text-td-text font-medium' : 'text-td-muted hover:text-td-text'
+              }`}
               title={isShoppingList ? 'Show all' : 'Shopping only'}
+              aria-label={isShoppingList ? 'Show all tasks' : 'Show shopping tasks only'}
+              aria-pressed={isShoppingList}
             >
-              <FontAwesomeIcon icon={faShoppingCart} className="h-3 w-3" />
+              <FontAwesomeIcon icon={faShoppingCart} className="h-4 w-4 md:h-3.5 md:w-3.5" />
             </button>
 
-            {/* Work section toggle */}
             <button
+              type="button"
               onClick={() => setShowWorkSection(!showWorkSection)}
-              className={`text-td-sm ${showWorkSection ? 'text-td-text font-medium' : 'text-td-muted hover:text-td-text'}`}
+              className={`flex min-h-[44px] min-w-[44px] shrink-0 touch-manipulation items-center justify-center rounded-md text-td-sm md:min-h-0 md:min-w-[2.75rem] md:px-2 md:py-1.5 md:hover:bg-td-hover ${
+                showWorkSection ? 'text-td-text font-medium' : 'text-td-muted hover:text-td-text'
+              }`}
               title={showWorkSection ? 'Unpin work tasks' : 'Pin work tasks to top'}
+              aria-label={showWorkSection ? 'Unpin work section' : 'Pin work tasks to top'}
+              aria-pressed={showWorkSection}
             >
-              <FontAwesomeIcon icon={faBriefcase} className="h-3 w-3" />
+              <FontAwesomeIcon icon={faBriefcase} className="h-4 w-4 md:h-3.5 md:w-3.5" />
             </button>
           </div>
         </div>
@@ -2443,7 +2468,7 @@ Rules:
       </div>
 
       {/* Main Content — flex-1 + min-h-0 so one scroll region on mobile */}
-      <div className="w-full flex-1 min-h-0 flex flex-col overflow-hidden lg:flex-none lg:overflow-visible">
+      <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
         {viewMode === 'timeline' || viewMode === 'tags' ? (
           <>
             {/* Mobile Navigation — single column */}
@@ -2521,7 +2546,7 @@ Rules:
             </div>
 
             {/* Desktop — CSS grid of columns */}
-            <div className="hidden lg:flex overflow-x-auto lg:min-h-0" style={{ height: 'calc(100dvh - 44px)' }}>
+            <div className="hidden min-h-0 flex-1 overflow-x-auto lg:flex">
               {currentColumns.map((column) => {
                 const getAddTaskHandler = () => {
                   if (column.isTag && column.tagName) {
@@ -2555,7 +2580,7 @@ Rules:
           </>
         ) : (
           /* List View */
-          <div className="max-w-2xl mx-auto px-3 py-4 flex-1 min-h-0 overflow-y-auto overscroll-y-contain lg:overflow-visible lg:flex-none">
+          <div className="mx-auto max-w-2xl flex-1 min-h-0 overflow-y-auto overscroll-y-contain px-3 py-4">
             <div className="border-b border-td-border pb-2 mb-2">
               <QuickAddTask onAdd={(taskData) => handleAddTask(taskData)} placeholder="Add…" />
             </div>

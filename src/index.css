@@ -59,10 +59,9 @@
     background: var(--td-border-strong);
   }
 
-  /* Safe area for notched devices (iPhone etc.) */
+  /* Safe area: horizontal only — vertical insets are applied on components (avoids
+     h-dvh + body padding exceeding the viewport and causing document vertical scroll). */
   body {
-    padding-top: env(safe-area-inset-top);
-    padding-bottom: env(safe-area-inset-bottom);
     padding-left: env(safe-area-inset-left);
     padding-right: env(safe-area-inset-right);
   }

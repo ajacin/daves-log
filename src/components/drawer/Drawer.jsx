@@ -16,7 +16,7 @@ const AppDrawer = () => {
     <>
       <button
         onClick={toggleDrawer}
-        className="fixed left-3 top-3 z-[1001] p-2 rounded border border-td-border bg-td-bg hover:bg-td-hover transition-colors cursor-pointer focus:outline-none"
+        className="fixed z-[1001] p-2 rounded border border-td-border bg-td-bg hover:bg-td-hover transition-colors cursor-pointer focus:outline-none left-[max(0.75rem,env(safe-area-inset-left))] top-[max(0.75rem,env(safe-area-inset-top))]"
         aria-label="Menu"
       >
         <FontAwesomeIcon
