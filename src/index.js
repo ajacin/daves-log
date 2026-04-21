@@ -8,11 +8,15 @@ import { UserProvider } from "./lib/context/user";
 import { IdeasProvider } from "./lib/context/ideas";
 import { BabyActivitiesProvider } from "./lib/context/activities";
 import TimeAgo from "javascript-time-ago";
+import { registerServiceWorker } from "./serviceWorkerRegistration";
 
 import en from "javascript-time-ago/locale/en.json";
 import { Toaster } from "react-hot-toast";
 
 TimeAgo.addDefaultLocale(en);
+
+// Register Service Worker for PWA
+registerServiceWorker();
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
