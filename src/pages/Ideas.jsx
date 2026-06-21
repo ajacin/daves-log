@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import { useUser } from "../lib/context/user";
 import { useIdeas } from "../lib/context/ideas";
+import { AITaskGenerator } from "../components/tasks/AITaskGenerator";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCheck,
@@ -19,6 +20,7 @@ import {
   faChevronDown,
   faInfoCircle,
   faUpload,
+  faWandMagicSparkles,
   faBriefcase,
   faCopy,
   faArrowUp,
@@ -816,6 +818,7 @@ export function Ideas() {
   const [viewMode, setViewMode] = useState('timeline'); // 'timeline', 'tags', or 'list'
   const [currentColumnIndex, setCurrentColumnIndex] = useState(0);
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
+  const [isAIGenOpen, setIsAIGenOpen] = useState(false);
   const [bulkTasksInput, setBulkTasksInput] = useState("");
   const [bulkUploadMode, setBulkUploadMode] = useState('text');
   const [jsonInput, setJsonInput] = useState("");
@@ -1997,6 +2000,37 @@ export function Ideas() {
     }
   };
 
+  const handleAITasksApproved = async (tasks) => {
+    let successCount = 0;
+    for (const task of tasks) {
+      try {
+        const success = await ideas.add({
+          userId: user.current.$id,
+          userName: user.current.name,
+          title: task.title,
+          description: task.description || "",
+          entryDate: new Date().toISOString(),
+          tags: task.tags || [],
+          completed: false,
+          dueDate: task.dueDate || null,
+        }, { source: 'ai-generator' });
+        if (success) successCount++;
+      } catch (err) {
+        toast.error(`Failed to add "${task.title}": ${err.message}`);
+      }
+    }
+    if (successCount > 0) {
+      toast.success(`Added ${successCount} task${successCount !== 1 ? 's' : ''} from AI!`, {
+        id: `ai-gen-success`,
+        ...toastConfig.success,
+      });
+    }
+    if (successCount < tasks.length) {
+      toast.error(`${tasks.length - successCount} task(s) failed to save`);
+    }
+    return successCount;
+  };
+
   const VALID_RECURRENCES = ['daily', 'weekly', 'biweekly', 'monthly', 'quarterly', 'yearly'];
 
   const parseAndValidateJson = (rawText) => {
@@ -2286,6 +2320,18 @@ Rules:
               <FontAwesomeIcon icon={faUpload} className="h-4 w-4 md:hidden" />
               <span className="hidden md:inline">Upload</span>
             </button>
+
+            {user.current?.labels?.includes('admin') && (
+              <button
+                type="button"
+                onClick={() => setIsAIGenOpen(true)}
+                className="flex min-h-[44px] min-w-[44px] shrink-0 touch-manipulation items-center justify-center text-td-sm text-td-muted hover:text-td-text md:min-h-0 md:min-w-0 md:rounded-md md:px-3 md:py-1.5 md:hover:bg-td-hover"
+                aria-label="AI Generate tasks"
+              >
+                <FontAwesomeIcon icon={faWandMagicSparkles} className="h-4 w-4 md:hidden" />
+                <span className="hidden md:inline">AI</span>
+              </button>
+            )}
 
             <div className="flex shrink-0 items-center gap-0.5 border border-td-border px-0.5 py-0.5 md:gap-1 md:px-1.5 md:py-1">
               {['timeline', 'tags', 'list'].map((mode) => (
@@ -2913,6 +2959,14 @@ Rules:
           </div>
         </div>
       )}
+
+      {/* AI Task Generator Modal */}
+      <AITaskGenerator
+        isOpen={isAIGenOpen}
+        onClose={() => setIsAIGenOpen(false)}
+        onTasksApproved={handleAITasksApproved}
+        userId={user.current?.$id}
+      />
 
       {/* Edit Task Modal — responsive: bottom sheet on small screens, centered sheet on md+ */}
       {isEditModalOpen && editingTask && (
