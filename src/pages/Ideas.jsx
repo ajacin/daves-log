@@ -2,6 +2,7 @@ import { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import { useUser } from "../lib/context/user";
 import { useIdeas } from "../lib/context/ideas";
 import { AITaskGenerator } from "../components/tasks/AITaskGenerator";
+import { generateTasks } from '../lib/api/aiTaskGen';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCheck,
@@ -826,6 +827,12 @@ export function Ideas() {
   const [jsonError, setJsonError] = useState("");
   const [jsonPromptCopied, setJsonPromptCopied] = useState(false);
   const jsonFileInputRef = useRef(null);
+  const [aiBulkInput, setAiBulkInput] = useState("");
+  const [aiBulkLoading, setAiBulkLoading] = useState(false);
+  const [aiBulkTasks, setAiBulkTasks] = useState([]);
+  const [aiBulkWarnings, setAiBulkWarnings] = useState([]);
+  const [aiBulkError, setAiBulkError] = useState(null);
+  const aiAbortRef = useRef(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
   const [editTitle, setEditTitle] = useState("");
@@ -2174,6 +2181,101 @@ export function Ideas() {
     }
   };
 
+  const handleAIBulkGenerate = async () => {
+    if (!aiBulkInput.trim()) return;
+
+    // Abort any previous in-flight request
+    if (aiAbortRef.current) {
+      aiAbortRef.current.abort();
+    }
+    const controller = new AbortController();
+    aiAbortRef.current = controller;
+
+    setAiBulkLoading(true);
+    setAiBulkTasks([]);
+    setAiBulkWarnings([]);
+    setAiBulkError(null);
+
+    try {
+      const result = await generateTasks(aiBulkInput.trim(), user.current?.$id, controller.signal);
+
+      if (controller.signal.aborted) return;
+
+      const tasks = (result.tasks || []).filter(t => t.title?.trim());
+
+      if (result.warnings && result.warnings.length > 0) {
+        setAiBulkWarnings(result.warnings);
+      }
+
+      if (tasks.length === 0) {
+        setAiBulkError("No tasks could be extracted from your text. Try rephrasing or including more action-oriented content.");
+        setAiBulkTasks([]);
+      } else {
+        setAiBulkTasks(tasks);
+      }
+    } catch (err) {
+      if (controller.signal.aborted) return;
+      console.error("AI bulk generate error:", err);
+      // Only show server error messages; hide raw network/fetch errors
+      const message = err.name === "AbortError"
+        ? "Request was cancelled."
+        : err.message && err.message.includes("AI")
+          ? err.message
+          : "Network error — please check your connection and try again.";
+      setAiBulkError(message);
+      setAiBulkTasks([]);
+    } finally {
+      if (!controller.signal.aborted) {
+        setAiBulkLoading(false);
+      }
+      if (aiAbortRef.current === controller) {
+        aiAbortRef.current = null;
+      }
+    }
+  };
+
+  const handleAIBulkUpload = async () => {
+    try {
+      if (aiBulkTasks.length === 0) {
+        toast.error("No tasks to upload");
+        return;
+      }
+
+      let successCount = 0;
+      for (const task of aiBulkTasks) {
+        const tags = [...(task.tags || [])];
+        if (commonTag.trim()) {
+          const cleanTag = commonTag.trim().toLowerCase().replace(/\s+/g, '');
+          if (!tags.includes(cleanTag)) {
+            tags.push(cleanTag);
+          }
+        }
+
+        const success = await ideas.add({
+          userId: user.current.$id,
+          userName: user.current.name,
+          title: task.title,
+          description: task.description || "",
+          entryDate: new Date().toISOString(),
+          tags,
+          completed: false,
+          dueDate: task.dueDate || null,
+        }, { source: 'ai-bulk-upload' });
+        if (success) successCount++;
+      }
+
+      if (successCount > 0) {
+        toast.success(`Successfully added ${successCount} tasks!`, {
+          id: `ai-bulk-upload-success`,
+          ...toastConfig.success,
+        });
+        closeBulkUploadModal();
+      }
+    } catch (error) {
+      toast.error("Failed to create tasks");
+    }
+  };
+
   const handleJsonFileUpload = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -2238,6 +2340,10 @@ Rules:
   };
 
   const closeBulkUploadModal = () => {
+    if (aiAbortRef.current) {
+      aiAbortRef.current.abort();
+      aiAbortRef.current = null;
+    }
     setIsBulkUploadOpen(false);
     setBulkTasksInput("");
     setIsShoppingList(false);
@@ -2248,6 +2354,11 @@ Rules:
     setJsonParsedTasks([]);
     setJsonError("");
     setJsonPromptCopied(false);
+    setAiBulkInput("");
+    setAiBulkTasks([]);
+    setAiBulkWarnings([]);
+    setAiBulkError(null);
+    setAiBulkLoading(false);
   };
 
   if (isLoading) {
@@ -2728,10 +2839,16 @@ Rules:
                 </button>
               </div>
 
-              {/* Tab bar */}
+              {/* Tab bar — Text | AI | JSON */}
               <div className="flex border-b border-td-border mb-3">
                 <button
-                  onClick={() => setBulkUploadMode('text')}
+                  onClick={() => {
+                    if (aiAbortRef.current) {
+                      aiAbortRef.current.abort();
+                      aiAbortRef.current = null;
+                    }
+                    setBulkUploadMode('text');
+                  }}
                   className={`px-4 py-1.5 text-td-sm font-medium border-b-2 -mb-px ${
                     bulkUploadMode === 'text'
                       ? 'border-td-text text-td-text'
@@ -2741,7 +2858,31 @@ Rules:
                   Text
                 </button>
                 <button
-                  onClick={() => setBulkUploadMode('json')}
+                  onClick={() => {
+                    if (aiAbortRef.current) {
+                      aiAbortRef.current.abort();
+                      aiAbortRef.current = null;
+                      setAiBulkLoading(false);
+                      setAiBulkError(null);
+                    }
+                    setBulkUploadMode('ai');
+                  }}
+                  className={`px-4 py-1.5 text-td-sm font-medium border-b-2 -mb-px ${
+                    bulkUploadMode === 'ai'
+                      ? 'border-td-text text-td-text'
+                      : 'border-transparent text-td-faint hover:text-td-muted'
+                  }`}
+                >
+                  AI
+                </button>
+                <button
+                  onClick={() => {
+                    if (aiAbortRef.current) {
+                      aiAbortRef.current.abort();
+                      aiAbortRef.current = null;
+                    }
+                    setBulkUploadMode('json');
+                  }}
                   className={`px-4 py-1.5 text-td-sm font-medium border-b-2 -mb-px ${
                     bulkUploadMode === 'json'
                       ? 'border-td-text text-td-text'
@@ -2938,14 +3079,131 @@ Rules:
                 </div>
                 )}
 
+                {/* === AI TAB === */}
+                {bulkUploadMode === 'ai' && (
+                <div>
+                  <div className="text-td-xs text-td-faint mb-2 flex items-center justify-between">
+                    <span>Paste freeform text — AI extracts tasks, dates, and tags.</span>
+                    <span className={`tabular-nums ${aiBulkInput.length > 3600 ? 'text-yellow-400' : 'text-td-faint'}`}>
+                      {aiBulkInput.length}/4000
+                    </span>
+                  </div>
+
+                  {aiBulkLoading ? (
+                    <div className="relative">
+                      <textarea
+                        value={aiBulkInput}
+                        readOnly
+                        className="w-full p-2 border border-td-border text-td-sm bg-td-hover/30 opacity-50 focus:outline-none"
+                        rows="6"
+                      />
+                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-td-bg/60">
+                        <svg className="animate-spin h-6 w-6 text-td-muted" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                        </svg>
+                        <span className="text-td-sm text-td-muted">Analyzing your text…</span>
+                        <button
+                          onClick={() => {
+                            if (aiAbortRef.current) {
+                              aiAbortRef.current.abort();
+                              aiAbortRef.current = null;
+                            }
+                            setAiBulkLoading(false);
+                            setAiBulkError(null);
+                          }}
+                          className="min-h-[44px] px-3 py-1 border border-td-border text-td-sm text-td-muted hover:text-td-text hover:bg-td-hover"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <textarea
+                        value={aiBulkInput}
+                        onChange={(e) => setAiBulkInput(e.target.value.slice(0, 4000))}
+                        maxLength={4000}
+                        className="w-full p-2 border border-td-border text-td-sm bg-transparent focus:outline-none"
+                        rows="6"
+                        placeholder={"Paste meeting notes, an email, a brainstorming session, or any text with action items.\n\nThe AI will extract tasks automatically."}
+                      />
+
+                      <button
+                        onClick={handleAIBulkGenerate}
+                        disabled={!aiBulkInput.trim()}
+                        className="w-full mt-2 min-h-[44px] py-1.5 border border-td-text text-td-text text-td-sm hover:bg-td-hover disabled:opacity-30"
+                      >
+                        Generate
+                      </button>
+
+                      {aiBulkWarnings.length > 0 && (
+                        <div className="mt-2 p-2 border border-yellow-400/30 bg-yellow-500/10 text-td-xs text-yellow-400">
+                          {aiBulkWarnings.map((w, i) => <div key={i}>{w}</div>)}
+                        </div>
+                      )}
+
+                      {aiBulkError && (
+                        <div className="mt-2 p-2 border border-red-400/30 bg-red-500/10 text-td-xs text-red-400">
+                          {aiBulkError}
+                        </div>
+                      )}
+
+                      {aiBulkTasks.length > 0 && (
+                        <div className="mt-3">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-td-xs text-td-muted">{aiBulkTasks.length} task{aiBulkTasks.length !== 1 ? 's' : ''} generated</span>
+                            <button
+                              onClick={() => {
+                                setAiBulkTasks([]);
+                                setAiBulkWarnings([]);
+                                setAiBulkError(null);
+                              }}
+                              className="min-h-[44px] px-2 text-td-xs text-td-faint hover:text-td-muted underline"
+                            >
+                              Regenerate
+                            </button>
+                          </div>
+                          <div className="border border-td-border p-2 max-h-36 overflow-y-auto">
+                            {aiBulkTasks.map((task, index) => (
+                              <div key={index} className="text-td-xs text-td-muted mb-1">
+                                <div className="flex items-baseline gap-1 flex-wrap">
+                                  <span>{index + 1}. {task.title}</span>
+                                  {task.tags && task.tags.length > 0 && <span className="text-td-faint">{task.tags.join(', ')}</span>}
+                                  {commonTag.trim() && <span className="text-td-faint">{commonTag.trim().toLowerCase().replace(/\s+/g, '')}</span>}
+                                  {task.dueDate && <span className="text-td-text ml-auto">→ {formatPreviewDate(task.dueDate)}</span>}
+                                  {task.recurrence && <span className="text-td-faint">↻ {task.recurrence}</span>}
+                                </div>
+                                {task.description && <div className="text-td-faint pl-3 italic">— {task.description}</div>}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  <div className="mt-2">
+                    <input
+                      type="text"
+                      value={commonTag}
+                      onChange={(e) => setCommonTag(e.target.value)}
+                      className="w-full p-1.5 border border-td-border text-td-sm bg-transparent focus:outline-none"
+                      placeholder="Common tag (optional)"
+                      maxLength="20"
+                    />
+                  </div>
+                </div>
+                )}
+
                 {/* Shared footer */}
                 <div className="flex gap-2 pt-2 border-t border-td-border">
                   <button
-                    onClick={bulkUploadMode === 'text' ? handleBulkUpload : handleJsonBulkUpload}
+                    onClick={bulkUploadMode === 'text' ? handleBulkUpload : bulkUploadMode === 'ai' ? handleAIBulkUpload : handleJsonBulkUpload}
                     className="flex-1 py-1.5 border border-td-text text-td-text text-td-sm hover:bg-td-hover disabled:opacity-30"
-                    disabled={bulkUploadMode === 'text' ? getTaskPreview(bulkTasksInput).length === 0 : jsonParsedTasks.length === 0}
+                    disabled={bulkUploadMode === 'text' ? getTaskPreview(bulkTasksInput).length === 0 : bulkUploadMode === 'ai' ? aiBulkTasks.length === 0 : jsonParsedTasks.length === 0}
                   >
-                    Upload {bulkUploadMode === 'text' ? getTaskPreview(bulkTasksInput).length : jsonParsedTasks.length}
+                    Upload {bulkUploadMode === 'text' ? getTaskPreview(bulkTasksInput).length : bulkUploadMode === 'ai' ? aiBulkTasks.length : jsonParsedTasks.length}
                   </button>
                   <button
                     onClick={closeBulkUploadModal}
