@@ -80,3 +80,26 @@
 .font-digital-7 {
   font-family: "Digital 7", sans-serif;
 }
+
+/* Larger font sizes on mobile (screens < 768px).
+   Desktop uses the Tailwind td-* sizes unchanged (td-base: 13px, td-sm: 12px, td-xs: 11px). */
+@media (max-width: 767px) {
+  body {
+    font-size: 15px;
+  }
+  .text-td-base {
+    font-size: 15px;
+    line-height: 1.45;
+  }
+  .text-td-sm {
+    font-size: 14px;
+    line-height: 1.45;
+  }
+  .text-td-xs {
+    font-size: 13px;
+    line-height: 1.45;
+  }
+  .text-td-header {
+    font-size: 12px;
+  }
+}
