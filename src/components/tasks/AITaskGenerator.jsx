@@ -20,6 +20,23 @@ function nextId() {
 
 const MAX_INPUT_LENGTH = 8000;
 
+function formatDueDate(dateStr) {
+  if (!dateStr) return "";
+  const date = new Date(dateStr + (dateStr.includes("T") ? "" : "T00:00:00"));
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const target = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const diffDays = Math.round((target - today) / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Tomorrow";
+  if (diffDays === -1) return "Yesterday";
+  if (diffDays < -1) return `${Math.abs(diffDays)}d ago`;
+  if (diffDays <= 7) return date.toLocaleDateString("en-US", { weekday: "short" });
+
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
 const TAG_SUGGESTIONS = [
   "shopping", "groceries", "health", "fitness", "work", "meeting",
   "finance", "bills", "kids", "school", "home", "maintenance",
@@ -464,7 +481,7 @@ function TaskCard({
           />
         </label>
 
-        {/* Title */}
+        {/* Title + meta */}
         <div className="flex-1 min-w-0">
           <input
             type="text"
@@ -475,6 +492,21 @@ function TaskCard({
             }`}
             placeholder="Task title (required)"
           />
+          {/* Always-visible due date + tag count */}
+          <div className="flex items-center gap-2 mt-1 text-td-xs">
+            {task.dueDate ? (
+              <span className="text-td-muted">
+                📅 {formatDueDate(task.dueDate)}
+              </span>
+            ) : (
+              <span className="text-td-faint">No due date</span>
+            )}
+            {task.tags && task.tags.length > 0 && (
+              <span className="text-td-faint">
+                · {task.tags.length} tag{task.tags.length !== 1 ? "s" : ""}
+              </span>
+            )}
+          </div>
           {isExpanded && (
             <textarea
               value={task.description || ""}

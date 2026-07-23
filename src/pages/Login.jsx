@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useUser } from "../lib/context/user";
 import { Link } from "react-router-dom";
+import toast from "react-hot-toast";
 
 export function Login() {
   const user = useUser();
@@ -15,6 +16,7 @@ export function Login() {
       await user.login(email, password);
     } catch (error) {
       console.error("Login error:", error);
+      toast.error(error.message || "Invalid email or password");
     } finally {
       setIsLoading(false);
     }
