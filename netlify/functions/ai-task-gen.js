@@ -51,6 +51,40 @@ Rules:
 }
 
 /**
+ * Build the system prompt for shopping-list parsing.
+ * Splits freeform text into individual shopping items and tags them with
+ * "shopping" plus a store tag when a store is mentioned.
+ */
+function buildShoppingSystemPrompt() {
+  return `You are a shopping list parser. Given freeform text describing shopping/grocery items, return ONLY a JSON array of item objects.
+
+Output ONLY valid JSON. No markdown, no code fences, no explanation.
+
+Split the text into INDIVIDUAL items. Separators include commas, the word "and", "&", and new lines. Each distinct product becomes its own object. Example: "apples and bananas from walmart" -> TWO items (apples, bananas), both from walmart.
+
+Each item object must follow this schema:
+{
+  "title": "string (required, the item name only, e.g. 'apples', keep it short)",
+  "description": "string (optional, default empty string, use for qualifiers like 'organic' or a quantity)",
+  "dueDate": null,
+  "tags": ["string"] (MUST always include "shopping"; add the store as a lowercase tag when a store is mentioned)
+}
+
+Store detection:
+- Phrases like "from walmart", "at costco", "walmart:", indicate the store for the items they refer to.
+- Known stores: walmart, costco, dollarama, foodco, groceries, pharmacy, errands. Normalize close matches (e.g. "wal-mart" -> "walmart", "food co" -> "foodco").
+- When a store applies to a group of items ("apples and bananas from walmart"), apply that store tag to ALL items in the group.
+- Every item's tags MUST include "shopping". Add the store tag in addition when detected.
+- If no store is mentioned, tags = ["shopping"].
+
+Rules:
+- Extract EVERY item. Never merge two products into one title.
+- Never invent items not present in the text.
+- dueDate is always null for shopping items.
+- If no items are found, return [].`;
+}
+
+/**
  * Call Appwrite Users API to check if a user has the "admin" label.
  */
 async function verifyAdmin(userId, appwriteEndpoint, projectId, apiKey) {
@@ -210,7 +244,7 @@ exports.handler = async (event) => {
     };
   }
 
-  const { prompt, userId } = body;
+  const { prompt, userId, mode } = body;
 
   if (!prompt || typeof prompt !== "string" || prompt.trim().length === 0) {
     return {
@@ -258,6 +292,10 @@ exports.handler = async (event) => {
 
   // --- Call DeepSeek API ---
   const todayDate = new Date().toISOString().split("T")[0];
+  const systemPrompt =
+    mode === "shopping"
+      ? buildShoppingSystemPrompt()
+      : buildSystemPrompt(todayDate);
 
   let deepseekRes;
   try {
@@ -270,7 +308,7 @@ exports.handler = async (event) => {
       body: JSON.stringify({
         model: DEEPSEEK_MODEL,
         messages: [
-          { role: "system", content: buildSystemPrompt(todayDate) },
+          { role: "system", content: systemPrompt },
           { role: "user", content: prompt.trim() },
         ],
         temperature: 0.3, // low temp for structured extraction

@@ -7,6 +7,7 @@ import {
   faXmark,
   faChevronDown,
   faChevronUp,
+  faShoppingCart,
 } from "@fortawesome/free-solid-svg-icons";
 import { generateTasks } from "../../lib/api/aiTaskGen";
 
@@ -46,7 +47,8 @@ const TAG_SUGGESTIONS = [
 
 // ─── Component ─────────────────────────────────────────────
 
-export function AITaskGenerator({ isOpen, onClose, onTasksApproved, userId }) {
+export function AITaskGenerator({ isOpen, onClose, onTasksApproved, userId, mode = "tasks" }) {
+  const isShopping = mode === "shopping";
   // Phase: 'input' | 'generating' | 'review'
   const [phase, setPhase] = useState("input");
   const [inputText, setInputText] = useState("");
@@ -100,7 +102,7 @@ export function AITaskGenerator({ isOpen, onClose, onTasksApproved, userId }) {
     abortRef.current = controller;
 
     try {
-      const result = await generateTasks(text, userId || undefined);
+      const result = await generateTasks(text, userId || undefined, controller.signal, mode);
 
       if (controller.signal.aborted) return;
 
@@ -126,7 +128,7 @@ export function AITaskGenerator({ isOpen, onClose, onTasksApproved, userId }) {
     } finally {
       abortRef.current = null;
     }
-  }, [inputText, userId]);
+  }, [inputText, userId, mode]);
 
   const handleCancelGeneration = useCallback(() => {
     if (abortRef.current) {
@@ -234,11 +236,11 @@ export function AITaskGenerator({ isOpen, onClose, onTasksApproved, userId }) {
         <div className="flex justify-between items-center px-5 py-3 border-b border-td-border shrink-0">
           <div className="flex items-center gap-2">
             <FontAwesomeIcon
-              icon={faWandMagicSparkles}
+              icon={isShopping ? faShoppingCart : faWandMagicSparkles}
               className="h-4 w-4 text-td-muted"
             />
             <h3 className="text-td-base font-medium text-td-text">
-              AI Task Generator
+              {isShopping ? "Add to shopping" : "AI Task Generator"}
             </h3>
           </div>
           <button
@@ -268,8 +270,9 @@ export function AITaskGenerator({ isOpen, onClose, onTasksApproved, userId }) {
             <>
               <div className="text-td-xs text-td-muted flex justify-between">
                 <span>
-                  Paste your notes, thoughts, or a brain dump below. AI will
-                  extract tasks with dates and tags.
+                  {isShopping
+                    ? "List what you need. Say the store (e.g. \u201Cfrom Walmart\u201D) and AI splits each item into its own entry."
+                    : "Paste your notes, thoughts, or a brain dump below. AI will extract tasks with dates and tags."}
                 </span>
                 <span className="text-td-faint tabular-nums">
                   {inputText.length}/{MAX_INPUT_LENGTH}
@@ -289,7 +292,11 @@ export function AITaskGenerator({ isOpen, onClose, onTasksApproved, userId }) {
                 }}
                 className="w-full p-3 border border-td-border text-td-sm bg-transparent focus:outline-none focus:border-td-muted resize-y"
                 rows={10}
-                placeholder={`Buy groceries and milk tomorrow at Walmart\nCall the dentist about teeth cleaning next Tuesday\nPay rent by the 1st of next month\nPrepare slides for team meeting on Friday\nGym workout every weekday\nPick up kids from school today at 3pm`}
+                placeholder={
+                  isShopping
+                    ? `apples and bananas from walmart\nmilk\neggs and cheese from costco\ndiapers from pharmacy`
+                    : `Buy groceries and milk tomorrow at Walmart\nCall the dentist about teeth cleaning next Tuesday\nPay rent by the 1st of next month\nPrepare slides for team meeting on Friday\nGym workout every weekday\nPick up kids from school today at 3pm`
+                }
               />
 
               <div className="text-td-xs text-td-faint">
@@ -309,8 +316,11 @@ export function AITaskGenerator({ isOpen, onClose, onTasksApproved, userId }) {
                 disabled={!inputText.trim()}
                 className="w-full py-2.5 border border-td-text text-td-text text-td-sm font-medium hover:bg-td-hover disabled:opacity-30 disabled:cursor-not-allowed"
               >
-                <FontAwesomeIcon icon={faWandMagicSparkles} className="h-3 w-3 mr-1.5" />
-                Generate Tasks
+                <FontAwesomeIcon
+                  icon={isShopping ? faShoppingCart : faWandMagicSparkles}
+                  className="h-3 w-3 mr-1.5"
+                />
+                {isShopping ? "Parse items" : "Generate Tasks"}
               </button>
             </>
           )}
@@ -338,7 +348,8 @@ export function AITaskGenerator({ isOpen, onClose, onTasksApproved, userId }) {
               {/* Summary */}
               <div className="flex items-center justify-between text-td-xs">
                 <span className="text-td-muted">
-                  {tasks.length} task{tasks.length !== 1 ? "s" : ""} generated
+                  {tasks.length} {isShopping ? "item" : "task"}
+                  {tasks.length !== 1 ? "s" : ""} {isShopping ? "found" : "generated"}
                   {selectedCount !== tasks.length && (
                     <span> · {selectedCount} selected</span>
                   )}
@@ -409,7 +420,7 @@ export function AITaskGenerator({ isOpen, onClose, onTasksApproved, userId }) {
                   Adding…
                 </span>
               ) : (
-                `Add ${selectedCount} task${selectedCount !== 1 ? "s" : ""}`
+                `Add ${selectedCount} ${isShopping ? "item" : "task"}${selectedCount !== 1 ? "s" : ""}`
               )}
             </button>
             <button

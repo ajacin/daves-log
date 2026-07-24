@@ -7,7 +7,8 @@ import {
   faChartLine,
   faCog,
   faUsers,
-  faClipboardList
+  faClipboardList,
+  faPlus
 } from '@fortawesome/free-solid-svg-icons'
 
 export const bottomNavItems = [
@@ -33,11 +34,11 @@ export const bottomNavItems = [
     match: (pathname) => pathname.startsWith('/dashboard/shopping')
   },
   {
-    id: 'activities',
-    label: 'Log',
-    to: '/dashboard/activities',
-    icon: faBaby,
-    match: (pathname) => pathname.startsWith('/dashboard/activities')
+    id: 'quick-add',
+    label: 'Add',
+    action: 'quick-add',
+    icon: faPlus,
+    match: () => false
   },
   {
     id: 'more',
@@ -46,6 +47,7 @@ export const bottomNavItems = [
     icon: faEllipsis,
     match: (pathname) =>
       pathname.startsWith('/dashboard/more') ||
+      pathname.startsWith('/dashboard/activities') ||
       pathname.startsWith('/dashboard/view-activities') ||
       pathname.startsWith('/dashboard/automations') ||
       pathname.startsWith('/dashboard/invitees') ||
@@ -89,6 +91,13 @@ export const dashboardSections = [
 ]
 
 export const dashboardSecondaryLinks = [
+  {
+    id: 'log-activities',
+    title: 'Log Activities',
+    description: 'Record feeds, diapers, and more',
+    to: '/dashboard/activities',
+    icon: faBaby
+  },
   {
     id: 'automations',
     title: 'Automations',

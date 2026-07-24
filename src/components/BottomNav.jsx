@@ -1,7 +1,6 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faPlus } from '@fortawesome/free-solid-svg-icons'
 import toast from 'react-hot-toast'
 import { bottomNavItems } from '../lib/navigation'
 import { useIdeas } from '../lib/context/ideas'
@@ -14,11 +13,25 @@ export function BottomNav () {
   const { current: user } = useUser()
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false)
 
+  // The quick-add button parses into shopping items on the shopping list,
+  // and into general tasks everywhere else.
+  const quickAddMode = useMemo(
+    () => (location.pathname.startsWith('/dashboard/shopping') ? 'shopping' : 'tasks'),
+    [location.pathname]
+  )
+
   const handleTasksApproved = useCallback(async (tasks) => {
     if (!user) return
 
     let successCount = 0
     for (const task of tasks) {
+      const tags = task.tags || []
+      // Guarantee the shopping tag so items land on the shopping list
+      const finalTags =
+        quickAddMode === 'shopping' && !tags.includes('shopping')
+          ? ['shopping', ...tags]
+          : tags
+
       try {
         const success = await ideas.add({
           userId: user.$id,
@@ -26,22 +39,23 @@ export function BottomNav () {
           title: task.title,
           description: task.description || '',
           entryDate: new Date().toISOString(),
-          tags: task.tags || [],
+          tags: finalTags,
           completed: false,
           dueDate: task.dueDate || null
-        }, { source: 'ai-generator' })
+        }, { source: quickAddMode === 'shopping' ? 'shopping-quick-add' : 'ai-generator' })
         if (success) successCount += 1
       } catch (err) {
-        console.error('Failed to add task from quick add:', err)
+        console.error('Failed to add from quick add:', err)
       }
     }
 
+    const noun = quickAddMode === 'shopping' ? 'item' : 'task'
     if (successCount > 0) {
-      toast.success(`Added ${successCount} task${successCount !== 1 ? 's' : ''}`)
+      toast.success(`Added ${successCount} ${noun}${successCount !== 1 ? 's' : ''}`)
     } else {
-      toast.error('Failed to add tasks')
+      toast.error(`Failed to add ${noun}s`)
     }
-  }, [ideas, user])
+  }, [ideas, user, quickAddMode])
 
   return (
     <>
@@ -49,18 +63,26 @@ export function BottomNav () {
         className="fixed inset-x-0 bottom-0 z-[1000] border-t border-td-border bg-td-bg/95 backdrop-blur-sm md:hidden"
         aria-label="Main navigation"
       >
-        {/* Center floating quick-add FAB — opens the AI parsing modal */}
-        <button
-          type="button"
-          onClick={() => setIsQuickAddOpen(true)}
-          className="absolute bottom-full left-1/2 mb-3 flex h-14 w-14 -translate-x-1/2 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg ring-4 ring-td-bg transition-transform touch-manipulation active:scale-95 hover:bg-emerald-600"
-          aria-label="Quick add task with AI"
-        >
-          <FontAwesomeIcon icon={faPlus} className="h-5 w-5" />
-        </button>
-
         <ul className="mx-auto flex max-w-lg items-stretch justify-around px-1 pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-1">
           {bottomNavItems.map((item) => {
+            if (item.action === 'quick-add') {
+              return (
+                <li key={item.id} className="flex-1">
+                  <button
+                    type="button"
+                    onClick={() => setIsQuickAddOpen(true)}
+                    className="flex min-h-[52px] w-full flex-col items-center justify-center gap-0.5 px-1 text-td-muted touch-manipulation transition-colors hover:text-td-text"
+                    aria-label={`Quick add ${quickAddMode === 'shopping' ? 'shopping items' : 'tasks'} with AI`}
+                  >
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500 text-white shadow-sm">
+                      <FontAwesomeIcon icon={item.icon} className="h-3.5 w-3.5" />
+                    </span>
+                    <span className="text-[10px] leading-none">{item.label}</span>
+                  </button>
+                </li>
+              )
+            }
+
             const isActive = item.match(location.pathname)
 
             return (
@@ -90,6 +112,7 @@ export function BottomNav () {
           onClose={() => setIsQuickAddOpen(false)}
           onTasksApproved={handleTasksApproved}
           userId={user?.$id}
+          mode={quickAddMode}
         />
       </div>
     </>
