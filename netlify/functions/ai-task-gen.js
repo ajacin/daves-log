@@ -12,7 +12,9 @@
  */
 
 const DEEPSEEK_API = "https://api.deepseek.com/v1/chat/completions";
-const DEEPSEEK_MODEL = "deepseek-chat";
+// The legacy "deepseek-chat" alias was retired on 2026-07-24. Use the current
+// V4 model with thinking disabled to match the old non-thinking behavior.
+const DEEPSEEK_MODEL = "deepseek-v4-flash";
 
 /**
  * Build the system prompt that constrains DeepSeek to structured JSON output.
@@ -313,6 +315,7 @@ exports.handler = async (event) => {
         ],
         temperature: 0.3, // low temp for structured extraction
         max_tokens: 4096,
+        thinking: { type: "disabled" }, // non-thinking, matches legacy deepseek-chat
       }),
       signal: AbortSignal.timeout(30000), // 30s timeout
     });
@@ -350,11 +353,21 @@ exports.handler = async (event) => {
       };
     }
 
+    // Surface DeepSeek's own message when available to aid debugging
+    let detail = "";
+    try {
+      detail = JSON.parse(errText)?.error?.message || "";
+    } catch {
+      detail = "";
+    }
+
     return {
       statusCode: 502,
       headers: corsHeaders(event),
       body: JSON.stringify({
-        error: `AI service returned an error (${deepseekRes.status})`,
+        error: detail
+          ? `AI service error (${deepseekRes.status}): ${detail.slice(0, 200)}`
+          : `AI service returned an error (${deepseekRes.status})`,
       }),
     };
   }
