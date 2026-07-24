@@ -1,6 +1,15 @@
 {
+  "id": "/",
   "short_name": "4292 Falcons",
   "name": "4292 Falcons - Home Management",
+  "description": "Family task board, shopping list, baby activity logging, and home management.",
+  "categories": ["productivity", "lifestyle"],
+  "scope": "/",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#0891b2",
+  "background_color": "#ffffff",
   "icons": [
     {
       "src": "favicon.ico",
@@ -10,16 +19,49 @@
     {
       "src": "logo192.png",
       "type": "image/png",
-      "sizes": "192x192"
+      "sizes": "192x192",
+      "purpose": "any"
+    },
+    {
+      "src": "logo192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "maskable"
     },
     {
       "src": "logo512.png",
       "type": "image/png",
-      "sizes": "512x512"
+      "sizes": "512x512",
+      "purpose": "any"
+    },
+    {
+      "src": "logo512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable"
     }
   ],
-  "start_url": ".",
-  "display": "standalone",
-  "theme_color": "#0891b2",
-  "background_color": "#ffffff"
+  "shortcuts": [
+    {
+      "name": "Shopping List",
+      "short_name": "Shopping",
+      "description": "Open the shopping list",
+      "url": "/dashboard/shopping",
+      "icons": [{ "src": "logo192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Tasks",
+      "short_name": "Tasks",
+      "description": "Open the task board",
+      "url": "/dashboard",
+      "icons": [{ "src": "logo192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Log Activity",
+      "short_name": "Log",
+      "description": "Log a baby activity",
+      "url": "/dashboard/activities",
+      "icons": [{ "src": "logo192.png", "sizes": "192x192" }]
+    }
+  ]
 }

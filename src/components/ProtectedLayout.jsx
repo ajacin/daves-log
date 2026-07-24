@@ -1,6 +1,8 @@
 import { Navigate } from 'react-router-dom';
 import { useUser } from '../lib/context/user';
 import AppDrawer from './drawer/Drawer';
+import { InstallPrompt } from './InstallPrompt';
+import { PwaUpdatePrompt } from './PwaUpdatePrompt';
 
 export function ProtectedLayout({ children }) {
   const { current: user } = useUser();
@@ -15,6 +17,8 @@ export function ProtectedLayout({ children }) {
       <main className="app-main">
         {children}
       </main>
+      <InstallPrompt />
+      <PwaUpdatePrompt />
     </div>
   );
 }

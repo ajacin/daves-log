@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faCheck,
@@ -11,9 +11,10 @@ import {
   faListUl
 } from '@fortawesome/free-solid-svg-icons'
 import { toast } from 'react-hot-toast'
-import { useIdeas } from '../lib/context/ideas'
 import { useUser } from '../lib/context/user'
 import { ConfirmationModal } from '../components/ConfirmationModal'
+import { OfflineBanner } from '../components/OfflineBanner'
+import { useShoppingOffline } from '../hooks/useShoppingOffline'
 
 const STORE_TAGS = [
   'walmart',
@@ -36,6 +37,7 @@ function ShoppingItem ({ item, isProcessing, onToggle, onDelete }) {
   const storeTags = (item.tags || []).filter(
     (tag) => tag !== 'shopping' && STORE_TAGS.includes(tag)
   )
+  const isPending = item._pending
 
   return (
     <li
@@ -68,6 +70,9 @@ function ShoppingItem ({ item, isProcessing, onToggle, onDelete }) {
           }`}
         >
           {item.title}
+          {isPending && (
+            <span className="ml-2 text-sm text-amber-600 md:text-td-xs">pending</span>
+          )}
         </p>
         {(item.description || storeTags.length > 0) && (
           <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5">
@@ -99,9 +104,18 @@ function ShoppingItem ({ item, isProcessing, onToggle, onDelete }) {
 }
 
 export function ShoppingList () {
-  const ideas = useIdeas()
   const user = useUser()
   const inputRef = useRef(null)
+  const {
+    shoppingItems,
+    isOnline,
+    isLoading,
+    pendingCount,
+    isSyncing,
+    addItem,
+    toggleItem,
+    deleteItem
+  } = useShoppingOffline()
 
   const [newItem, setNewItem] = useState('')
   const [bulkMode, setBulkMode] = useState(false)
@@ -112,16 +126,6 @@ export function ShoppingList () {
   const [deleteId, setDeleteId] = useState(null)
   const [clearCompletedOpen, setClearCompletedOpen] = useState(false)
 
-  useEffect(() => {
-    if (!ideas.current.length) {
-      ideas.init()
-    }
-  }, [ideas])
-
-  const shoppingItems = useMemo(() => {
-    return ideas.current.filter((task) => task.tags?.includes('shopping'))
-  }, [ideas])
-
   const visibleItems = useMemo(() => {
     if (hideCompleted) {
       return shoppingItems.filter((item) => !item.completed)
@@ -129,7 +133,7 @@ export function ShoppingList () {
     return shoppingItems
   }, [shoppingItems, hideCompleted])
 
-  const pendingCount = useMemo(
+  const pendingCountItems = useMemo(
     () => shoppingItems.filter((item) => !item.completed).length,
     [shoppingItems]
   )
@@ -163,7 +167,6 @@ export function ShoppingList () {
       .map((line) => line.trim())
       .filter((line) => line.length > 0)
       .map((line) => {
-        // Allow "#walmart milk" style store tags on a line
         const tags = ['shopping']
         let title = line
         const tagMatches = line.match(/#(\w+)/g)
@@ -193,7 +196,7 @@ export function ShoppingList () {
 
     try {
       for (const item of items) {
-        const success = await ideas.add({
+        const success = await addItem({
           title: item.title,
           description: '',
           tags: item.tags,
@@ -202,16 +205,17 @@ export function ShoppingList () {
           entryDate: new Date().toISOString(),
           userId: user.current.$id,
           userName: user.current.name
-        }, { source: 'shopping-list' })
-
+        })
         if (success) successCount++
       }
 
       if (successCount > 0) {
         toast.success(
-          successCount === 1
-            ? 'Added to shopping list'
-            : `Added ${successCount} items`
+          !isOnline
+            ? `Saved ${successCount} item${successCount === 1 ? '' : 's'} offline`
+            : successCount === 1
+              ? 'Added to shopping list'
+              : `Added ${successCount} items`
         )
         setNewItem('')
         setBulkMode(false)
@@ -232,7 +236,7 @@ export function ShoppingList () {
 
     setProcessingIds((prev) => new Set([...prev, id]))
     try {
-      const success = await ideas.toggleComplete(id)
+      const success = await toggleItem(id)
       if (!success) toast.error('Could not update item')
     } catch (err) {
       console.error(err)
@@ -253,9 +257,9 @@ export function ShoppingList () {
 
     setProcessingIds((prev) => new Set([...prev, id]))
     try {
-      const success = await ideas.remove(id, { source: 'shopping-list' })
+      const success = await deleteItem(id)
       if (success) {
-        toast.success('Removed')
+        toast.success(isOnline ? 'Removed' : 'Removed offline')
       } else {
         toast.error('Failed to delete')
       }
@@ -278,7 +282,7 @@ export function ShoppingList () {
 
     let cleared = 0
     for (const item of done) {
-      const success = await ideas.remove(item.$id, { source: 'shopping-clear' })
+      const success = await deleteItem(item.$id)
       if (success) cleared++
     }
 
@@ -287,7 +291,7 @@ export function ShoppingList () {
     }
   }
 
-  if (ideas.isLoading && shoppingItems.length === 0) {
+  if (isLoading && shoppingItems.length === 0) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center text-td-muted">
         <FontAwesomeIcon icon={faSpinner} className="h-6 w-6 animate-spin" />
@@ -297,7 +301,8 @@ export function ShoppingList () {
 
   return (
     <div className="mx-auto min-h-screen max-w-xl bg-td-bg pb-24 md:pb-8">
-      {/* Header */}
+      <OfflineBanner pendingCount={pendingCount} isSyncing={isSyncing} />
+
       <header className="sticky top-0 z-10 border-b border-td-border bg-td-bg/95 backdrop-blur-sm">
         <div className="flex items-center justify-between gap-3 px-4 py-4 md:py-3">
           <div className="min-w-0">
@@ -308,9 +313,9 @@ export function ShoppingList () {
               </h1>
             </div>
             <p className="mt-0.5 text-base text-td-muted md:text-td-sm">
-              {pendingCount === 0
+              {pendingCountItems === 0
                 ? 'List is clear'
-                : `${pendingCount} item${pendingCount === 1 ? '' : 's'} left`}
+                : `${pendingCountItems} item${pendingCountItems === 1 ? '' : 's'} left`}
               {completedCount > 0 && hideCompleted
                 ? ` · ${completedCount} done`
                 : ''}
@@ -344,7 +349,6 @@ export function ShoppingList () {
           </div>
         </div>
 
-        {/* Add form */}
         <form onSubmit={handleAdd} className="border-t border-td-border px-3 py-3 md:py-2">
           {bulkMode ? (
             <textarea
@@ -394,7 +398,6 @@ export function ShoppingList () {
         </form>
       </header>
 
-      {/* List */}
       <div className="px-0">
         {visibleItems.length === 0 ? (
           <div className="px-6 py-16 text-center">
