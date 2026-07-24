@@ -31,6 +31,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import toast from 'react-hot-toast';
 import React from "react";
 import confetti from 'canvas-confetti';
+import { useMobileNav } from '../lib/hooks/useMobileNav';
 
 // Toast configuration to prevent duplicate notifications
 const toastConfig = {
@@ -803,7 +804,7 @@ export function Ideas() {
   const ideas = useIdeas();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  
+  const isMobileNav = useMobileNav();
   // State
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -848,6 +849,9 @@ export function Ideas() {
   
   // Debounce mechanism to prevent rapid-fire clicks
   const [processingTasks, setProcessingTasks] = useState(new Set());
+
+  // Local calendar day key — refreshed across midnight so column dates stay current
+  const [todayKey, setTodayKey] = useState(() => toLocalDateString(new Date()));
   
   // Track recent completions to prevent duplicate notifications
   const recentCompletions = useRef(new Map());
@@ -950,31 +954,56 @@ export function Ideas() {
     setShowTimezoneWarning(hasIssues);
   }, [checkForTimezoneIssues]);
 
-  // Date helper functions
+  // Keep todayKey current when the tab stays open past midnight
+  useEffect(() => {
+    const refreshTodayKey = () => {
+      const nextKey = toLocalDateString(new Date());
+      setTodayKey((prev) => (prev === nextKey ? prev : nextKey));
+    };
+
+    const onVisibilityOrFocus = () => {
+      if (document.visibilityState === 'visible') refreshTodayKey();
+    };
+
+    window.addEventListener('focus', onVisibilityOrFocus);
+    document.addEventListener('visibilitychange', onVisibilityOrFocus);
+
+    // Poll so an open tab crossing midnight updates columns without a refresh
+    const intervalId = setInterval(refreshTodayKey, 60 * 1000);
+
+    return () => {
+      window.removeEventListener('focus', onVisibilityOrFocus);
+      document.removeEventListener('visibilitychange', onVisibilityOrFocus);
+      clearInterval(intervalId);
+    };
+  }, []);
+
+  // Date helper functions — depends on todayKey so columns refresh after midnight
   const getDateInfo = useCallback(() => {
-    const today = new Date();
+    const [year, month, day] = todayKey.split('-').map(Number);
+    const today = new Date(year, month - 1, day);
     today.setHours(0, 0, 0, 0);
-    
+
     const yesterday = new Date(today);
     yesterday.setDate(today.getDate() - 1);
-    
+
     const tomorrow = new Date(today);
     tomorrow.setDate(today.getDate() + 1);
-    
+
     const dayAfterTomorrow = new Date(today);
     dayAfterTomorrow.setDate(today.getDate() + 2);
-    
+
     // Get remaining days of this week (after day after tomorrow)
     const remainingWeekDays = [];
     const dayOfWeek = today.getDay();
     const daysLeftInWeek = 6 - dayOfWeek; // Saturday is the end
-    
+
     for (let i = 3; i <= daysLeftInWeek; i++) {
-      const day = new Date(today);
-      day.setDate(today.getDate() + i);
-      remainingWeekDays.push(day);
+      const nextDay = new Date(today);
+      nextDay.setDate(today.getDate() + i);
+      remainingWeekDays.push(nextDay);
     }
-    
+
     return {
       today,
       yesterday,
@@ -982,7 +1011,7 @@ export function Ideas() {
       dayAfterTomorrow,
       remainingWeekDays
     };
-  }, []);
+  }, [todayKey]);
 
   const formatColumnHeader = useCallback((date, type) => {
     const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
@@ -1610,7 +1639,7 @@ export function Ideas() {
 
   const handleTaskDrop = async (taskId, columnType, targetDate) => {
     console.log('🚀 handleTaskDrop called:', { taskId, columnType, targetDate });
-    
+
     const task = ideas.current.find(t => t.$id === taskId);
     if (!task) {
       console.error('❌ Task not found:', taskId);
@@ -1621,44 +1650,34 @@ export function Ideas() {
 
     let newDueDate = null;
 
-    // Determine the new due date based on the column type
+    // Prefer column targetDate (same source create uses) so drag/create stay aligned
     if (columnType === 'unscheduled') {
-      newDueDate = null; // Unscheduled tasks have no due date
+      newDueDate = null;
+    } else if (targetDate instanceof Date) {
+      newDueDate = toLocalDateString(targetDate);
+    } else if (typeof targetDate === 'string') {
+      newDueDate = targetDate.split('T')[0];
     } else if (columnType === 'today') {
-      const today = new Date();
-      newDueDate = toLocalDateString(today);
+      newDueDate = toLocalDateString(dateInfo.today);
     } else if (columnType === 'tomorrow') {
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      newDueDate = toLocalDateString(tomorrow);
+      newDueDate = toLocalDateString(dateInfo.tomorrow);
     } else if (columnType === 'dayAfterTomorrow') {
-      const dayAfter = new Date();
-      dayAfter.setDate(dayAfter.getDate() + 2);
-      newDueDate = toLocalDateString(dayAfter);
+      newDueDate = toLocalDateString(dateInfo.dayAfterTomorrow);
     } else if (columnType === 'overdue') {
-      // For overdue column, set to yesterday to make it overdue
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      newDueDate = toLocalDateString(yesterday);
-    } else if (targetDate) {
-      // For specific date columns, use the target date
-      if (targetDate instanceof Date) {
-        newDueDate = toLocalDateString(targetDate);
-      } else if (typeof targetDate === 'string') {
-        newDueDate = targetDate.split('T')[0]; // Handle both date and datetime strings
-      }
+      newDueDate = toLocalDateString(dateInfo.yesterday);
     } else {
-      // For columns without specific target dates (remainingWeek, future), keep current date or set to today
+      // Columns without a specific target date (remainingWeek, future)
       console.log('⚠️ No target date for column type:', columnType);
-      const today = new Date();
-      newDueDate = toLocalDateString(today);
+      newDueDate = toLocalDateString(dateInfo.today);
     }
 
-    console.log('📅 Calculated newDueDate:', newDueDate);
-    console.log('🔄 Comparison:', { current: task.dueDate, new: newDueDate, same: task.dueDate === newDueDate });
+    const currentDatePart = task.dueDate ? task.dueDate.split('T')[0] : null;
 
-    // Don't update if the date is the same
-    if (task.dueDate === newDueDate) {
+    console.log('📅 Calculated newDueDate:', newDueDate);
+    console.log('🔄 Comparison:', { current: currentDatePart, new: newDueDate, same: currentDatePart === newDueDate });
+
+    // Don't update if the calendar day is the same (normalize ISO vs YYYY-MM-DD)
+    if (currentDatePart === newDueDate) {
       console.log('⏭️ Skipping update - dates are the same');
       return;
     }
@@ -2403,7 +2422,7 @@ Rules:
       <div className="flex-shrink-0 bg-td-bg border-b border-td-border z-10 lg:sticky lg:top-0 pt-[max(0px,env(safe-area-inset-top))] lg:pt-0">
         <div className="flex flex-col gap-2 py-2 md:py-0 md:flex-row md:items-center md:h-11 md:gap-3 px-3">
           <div className="flex items-center gap-3 w-full min-h-[44px] md:min-h-0 md:w-auto md:contents">
-            <div className="flex items-baseline gap-1.5 pl-8 shrink-0">
+            <div className={`flex items-baseline gap-1.5 shrink-0 ${isMobileNav ? '' : 'pl-8'}`}>
               <span className="text-td-base font-medium text-td-text">Tasks</span>
               <span className="text-td-xs text-td-faint">{filteredTasks.length}</span>
             </div>
@@ -2438,7 +2457,7 @@ Rules:
           </div>
 
           {/* Mobile — primary actions + overflow menu (no horizontal scroll) */}
-          <div className="flex md:hidden items-center justify-end gap-1 pl-8 pr-2">
+          <div className={`flex md:hidden items-center justify-end gap-1 pr-2 ${isMobileNav ? '' : 'pl-8'}`}>
             <button
               type="button"
               onClick={() => setShowFilters(!showFilters)}

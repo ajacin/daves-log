@@ -7,6 +7,29 @@ import { logAction, determineAction, extractRelevantBefore } from "../activityLo
 export const DATABASE_ID = process.env.REACT_APP_DATABASE_ID; // Replace with your database ID
 export const COLLECTION_ID = process.env.REACT_APP_COLLECTION_ID_IDEAS_TRACKER;
 
+// Format a Date as YYYY-MM-DD in local time (avoids UTC day shifts from toISOString)
+const toLocalDateString = (date) => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
+
+// Parse dueDate string to local midnight without UTC conversion
+const parseDueDateToLocal = (dueDateStr) => {
+  if (!dueDateStr) return null;
+  try {
+    const datePart = dueDateStr.split('T')[0];
+    const [year, month, day] = datePart.split('-').map(Number);
+    if (!year || !month || !day) return null;
+    const d = new Date(year, month - 1, day);
+    if (isNaN(d.getTime())) return null;
+    return d;
+  } catch {
+    return null;
+  }
+};
+
 const IdeasContext = createContext();
 
 export function useIdeas() {
@@ -221,8 +244,8 @@ export function IdeasProvider(props) {
       
       // For date-sensitive tasks, use original due date to maintain exact recurring dates
       // For other tasks, use completion date to allow flexible scheduling
-      const baseDate = (isDateSensitiveTask && completedTask.dueDate) 
-        ? new Date(completedTask.dueDate) 
+      const baseDate = (isDateSensitiveTask && completedTask.dueDate)
+        ? (parseDueDateToLocal(completedTask.dueDate) || completionDateTime)
         : completionDateTime;
       
       // Note: Date-sensitive tasks use original due date for precise recurring dates
@@ -286,7 +309,7 @@ export function IdeasProvider(props) {
         description: completedTask.description || "",
         entryDate: new Date().toISOString(),
         tags: tagsWithRecurring,
-        dueDate: nextDueDate.toISOString(),
+        dueDate: toLocalDateString(nextDueDate),
         completed: false,
         recurrence: completedTask.recurrence,
         parentTaskId: completedTask.$id, // Reference to the original task

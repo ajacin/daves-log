@@ -1,227 +1,182 @@
-import { Navigate, Link } from 'react-router-dom';
-import { useUser } from '../lib/context/user';
-import { useIdeas } from '../lib/context/ideas';
-import AppDrawer from '../components/drawer/Drawer';
-import { useEffect, useState, useMemo } from 'react';
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { Link } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
-  faChartLine,
-  faCircleCheck,
-  faClock,
-  faExclamationTriangle,
+  faChevronRight,
   faCalendarDay,
-  faShoppingCart,
-  faLayerGroup,
-  faPlus
-} from "@fortawesome/free-solid-svg-icons";
+  faExclamationTriangle
+} from '@fortawesome/free-solid-svg-icons'
+import { useUser } from '../lib/context/user'
+import { useIdeas } from '../lib/context/ideas'
+import { dashboardSections, dashboardSecondaryLinks } from '../lib/navigation'
+import { useMobileNav } from '../lib/hooks/useMobileNav'
 
-export function ProtectedLayout({ children }) {
-  const { current: user } = useUser();
-
-  if (!user) {
-    return <Navigate to="/" replace />;
-  }
-
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <AppDrawer />
-      <main className="p-4 sm:p-6 lg:p-8">
-        {children}
-      </main>
-    </div>
-  );
-}
-
-export function Dashboard() {
-  const { current: user } = useUser();
-  const ideas = useIdeas();
-  const [greeting, setGreeting] = useState('');
+export function Dashboard () {
+  const { current: user } = useUser()
+  const ideas = useIdeas()
+  const isMobileNav = useMobileNav()
+  const [greeting, setGreeting] = useState('')
 
   useEffect(() => {
-    const hour = new Date().getHours();
+    const hour = new Date().getHours()
     if (hour < 12) {
-      setGreeting('Good morning');
+      setGreeting('Good morning')
     } else if (hour < 18) {
-      setGreeting('Good afternoon');
+      setGreeting('Good afternoon')
     } else {
-      setGreeting('Good evening');
+      setGreeting('Good evening')
     }
-  }, []);
+  }, [])
 
-  // Initialize ideas data when the dashboard loads
   useEffect(() => {
     if (!ideas.current.length) {
-      ideas.init();
+      ideas.init()
     }
-  }, [ideas]);
+  }, [ideas])
 
-  // Memoize dashboard stats
-  const dashboardStats = useMemo(() => ({
-    totalTasks: ideas.current.length,
-    completedTasks: ideas.current.filter(idea => idea.completed).length,
-    completedToday: ideas.current.filter(idea => {
-      if (!idea.completed) return false;
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const completedDate = new Date(idea.completedAt || idea.entryDate);
-      return completedDate >= today;
-    }).length,
-    pendingTasks: ideas.current.filter(idea => !idea.completed).length,
-    overdueTasks: ideas.current.filter(idea => {
-      if (!idea.dueDate || idea.completed) return false;
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const dueDate = new Date(idea.dueDate);
-      return dueDate < today;
-    }).length,
-    tasksDueToday: ideas.current.filter(idea => {
-      if (!idea.dueDate || idea.completed) return false;
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const dueDate = new Date(idea.dueDate);
-      const dueDay = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate());
-      return dueDay.getTime() === today.getTime();
-    }).length,
-    shoppingItems: ideas.current.filter(idea => 
-      !idea.completed && idea.tags?.includes('shopping')
-    ).length,
-    urgentTasks: ideas.current.filter(idea => 
-      !idea.completed && idea.tags?.includes('urgent')
-    ).length
-  }), [ideas]);
+  const snapshot = useMemo(() => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    const pendingTasks = ideas.current.filter((idea) => !idea.completed)
+    const overdueTasks = pendingTasks.filter((idea) => {
+      if (!idea.dueDate) return false
+      const dueDate = new Date(idea.dueDate)
+      return dueDate < today
+    })
+    const tasksDueToday = pendingTasks.filter((idea) => {
+      if (!idea.dueDate) return false
+      const dueDate = new Date(idea.dueDate)
+      const dueDay = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate())
+      return dueDay.getTime() === today.getTime()
+    })
+    const shoppingItems = pendingTasks.filter((idea) => idea.tags?.includes('shopping'))
+
+    return {
+      pendingTasks: pendingTasks.length,
+      overdueTasks: overdueTasks.length,
+      tasksDueToday: tasksDueToday.length,
+      shoppingItems: shoppingItems.length
+    }
+  }, [ideas])
+
+  const todayLabel = new Date().toLocaleDateString(undefined, {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric'
+  })
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          <h1 className="text-2xl lg:text-3xl font-bold text-slate-800">{greeting}, {user?.name || 'User'}</h1>
-          <p className="text-sm lg:text-base text-slate-600 mt-1">Here's your dashboard overview</p>
-        </div>
-      </div>
+    <div className="mx-auto min-h-screen max-w-xl bg-td-bg pb-8">
+      <header className="border-b border-td-border px-4 py-5 pt-[max(1rem,env(safe-area-inset-top))] md:pt-5">
+        <p className="text-td-xs uppercase tracking-wider text-td-faint">{todayLabel}</p>
+        <h1 className="mt-1 text-2xl font-semibold tracking-tight text-td-text md:text-xl">
+          {greeting}, {user?.name || 'there'}
+        </h1>
+        <p className="mt-1 text-base text-td-muted md:text-td-sm">
+          Jump to any section below
+        </p>
+      </header>
 
-      <div className="max-w-7xl mx-auto px-4 py-6">
-        <div className="max-w-6xl mx-auto">
-          {/* Task Statistics */}
-          <div className="bg-white rounded-2xl shadow-sm p-6 mb-6">
-            <h2 className="text-lg font-semibold text-slate-800 mb-4">Task Overview</h2>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <Link 
-                to="/dashboard/ideas"
-                className="bg-slate-50 rounded-xl p-4 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-100 transition-all duration-200"
-              >
-                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-slate-100 mb-2">
-                  <FontAwesomeIcon icon={faChartLine} className="text-slate-600 h-5 w-5" />
-                </div>
-                <span className="text-xs text-slate-500">Total</span>
-                <span className="text-xl font-bold text-slate-800">{dashboardStats.totalTasks}</span>
-              </Link>
-              
-              <Link 
-                to="/dashboard/ideas"
-                className="bg-emerald-50 rounded-xl p-4 flex flex-col items-center justify-center cursor-pointer hover:bg-emerald-100 transition-all duration-200"
-              >
-                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-emerald-100 mb-2">
-                  <FontAwesomeIcon icon={faCircleCheck} className="text-emerald-600 h-5 w-5" />
-                </div>
-                <span className="text-xs text-slate-500">Done</span>
-                <span className="text-xl font-bold text-emerald-600">{dashboardStats.completedTasks}</span>
-              </Link>
-              
-              <Link 
-                to="/dashboard/ideas"
-                className="bg-blue-50 rounded-xl p-4 flex flex-col items-center justify-center cursor-pointer hover:bg-blue-100 transition-all duration-200"
-              >
-                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-100 mb-2">
-                  <FontAwesomeIcon icon={faClock} className="text-blue-600 h-5 w-5" />
-                </div>
-                <span className="text-xs text-slate-500">Pending</span>
-                <span className="text-xl font-bold text-blue-600">{dashboardStats.pendingTasks}</span>
-              </Link>
-              
-              <Link 
-                to="/dashboard/ideas"
-                className="bg-red-50 rounded-xl p-4 flex flex-col items-center justify-center cursor-pointer hover:bg-red-100 transition-all duration-200"
-              >
-                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-red-100 mb-2">
-                  <FontAwesomeIcon icon={faExclamationTriangle} className="text-red-600 h-5 w-5" />
-                </div>
-                <span className="text-xs text-slate-500">Overdue</span>
-                <span className="text-xl font-bold text-red-600">{dashboardStats.overdueTasks}</span>
-              </Link>
-            </div>
-          </div>
-
-          {/* Additional Stats */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-            <div className="bg-white rounded-2xl shadow-sm p-6">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center">
-                  <FontAwesomeIcon icon={faCalendarDay} className="text-amber-600 h-5 w-5" />
-                </div>
-                <div>
-                  <p className="text-sm text-slate-500">Due Today</p>
-                  <p className="text-2xl font-bold text-slate-800">{dashboardStats.tasksDueToday}</p>
-                </div>
-              </div>
-            </div>
-
+      {(snapshot.tasksDueToday > 0 || snapshot.overdueTasks > 0) && (
+        <div className="mx-4 mt-4 space-y-2">
+          {snapshot.tasksDueToday > 0 && (
             <Link
-              to="/dashboard/shopping"
-              className="bg-white rounded-2xl shadow-sm p-6 hover:bg-slate-50 transition-colors"
+              to="/dashboard/ideas"
+              className="flex items-center gap-3 border border-amber-200 bg-amber-50 px-3 py-3 text-td-sm text-amber-900 touch-manipulation hover:bg-amber-100"
             >
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center">
-                  <FontAwesomeIcon icon={faShoppingCart} className="text-emerald-600 h-5 w-5" />
-                </div>
-                <div>
-                  <p className="text-sm text-slate-500">Shopping Items</p>
-                  <p className="text-2xl font-bold text-slate-800">{dashboardStats.shoppingItems}</p>
-                </div>
-              </div>
+              <FontAwesomeIcon icon={faCalendarDay} className="h-4 w-4 shrink-0" />
+              <span>
+                {snapshot.tasksDueToday} task{snapshot.tasksDueToday !== 1 ? 's' : ''} due today
+              </span>
+              <FontAwesomeIcon icon={faChevronRight} className="ml-auto h-3 w-3 opacity-60" />
             </Link>
-
-            <div className="bg-white rounded-2xl shadow-sm p-6">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-                  <FontAwesomeIcon icon={faLayerGroup} className="text-red-600 h-5 w-5" />
-                </div>
-                <div>
-                  <p className="text-sm text-slate-500">Urgent Tasks</p>
-                  <p className="text-2xl font-bold text-slate-800">{dashboardStats.urgentTasks}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Due Today Notice */}
-          {dashboardStats.tasksDueToday > 0 && (
-            <div className="bg-amber-50 border-l-4 border-amber-400 p-4 rounded-xl flex items-center gap-3 mb-6">
-              <FontAwesomeIcon icon={faCalendarDay} className="h-5 w-5 text-amber-500" />
-              <div>
-                <p className="text-sm text-amber-700">
-                  You have <span className="font-medium">{dashboardStats.tasksDueToday} task{dashboardStats.tasksDueToday !== 1 ? 's' : ''}</span> due today.
-                  <Link 
-                    to="/dashboard/ideas" 
-                    className="ml-2 text-amber-800 underline hover:text-amber-900"
-                  >View all tasks</Link>
-                </p>
-              </div>
-            </div>
           )}
-
-          {/* Quick Add Button */}
-          <div className="fixed bottom-6 right-6">
-            <Link 
-              to="/dashboard/ideas?new=true"
-              className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white w-14 h-14 rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
-              title="Add New Task"
+          {snapshot.overdueTasks > 0 && (
+            <Link
+              to="/dashboard/ideas"
+              className="flex items-center gap-3 border border-red-200 bg-red-50 px-3 py-3 text-td-sm text-red-900 touch-manipulation hover:bg-red-100"
             >
-              <FontAwesomeIcon icon={faPlus} className="h-6 w-6" />
+              <FontAwesomeIcon icon={faExclamationTriangle} className="h-4 w-4 shrink-0" />
+              <span>
+                {snapshot.overdueTasks} overdue task{snapshot.overdueTasks !== 1 ? 's' : ''}
+              </span>
+              <FontAwesomeIcon icon={faChevronRight} className="ml-auto h-3 w-3 opacity-60" />
             </Link>
-          </div>
+          )}
         </div>
-      </div>
+      )}
+
+      <section className="px-4 py-5">
+        <h2 className="mb-3 text-td-xs font-medium uppercase tracking-wider text-td-faint">
+          Main
+        </h2>
+        <ul className="grid gap-3">
+          {dashboardSections.map((section) => (
+            <li key={section.id}>
+              <Link
+                to={section.to}
+                className="flex min-h-[72px] items-center gap-3 border border-td-border bg-td-bg px-4 py-3 touch-manipulation hover:bg-td-hover md:min-h-0"
+              >
+                <div
+                  className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${section.accent}`}
+                >
+                  <FontAwesomeIcon icon={section.icon} className="h-5 w-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-td-base font-medium text-td-text">{section.title}</p>
+                  <p className="text-td-xs text-td-faint">{section.description}</p>
+                </div>
+                <FontAwesomeIcon icon={faChevronRight} className="h-3 w-3 shrink-0 text-td-faint" />
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section className="px-4 pb-6">
+        <h2 className="mb-3 text-td-xs font-medium uppercase tracking-wider text-td-faint">
+          At a glance
+        </h2>
+        <div className="grid grid-cols-2 gap-3">
+          <Link
+            to="/dashboard/ideas"
+            className="border border-td-border px-3 py-3 touch-manipulation hover:bg-td-hover"
+          >
+            <p className="text-td-xs text-td-faint">Pending tasks</p>
+            <p className="mt-1 text-2xl font-semibold text-td-text">{snapshot.pendingTasks}</p>
+          </Link>
+          <Link
+            to="/dashboard/shopping"
+            className="border border-td-border px-3 py-3 touch-manipulation hover:bg-td-hover"
+          >
+            <p className="text-td-xs text-td-faint">Shopping items</p>
+            <p className="mt-1 text-2xl font-semibold text-td-text">{snapshot.shoppingItems}</p>
+          </Link>
+        </div>
+      </section>
+
+      {!isMobileNav && (
+        <section className="px-4 pb-8">
+          <h2 className="mb-3 text-td-xs font-medium uppercase tracking-wider text-td-faint">
+            More
+          </h2>
+          <ul className="divide-y divide-td-border border border-td-border">
+            {dashboardSecondaryLinks.map((item) => (
+              <li key={item.id}>
+                <Link
+                  to={item.to}
+                  className="flex items-center gap-3 px-4 py-3 text-td-sm text-td-text hover:bg-td-hover"
+                >
+                  <FontAwesomeIcon icon={item.icon} className="h-4 w-4 text-td-muted" />
+                  <span>{item.title}</span>
+                  <FontAwesomeIcon icon={faChevronRight} className="ml-auto h-3 w-3 text-td-faint" />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </div>
-  );
-} 
+  )
+}

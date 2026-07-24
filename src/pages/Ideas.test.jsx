@@ -60,6 +60,10 @@ jest.mock('../lib/context/ideas', () => ({
   }),
 }));
 
+jest.mock('../lib/hooks/useMobileNav', () => ({
+  useMobileNav: () => false,
+}));
+
 // ── Test Data Helpers ──────────────────────────────────────────────────────────
 
 const today = new Date();

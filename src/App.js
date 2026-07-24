@@ -10,6 +10,7 @@ import { Automations } from "./pages/Automations";
 import { Invitees } from "./pages/Invitees";
 import { ActivityLog } from "./pages/ActivityLog";
 import { ShoppingList } from "./pages/ShoppingList";
+import { More } from "./pages/More";
 import { useUser } from "./lib/context/user";
 import { ProtectedLayout } from "./components/ProtectedLayout";
 import { UserProvider } from "./lib/context/user";
@@ -22,12 +23,12 @@ function ProtectedRoutes() {
   return (
     <ProtectedLayout>
       <Routes>
-        <Route index element={<Ideas />} />
-        <Route path="dashboard" element={<Dashboard />} />
+        <Route index element={<Dashboard />} />
+        <Route path="ideas" element={<Ideas />} />
         <Route path="activities" element={<Activities />} />
         <Route path="view-activities" element={<ViewActivities />} />
-        <Route path="ideas" element={<Ideas />} />
         <Route path="shopping" element={<ShoppingList />} />
+        <Route path="more" element={<More />} />
         <Route path="automations" element={<Automations />} />
         <Route path="invitees" element={<Invitees />} />
         <Route path="activity-log" element={<ActivityLog />} />

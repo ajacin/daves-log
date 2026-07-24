@@ -53,7 +53,7 @@
       "name": "Tasks",
       "short_name": "Tasks",
       "description": "Open the task board",
-      "url": "/dashboard",
+      "url": "/dashboard/ideas",
       "icons": [{ "src": "logo192.png", "sizes": "192x192" }]
     },
     {

@@ -11,41 +11,36 @@ export function QuickAddTask() {
     const today = new Date()
     const currentDay = today.getDay() // 0 = Sunday, 5 = Friday
     let daysUntilFriday = 5 - currentDay
-    
+
     // If today is Friday or after, get next Friday
     if (daysUntilFriday <= 0) {
       daysUntilFriday += 7
     }
-    
+
     const nextFriday = new Date(today)
     nextFriday.setDate(today.getDate() + daysUntilFriday)
-    nextFriday.setHours(18, 0, 0, 0) // 6:00 PM
     return nextFriday
   }
 
   const getDueDate = () => {
     const now = new Date()
-    
+
     switch (selectedDueDate) {
       case 'today':
-        now.setHours(23, 59, 59, 999)
         return now
-      
+
       case 'tomorrow':
         now.setDate(now.getDate() + 1)
-        now.setHours(23, 59, 59, 999)
         return now
-      
+
       case 'weekend':
         return getNextFriday()
-      
+
       case 'nextWeek':
         now.setDate(now.getDate() + 7)
-        now.setHours(23, 59, 59, 999)
         return now
-      
+
       default:
-        now.setHours(23, 59, 59, 999)
         return now
     }
   }
@@ -56,15 +51,22 @@ export function QuickAddTask() {
     }
   };
 
+  const toLocalDateString = (date) => {
+    const y = date.getFullYear()
+    const m = String(date.getMonth() + 1).padStart(2, '0')
+    const d = String(date.getDate()).padStart(2, '0')
+    return `${y}-${m}-${d}`
+  }
+
   const addTask = async () => {
     if (!taskText.trim()) return
 
     try {
       const dueDate = getDueDate()
-      
+
       const taskData = {
         title: taskText.trim(),
-        dueDate: dueDate.toISOString(),
+        dueDate: toLocalDateString(dueDate),
         tags: ['quick'],
         completed: false,
         createdAt: new Date().toISOString()

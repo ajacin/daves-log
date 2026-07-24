@@ -4,13 +4,19 @@ import "react-modern-drawer/dist/index.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBars } from "@fortawesome/free-solid-svg-icons";
 import DrawerItems from "./DrawerItems";
+import { useMobileNav } from "../../lib/hooks/useMobileNav";
 
 const AppDrawer = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const isMobileNav = useMobileNav();
 
   const toggleDrawer = () => {
     setIsOpen((prevState) => !prevState);
   };
+
+  if (isMobileNav) {
+    return null;
+  }
 
   return (
     <>

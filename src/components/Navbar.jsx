@@ -15,6 +15,15 @@ export function Navbar({ setIsDrawerOpen }) {
                 className="px-3 py-2 flex items-center text-xs uppercase font-bold leading-snug text-blue-600 hover:text-blue-800"
                 to="/dashboard"
               >
+                <div className="text-lg">Home</div>
+              </Link>
+            </li>
+            <li className="nav-item">
+              <Link
+                onClick={closeDrawer}
+                className="px-3 py-2 flex items-center text-xs uppercase font-bold leading-snug  hover:opacity-75"
+                to="/dashboard/ideas"
+              >
                 <div className="text-lg">Tasks</div>
               </Link>
             </li>
@@ -25,15 +34,6 @@ export function Navbar({ setIsDrawerOpen }) {
                 to="/dashboard/shopping"
               >
                 <div className="text-lg">Shopping</div>
-              </Link>
-            </li>
-            <li className="nav-item">
-              <Link
-                onClick={closeDrawer}
-                className="px-3 py-2 flex items-center text-xs uppercase font-bold leading-snug  hover:opacity-75"
-                to="/dashboard/dashboard"
-              >
-                <div className="text-lg">Dashboard</div>
               </Link>
             </li>
             <li className="nav-item">
