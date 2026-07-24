@@ -67,6 +67,68 @@
   }
 }
 
+@layer utilities {
+  /* Mobile typography — matches Shopping page (text-xl primary, text-base secondary).
+     Applies below md (768px). Desktop keeps compact td-* sizes. */
+  @media (max-width: 767px) {
+    body {
+      font-size: 1rem;
+      line-height: 1.5;
+    }
+
+    .text-td-base {
+      font-size: 1.25rem;
+      line-height: 1.45;
+    }
+
+    .text-td-sm {
+      font-size: 1rem;
+      line-height: 1.45;
+    }
+
+    .text-td-xs {
+      font-size: 0.875rem;
+      line-height: 1.45;
+    }
+
+    .text-td-header {
+      font-size: 0.8125rem;
+      line-height: 1.45;
+    }
+
+    .text-xs {
+      font-size: 0.875rem;
+      line-height: 1.45;
+    }
+
+    .text-sm {
+      font-size: 1rem;
+      line-height: 1.45;
+    }
+
+    .text-base {
+      font-size: 1.125rem;
+      line-height: 1.45;
+    }
+
+    .app-nav .text-lg {
+      font-size: 1.25rem;
+      line-height: 1.45;
+    }
+
+    /* Form fields — readable at arm's length, prevents iOS zoom-on-focus */
+    .app-main input:not([type='checkbox']):not([type='radio']):not([type='hidden']):not([type='submit']):not([type='button']):not([type='file']),
+    .app-main textarea,
+    .app-main select,
+    .auth-page input:not([type='checkbox']):not([type='radio']):not([type='hidden']):not([type='submit']):not([type='button']):not([type='file']),
+    .auth-page textarea,
+    .auth-page select {
+      font-size: 1.25rem;
+      line-height: 1.45;
+    }
+  }
+}
+
 /* Safe area padding for fixed overlays */
 .safe-area-overlay {
   padding-top: max(1rem, env(safe-area-inset-top));
@@ -79,27 +141,4 @@
 
 .font-digital-7 {
   font-family: "Digital 7", sans-serif;
-}
-
-/* Larger font sizes on mobile (screens < 768px).
-   Desktop uses the Tailwind td-* sizes unchanged (td-base: 13px, td-sm: 12px, td-xs: 11px). */
-@media (max-width: 767px) {
-  body {
-    font-size: 15px;
-  }
-  .text-td-base {
-    font-size: 15px;
-    line-height: 1.45;
-  }
-  .text-td-sm {
-    font-size: 14px;
-    line-height: 1.45;
-  }
-  .text-td-xs {
-    font-size: 13px;
-    line-height: 1.45;
-  }
-  .text-td-header {
-    font-size: 12px;
-  }
 }

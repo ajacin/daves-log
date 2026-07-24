@@ -23,7 +23,7 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen relative overflow-hidden">
+    <div className="auth-page min-h-screen relative overflow-hidden">
       {/* Background Graphics */}
       <div className="absolute inset-0 bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900">
         {/* Animated Background Shapes */}

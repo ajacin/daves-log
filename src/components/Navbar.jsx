@@ -5,7 +5,7 @@ export function Navbar({ setIsDrawerOpen }) {
     setIsDrawerOpen(false);
   };
   return (
-    <nav className=" p-2 mt-0 mb-4">
+    <nav className="app-nav p-2 mt-0 mb-4">
       <div className="container mx-auto flex flex-wrap items-center">
         <div className="flex w-full md:w-auto">
           <ul className="flex flex-col pl-0 mb-0 list-none text-gray-700">
@@ -16,6 +16,15 @@ export function Navbar({ setIsDrawerOpen }) {
                 to="/dashboard"
               >
                 <div className="text-lg">Tasks</div>
+              </Link>
+            </li>
+            <li className="nav-item">
+              <Link
+                onClick={closeDrawer}
+                className="px-3 py-2 flex items-center text-xs uppercase font-bold leading-snug  hover:opacity-75"
+                to="/dashboard/shopping"
+              >
+                <div className="text-lg">Shopping</div>
               </Link>
             </li>
             <li className="nav-item">

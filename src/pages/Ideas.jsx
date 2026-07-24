@@ -844,14 +844,18 @@ export function Ideas() {
   const [editSubtasks, setEditSubtasks] = useState([]);
   const [newSubtaskText, setNewSubtaskText] = useState("");
   const [showRecurringInfo, setShowRecurringInfo] = useState(false);
+  const [showMobileTools, setShowMobileTools] = useState(false);
   
   // Debounce mechanism to prevent rapid-fire clicks
   const [processingTasks, setProcessingTasks] = useState(new Set());
   
   // Track recent completions to prevent duplicate notifications
   const recentCompletions = useRef(new Map());
+  const mobileToolsRef = useRef(null);
 
   const initRef = useRef(false);
+
+  const activeFilterCount = selectedTags.length + (timeFilter ? 1 : 0) + (userFilter ? 1 : 0);
 
   useEffect(() => {
     if (!user.current) {
@@ -870,6 +874,23 @@ export function Ideas() {
 
     initialize();
   }, [navigate, ideas, user]);
+
+  useEffect(() => {
+    if (!showMobileTools) return;
+
+    const handleClickOutside = (event) => {
+      if (mobileToolsRef.current && !mobileToolsRef.current.contains(event.target)) {
+        setShowMobileTools(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, [showMobileTools]);
 
   // Check for new task URL parameter
   useEffect(() => {
@@ -1014,11 +1035,6 @@ export function Ideas() {
       filtered = filtered.filter(task => !task.completed);
     }
 
-    // Shopping list filter
-    if (isShoppingList) {
-      filtered = filtered.filter(task => task.tags?.includes('shopping'));
-    }
-
     // User filter
     if (userFilter) {
       filtered = filtered.filter(task => task.userId === userFilter);
@@ -1081,7 +1097,7 @@ export function Ideas() {
     }
 
     return filtered;
-  }, [ideas, hideCompleted, isShoppingList, userFilter, timeFilter, searchQuery, selectedTags]);
+  }, [ideas, hideCompleted, userFilter, timeFilter, searchQuery, selectedTags]);
 
   // Get date periods
   const dateInfo = useMemo(() => getDateInfo(), [getDateInfo]);
@@ -2383,7 +2399,7 @@ Rules:
         </div>
       )}
 
-      {/* Top Bar — mobile: title+search row + scrollable tools; md+: single row */}
+      {/* Top Bar — mobile: title+search row + compact tools; md+: single row */}
       <div className="flex-shrink-0 bg-td-bg border-b border-td-border z-10 lg:sticky lg:top-0 pt-[max(0px,env(safe-area-inset-top))] lg:pt-0">
         <div className="flex flex-col gap-2 py-2 md:py-0 md:flex-row md:items-center md:h-11 md:gap-3 px-3">
           <div className="flex items-center gap-3 w-full min-h-[44px] md:min-h-0 md:w-auto md:contents">
@@ -2421,30 +2437,145 @@ Rules:
             </div>
           </div>
 
-          <div className="flex flex-nowrap items-center gap-1 overflow-x-auto overflow-y-hidden overscroll-x-contain overscroll-y-none touch-pan-x pl-8 pr-2 [scrollbar-width:thin] md:mx-0 md:shrink-0 md:gap-2 md:overflow-visible md:pl-0 md:pr-0">
+          {/* Mobile — primary actions + overflow menu (no horizontal scroll) */}
+          <div className="flex md:hidden items-center justify-end gap-1 pl-8 pr-2">
+            <button
+              type="button"
+              onClick={() => setShowFilters(!showFilters)}
+              aria-label={activeFilterCount > 0 ? `Filters, ${activeFilterCount} active` : 'Filters'}
+              aria-expanded={showFilters}
+              className={`flex min-h-[44px] min-w-[44px] shrink-0 touch-manipulation items-center justify-center gap-0.5 rounded-md text-td-sm transition-colors ${
+                showFilters || activeFilterCount > 0
+                  ? 'text-td-text font-medium'
+                  : 'text-td-muted hover:text-td-text'
+              }`}
+            >
+              <FontAwesomeIcon icon={faFilter} className="h-4 w-4" />
+              {activeFilterCount > 0 && (
+                <span className="text-td-xs">{activeFilterCount}</span>
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigate('/dashboard/shopping')}
+              className="flex min-h-[44px] min-w-[44px] shrink-0 touch-manipulation items-center justify-center rounded-md text-td-sm text-td-muted hover:text-td-text"
+              title="Open shopping list"
+              aria-label="Open shopping list"
+            >
+              <FontAwesomeIcon icon={faShoppingCart} className="h-4 w-4" />
+            </button>
+
+            <div className="relative shrink-0" ref={mobileToolsRef}>
+              <button
+                type="button"
+                onClick={() => setShowMobileTools(!showMobileTools)}
+                aria-label="More task options"
+                aria-expanded={showMobileTools}
+                aria-haspopup="menu"
+                className={`flex min-h-[44px] min-w-[44px] touch-manipulation items-center justify-center rounded-md text-td-sm ${
+                  showMobileTools || hideCompleted || showWorkSection
+                    ? 'text-td-text font-medium'
+                    : 'text-td-muted hover:text-td-text'
+                }`}
+              >
+                <FontAwesomeIcon icon={faEllipsisV} className="h-4 w-4" />
+              </button>
+
+              {showMobileTools && (
+                <div
+                  role="menu"
+                  className="absolute right-0 top-full z-20 mt-1 min-w-[11rem] border border-td-border bg-white py-1 shadow-sm"
+                >
+                  <div className="border-b border-td-border px-3 py-2">
+                    <span className="text-td-xs text-td-faint">View</span>
+                    <div className="mt-1 flex gap-1">
+                      {['timeline', 'tags', 'list'].map((mode) => (
+                        <button
+                          key={mode}
+                          type="button"
+                          onClick={() => setViewMode(mode)}
+                          className={`flex-1 px-2 py-1.5 text-td-xs capitalize transition-colors ${
+                            viewMode === mode
+                              ? 'bg-td-hover text-td-text font-medium'
+                              : 'text-td-muted hover:bg-td-hover'
+                          }`}
+                        >
+                          {mode === 'timeline' ? 'Days' : mode}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => { setIsBulkUploadOpen(true); setShowMobileTools(false); }}
+                    className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-td-sm text-td-text hover:bg-td-hover"
+                  >
+                    <FontAwesomeIcon icon={faUpload} className="h-3.5 w-3.5 text-td-muted" />
+                    Upload tasks
+                  </button>
+
+                  {user.current?.labels?.includes('admin') && (
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => { setIsAIGenOpen(true); setShowMobileTools(false); }}
+                      className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-td-sm text-td-text hover:bg-td-hover"
+                    >
+                      <FontAwesomeIcon icon={faWandMagicSparkles} className="h-3.5 w-3.5 text-td-muted" />
+                      AI generate
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => setHideCompleted(!hideCompleted)}
+                    className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-td-sm text-td-text hover:bg-td-hover"
+                  >
+                    <FontAwesomeIcon icon={hideCompleted ? faEyeSlash : faEye} className="h-3.5 w-3.5 text-td-muted" />
+                    {hideCompleted ? 'Show completed' : 'Hide completed'}
+                  </button>
+
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => setShowWorkSection(!showWorkSection)}
+                    className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-td-sm text-td-text hover:bg-td-hover"
+                  >
+                    <FontAwesomeIcon icon={faBriefcase} className="h-3.5 w-3.5 text-td-muted" />
+                    {showWorkSection ? 'Unpin work tasks' : 'Pin work tasks'}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Desktop — full toolbar */}
+          <div className="hidden md:flex items-center gap-2 shrink-0">
             <button
               type="button"
               onClick={() => setIsBulkUploadOpen(true)}
-              className="flex min-h-[44px] min-w-[44px] shrink-0 touch-manipulation items-center justify-center text-td-sm text-td-muted hover:text-td-text md:min-h-0 md:min-w-0 md:rounded-md md:px-3 md:py-1.5 md:hover:bg-td-hover"
+              className="flex min-h-0 items-center justify-center rounded-md px-3 py-1.5 text-td-sm text-td-muted hover:bg-td-hover hover:text-td-text"
               aria-label="Upload tasks"
             >
-              <FontAwesomeIcon icon={faUpload} className="h-4 w-4 md:hidden" />
-              <span className="hidden md:inline">Upload</span>
+              <span>Upload</span>
             </button>
 
             {user.current?.labels?.includes('admin') && (
               <button
                 type="button"
                 onClick={() => setIsAIGenOpen(true)}
-                className="flex min-h-[44px] min-w-[44px] shrink-0 touch-manipulation items-center justify-center text-td-sm text-td-muted hover:text-td-text md:min-h-0 md:min-w-0 md:rounded-md md:px-3 md:py-1.5 md:hover:bg-td-hover"
+                className="flex min-h-0 items-center justify-center rounded-md px-3 py-1.5 text-td-sm text-td-muted hover:bg-td-hover hover:text-td-text"
                 aria-label="AI Generate tasks"
               >
-                <FontAwesomeIcon icon={faWandMagicSparkles} className="h-4 w-4 md:hidden" />
-                <span className="hidden md:inline">AI</span>
+                <span>AI</span>
               </button>
             )}
 
-            <div className="flex shrink-0 items-center gap-0.5 border border-td-border px-0.5 py-0.5 md:gap-1 md:px-1.5 md:py-1">
+            <div className="flex shrink-0 items-center gap-1 border border-td-border px-1.5 py-1">
               {['timeline', 'tags', 'list'].map((mode) => (
                 <button
                   key={mode}
@@ -2452,7 +2583,7 @@ Rules:
                   onClick={() => setViewMode(mode)}
                   aria-label={`${mode} view`}
                   aria-pressed={viewMode === mode}
-                  className={`min-h-[44px] shrink-0 touch-manipulation px-3 text-td-xs capitalize transition-colors md:min-h-0 md:px-3 md:py-1.5 ${
+                  className={`min-h-0 shrink-0 px-3 py-1.5 text-td-xs capitalize transition-colors ${
                     viewMode === mode
                       ? 'text-td-text font-medium bg-td-hover'
                       : 'text-td-faint hover:text-td-muted'
@@ -2466,58 +2597,51 @@ Rules:
             <button
               type="button"
               onClick={() => setShowFilters(!showFilters)}
-              aria-label={
-                (selectedTags.length + (timeFilter ? 1 : 0) + (userFilter ? 1 : 0)) > 0
-                  ? `Filters, ${selectedTags.length + (timeFilter ? 1 : 0) + (userFilter ? 1 : 0)} active`
-                  : 'Filters'
-              }
+              aria-label={activeFilterCount > 0 ? `Filters, ${activeFilterCount} active` : 'Filters'}
               aria-expanded={showFilters}
-              className={`flex min-h-[44px] min-w-[44px] shrink-0 touch-manipulation items-center justify-center gap-0.5 rounded-md text-td-sm transition-colors md:min-h-0 md:min-w-[2.75rem] md:px-2 md:py-1.5 md:hover:bg-td-hover ${
-                showFilters || selectedTags.length > 0 || timeFilter || userFilter
+              className={`flex min-h-0 min-w-[2.75rem] items-center justify-center gap-0.5 rounded-md px-2 py-1.5 text-td-sm transition-colors hover:bg-td-hover ${
+                showFilters || activeFilterCount > 0
                   ? 'text-td-text font-medium'
                   : 'text-td-muted hover:text-td-text'
               }`}
             >
-              <FontAwesomeIcon icon={faFilter} className="h-4 w-4 md:h-3.5 md:w-3.5" />
-              {(selectedTags.length + (timeFilter ? 1 : 0) + (userFilter ? 1 : 0)) > 0 && (
-                <span className="text-td-xs">{selectedTags.length + (timeFilter ? 1 : 0) + (userFilter ? 1 : 0)}</span>
+              <FontAwesomeIcon icon={faFilter} className="h-3.5 w-3.5" />
+              {activeFilterCount > 0 && (
+                <span className="text-td-xs">{activeFilterCount}</span>
               )}
             </button>
 
             <button
               type="button"
               onClick={() => setHideCompleted(!hideCompleted)}
-              className="flex min-h-[44px] min-w-[44px] shrink-0 touch-manipulation items-center justify-center rounded-md text-td-sm text-td-muted hover:text-td-text md:min-h-0 md:min-w-[2.75rem] md:px-2 md:py-1.5 md:hover:bg-td-hover"
+              className="flex min-h-0 min-w-[2.75rem] items-center justify-center rounded-md px-2 py-1.5 text-td-sm text-td-muted hover:bg-td-hover hover:text-td-text"
               title={hideCompleted ? 'Show done' : 'Hide done'}
               aria-label={hideCompleted ? 'Show completed tasks' : 'Hide completed tasks'}
             >
-              <FontAwesomeIcon icon={hideCompleted ? faEyeSlash : faEye} className="h-4 w-4 md:h-3.5 md:w-3.5" />
+              <FontAwesomeIcon icon={hideCompleted ? faEyeSlash : faEye} className="h-3.5 w-3.5" />
             </button>
 
             <button
               type="button"
-              onClick={() => setIsShoppingList(!isShoppingList)}
-              className={`flex min-h-[44px] min-w-[44px] shrink-0 touch-manipulation items-center justify-center rounded-md text-td-sm md:min-h-0 md:min-w-[2.75rem] md:px-2 md:py-1.5 md:hover:bg-td-hover ${
-                isShoppingList ? 'text-td-text font-medium' : 'text-td-muted hover:text-td-text'
-              }`}
-              title={isShoppingList ? 'Show all' : 'Shopping only'}
-              aria-label={isShoppingList ? 'Show all tasks' : 'Show shopping tasks only'}
-              aria-pressed={isShoppingList}
+              onClick={() => navigate('/dashboard/shopping')}
+              className="flex min-h-0 min-w-[2.75rem] items-center justify-center rounded-md px-2 py-1.5 text-td-sm text-td-muted hover:bg-td-hover hover:text-td-text"
+              title="Open shopping list"
+              aria-label="Open shopping list"
             >
-              <FontAwesomeIcon icon={faShoppingCart} className="h-4 w-4 md:h-3.5 md:w-3.5" />
+              <FontAwesomeIcon icon={faShoppingCart} className="h-3.5 w-3.5" />
             </button>
 
             <button
               type="button"
               onClick={() => setShowWorkSection(!showWorkSection)}
-              className={`flex min-h-[44px] min-w-[44px] shrink-0 touch-manipulation items-center justify-center rounded-md text-td-sm md:min-h-0 md:min-w-[2.75rem] md:px-2 md:py-1.5 md:hover:bg-td-hover ${
+              className={`flex min-h-0 min-w-[2.75rem] items-center justify-center rounded-md px-2 py-1.5 text-td-sm hover:bg-td-hover ${
                 showWorkSection ? 'text-td-text font-medium' : 'text-td-muted hover:text-td-text'
               }`}
               title={showWorkSection ? 'Unpin work tasks' : 'Pin work tasks to top'}
               aria-label={showWorkSection ? 'Unpin work section' : 'Pin work tasks to top'}
               aria-pressed={showWorkSection}
             >
-              <FontAwesomeIcon icon={faBriefcase} className="h-4 w-4 md:h-3.5 md:w-3.5" />
+              <FontAwesomeIcon icon={faBriefcase} className="h-3.5 w-3.5" />
             </button>
           </div>
         </div>

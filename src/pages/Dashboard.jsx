@@ -166,7 +166,10 @@ export function Dashboard() {
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl shadow-sm p-6">
+            <Link
+              to="/dashboard/shopping"
+              className="bg-white rounded-2xl shadow-sm p-6 hover:bg-slate-50 transition-colors"
+            >
               <div className="flex items-center space-x-3">
                 <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center">
                   <FontAwesomeIcon icon={faShoppingCart} className="text-emerald-600 h-5 w-5" />
@@ -176,7 +179,7 @@ export function Dashboard() {
                   <p className="text-2xl font-bold text-slate-800">{dashboardStats.shoppingItems}</p>
                 </div>
               </div>
-            </div>
+            </Link>
 
             <div className="bg-white rounded-2xl shadow-sm p-6">
               <div className="flex items-center space-x-3">

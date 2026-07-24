@@ -12,7 +12,7 @@ export function ProtectedLayout({ children }) {
   return (
     <div className="min-h-screen bg-td-bg">
       <AppDrawer />
-      <main>
+      <main className="app-main">
         {children}
       </main>
     </div>
